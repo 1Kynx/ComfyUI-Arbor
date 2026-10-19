@@ -343,7 +343,8 @@ node("Arbor_NumberSlider", en=dict(
             "max": "Upper end of the range (click the right number under the bar).",
             "step": "Values snap to min + k × step: 1 = whole numbers, 0.05 = steps of 0.05, 0 = continuous. "
                     "Also sets how many decimals are shown."},
-    outputs=["The value as FLOAT.", "The value rounded to INT — for steps, seeds, counts."],
+    outputs=["One output for every number input: connects to INT inputs (steps, seed) and FLOAT inputs "
+             "(cfg, denoise) alike. Whole numbers come out as INT, others as FLOAT."],
     doc="""## How to use
 - **Drag** across the bar — the value follows the pointer. Hold **Shift** while dragging for 10× finer control.
 - **Click** the bar (without dragging) to type a value; Enter confirms, Esc cancels. A value outside the range widens the range.
@@ -358,7 +359,8 @@ node("Arbor_NumberSlider", en=dict(
 | 0 · 0 · 1 | any value (shown with up to 4 decimals) |
 
 ## Tips
-- Connect *value* to any FLOAT widget (cfg, denoise, LoRA strength) or *int* to INT widgets (steps, seed).
+- The single *value* output connects to any number input — FLOAT (cfg, denoise, LoRA strength) or INT (steps, seed, batch size). Drag it onto a widget to turn the widget into an input.
+- For INT inputs use a whole-number slider (step 1): a value like 7.5 would be passed as FLOAT.
 - Live Panels downstream follow the slider while you drag.
 """), zh=dict(
     name="数值滑块",
@@ -367,7 +369,7 @@ node("Arbor_NumberSlider", en=dict(
             "min": ("最小值", "范围下限（点击滑条下方左侧的数字修改）。"),
             "max": ("最大值", "范围上限（点击滑条下方右侧的数字修改）。"),
             "step": ("步长", "数值对齐到 最小值 + k × 步长：1 = 整数，0.05 = 以 0.05 为间隔，0 = 连续取值。同时决定显示几位小数。")},
-    outputs=[("数值", "FLOAT 形式的数值。"), ("整数", "四舍五入为 INT——用于步数、种子、数量。")],
+    outputs=[("数值", "一个输出兼顾所有数值输入：INT（步数、种子）和 FLOAT（cfg、denoise）都能直接连接。整数以 INT 输出，其余以 FLOAT 输出。")],
     doc="""## 用法
 - 在滑条上**拖动**——数值跟随鼠标位置。拖动时按住 **Shift** 可精细调节（10 倍精度）。
 - **单击**滑条（不拖动）直接输入数值；Enter 确认，Esc 取消。输入超出范围的值时，范围会自动扩展。
@@ -382,7 +384,8 @@ node("Arbor_NumberSlider", en=dict(
 | 0 · 0 · 1 | 任意值（最多显示 4 位小数） |
 
 ## 提示
-- *数值* 可接任何 FLOAT 参数（cfg、denoise、LoRA 强度），*整数* 接 INT 参数（步数、种子）。
+- 唯一的 *数值* 输出可接任何数值输入——FLOAT（cfg、denoise、LoRA 强度）或 INT（步数、种子、批次大小）。把它拖到参数上，参数会变成输入口。
+- 接 INT 参数时请用整数滑块（步长 1）：像 7.5 这样的值会以 FLOAT 传出。
 - 拖动时，下游的实时面板会跟着变化。
 """))
 

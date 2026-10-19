@@ -341,11 +341,7 @@
     "outputs": {
       "0": {
         "name": "数值",
-        "tooltip": "FLOAT 形式的数值。"
-      },
-      "1": {
-        "name": "整数",
-        "tooltip": "四舍五入为 INT——用于步数、种子、数量。"
+        "tooltip": "一个输出兼顾所有数值输入：INT（步数、种子）和 FLOAT（cfg、denoise）都能直接连接。整数以 INT 输出，其余以 FLOAT 输出。"
       }
     }
   },

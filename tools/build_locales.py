@@ -75,7 +75,7 @@ def type_name(inp, lang) -> str:
 def out_type(o, lang) -> str:
     t = o.get_io_type() if hasattr(o, "get_io_type") else getattr(o, "io_type", "")
     h = HEAD[lang]
-    t = h["any"] if t == "*" else h["tree"] if t == "ARBOR_TREE" else t
+    t = h["any"] if t == "*" else h["tree"] if t == "ARBOR_TREE" else str(t).replace(",", " / ")
     return t + (" ×N" if getattr(o, "is_output_list", False) else "")
 
 

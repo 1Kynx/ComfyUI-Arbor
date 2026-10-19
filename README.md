@@ -55,7 +55,7 @@ Long lines wrap; ⤢ opens a large editor; Ctrl+Enter still queues. Outputs `dat
 
 **Number Slider** — one bar: drag across it to set the value (Shift = fine), click it to type
 (a value outside the range widens the range), scroll or ← → to step. Click *min*, *step* or *max* under
-the bar to edit them; step 1 gives whole numbers, 0 is continuous. Outputs FLOAT and INT; live Panels
+the bar to edit them; step 1 gives whole numbers, 0 is continuous. A single output connects to INT and FLOAT inputs alike; live Panels
 follow while you drag.
 
 **True / false** — pattern inputs (Cull Pattern, Dispatch) take typed text (`T F`), a native BOOLEAN,

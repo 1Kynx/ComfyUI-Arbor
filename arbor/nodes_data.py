@@ -21,6 +21,16 @@ def _match(tree: T.DataTree, k: int, j: int):
     return items[min(j, len(items) - 1)] if items else None
 
 
+# A socket that is both: the front end and the server accept "FLOAT,INT" on
+# any INT or FLOAT input (comma types match when they overlap).
+NUMBER = IO.Custom("FLOAT,INT")
+
+
+def as_number(v: float) -> int | float:
+    """Whole values as int (safe for steps / seeds), the rest as float."""
+    return int(v) if float(v).is_integer() else float(v)
+
+
 def step_decimals(step: float) -> int:
     """Decimal places a step implies: 1 -> 0, 0.1 -> 1, 0.05 -> 2 (max 6)."""
     if not step or step <= 0:
@@ -54,12 +64,13 @@ class NumberSlider(IO.ComfyNode):
                 IO.Float.Input("max", default=1.0, min=-big, max=big, step=0.0001, round=False),
                 IO.Float.Input("step", default=0.01, min=0.0, max=big, step=0.0001, round=False),
             ],
-            outputs=[IO.Float.Output(display_name="value"), IO.Int.Output(display_name="int")])
+            outputs=[NUMBER.Output(display_name="value",
+                                   tooltip="One output for both: connects to INT and FLOAT inputs. "
+                                           "Whole numbers come out as INT, others as FLOAT.")])
 
     @classmethod
     def execute(cls, value, min, max, step) -> IO.NodeOutput:
-        v = slider_value(value, min, max, step)
-        return IO.NodeOutput(v, int(round(v)))
+        return IO.NodeOutput(as_number(slider_value(value, min, max, step)))
 
 
 class PromptTemplate(IO.ComfyNode):

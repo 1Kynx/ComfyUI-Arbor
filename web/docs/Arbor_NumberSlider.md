@@ -15,10 +15,8 @@ Grasshopper-style number slider: drag the bar to set a value between min and max
 
 ## Outputs
 
-- **value** · *FLOAT*  
-  The value as FLOAT.
-- **int** · *INT*  
-  The value rounded to INT — for steps, seeds, counts.
+- **value** · *FLOAT / INT*  
+  One output for every number input: connects to INT inputs (steps, seed) and FLOAT inputs (cfg, denoise) alike. Whole numbers come out as INT, others as FLOAT.
 
 ## How to use
 - **Drag** across the bar — the value follows the pointer. Hold **Shift** while dragging for 10× finer control.
@@ -34,5 +32,6 @@ Grasshopper-style number slider: drag the bar to set a value between min and max
 | 0 · 0 · 1 | any value (shown with up to 4 decimals) |
 
 ## Tips
-- Connect *value* to any FLOAT widget (cfg, denoise, LoRA strength) or *int* to INT widgets (steps, seed).
+- The single *value* output connects to any number input — FLOAT (cfg, denoise, LoRA strength) or INT (steps, seed, batch size). Drag it onto a widget to turn the widget into an input.
+- For INT inputs use a whole-number slider (step 1): a value like 7.5 would be passed as FLOAT.
 - Live Panels downstream follow the slider while you drag.

@@ -341,11 +341,7 @@
     "outputs": {
       "0": {
         "name": "value",
-        "tooltip": "The value as FLOAT."
-      },
-      "1": {
-        "name": "int",
-        "tooltip": "The value rounded to INT — for steps, seeds, counts."
+        "tooltip": "One output for every number input: connects to INT inputs (steps, seed) and FLOAT inputs (cfg, denoise) alike. Whole numbers come out as INT, others as FLOAT."
       }
     }
   },
