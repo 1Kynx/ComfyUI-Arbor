@@ -1,6 +1,7 @@
 """Data generators and per-item math: Number Slider, Prompt Template, Expression, Random."""
 
 import itertools
+import math
 import random
 import re
 
@@ -31,6 +32,34 @@ def as_number(v: float) -> int | float:
     return int(v) if float(v).is_integer() else float(v)
 
 
+def _input_type(class_type: str, name: str):
+    try:
+        import nodes
+        cls = nodes.NODE_CLASS_MAPPINGS.get(class_type)
+        spec = cls.INPUT_TYPES() if cls is not None else {}
+    except Exception:
+        return None
+    for group in ("required", "optional"):
+        entry = (spec.get(group) or {}).get(name)
+        if entry:
+            return entry[0]
+    return None
+
+
+def feeds_int(prompt: dict | None, node_id) -> bool:
+    """True when any input this node's output is linked to only accepts INT
+    (steps, seed, width…): a value like 4.5 must not reach it."""
+    if not prompt or node_id is None:
+        return False
+    for other in prompt.values():
+        for name, v in (other.get("inputs") or {}).items():
+            if isinstance(v, list) and len(v) == 2 and str(v[0]) == str(node_id):
+                t = _input_type(other.get("class_type"), name)
+                if isinstance(t, str) and "INT" in t.split(",") and "FLOAT" not in t.split(","):
+                    return True
+    return False
+
+
 def step_decimals(step: float) -> int:
     """Decimal places a step implies: 1 -> 0, 0.1 -> 1, 0.05 -> 2 (max 6)."""
     if not step or step <= 0:
@@ -58,6 +87,7 @@ class NumberSlider(IO.ComfyNode):
             description="Grasshopper-style number slider: drag the bar to set a value between min and max, "
                         "click it to type. A step of 1 gives whole numbers.",
             search_aliases=["slider", "number", "float", "int", "value", "parameter", "range slider"],
+            hidden=[IO.Hidden.prompt, IO.Hidden.unique_id],
             inputs=[
                 IO.Float.Input("value", default=0.5, min=-big, max=big, step=0.0001, round=False),
                 IO.Float.Input("min", default=0.0, min=-big, max=big, step=0.0001, round=False),
@@ -70,7 +100,11 @@ class NumberSlider(IO.ComfyNode):
 
     @classmethod
     def execute(cls, value, min, max, step) -> IO.NodeOutput:
-        return IO.NodeOutput(as_number(slider_value(value, min, max, step)))
+        v = slider_value(value, min, max, step)
+        h = cls.hidden
+        if feeds_int(getattr(h, "prompt", None), getattr(h, "unique_id", None)):
+            v = float(math.floor(v + 0.5))  # INT target: round half up, like the slider shows it
+        return IO.NodeOutput(as_number(v))
 
 
 class PromptTemplate(IO.ComfyNode):

@@ -210,17 +210,33 @@ class SliderView {
     input.addEventListener("pointerdown", (e) => e.stopPropagation());
   }
 
+  /* linked to an input that only takes INT (steps, seed, width…)? The
+   * server then rounds the value (nodes_data.feeds_int), so show it rounded. */
+  feedsInt() {
+    const g = this.node.graph;
+    for (const id of this.node.outputs?.[0]?.links ?? []) {
+      const l = g?.links?.get?.(id) ?? g?.links?.[id] ?? g?.getLink?.(id);
+      const target = l && g.getNodeById(l.target_id);
+      const parts = String(target?.inputs?.[l.target_slot]?.type ?? "").split(",");
+      if (parts.includes("INT") && !parts.includes("FLOAT")) return true;
+    }
+    return false;
+  }
+
   render() {
     const { lo, hi, step, v } = this.state;
     const f = hi > lo ? (v - lo) / (hi - lo) : 0;
+    const asInt = this.feedsInt();
+    this.bar.classList.toggle("int", asInt);
+    this.bar.dataset.tag = asInt ? "INT" : "";
     this.fill.style.width = `${f * 100}%`;
-    if (!this.valueEl.querySelector("input")) this.valueEl.textContent = fmt(v, step);
+    if (!this.valueEl.querySelector("input")) this.valueEl.textContent = asInt ? String(Math.round(v)) : fmt(v, step);
     if (!this.minEl.querySelector("input")) this.minEl.textContent = fmt(lo, step);
     if (!this.maxEl.querySelector("input")) this.maxEl.textContent = fmt(hi, step);
     if (!this.stepEl.querySelector("input")) {
       this.stepEl.textContent = step > 0 ? t("stepIs", { s: fmt(step, step) }) : t("stepFree");
     }
-    this.bar.title = t("barTip");
+    this.bar.title = asInt ? `${t("barTip")}\n${t("intMode")}` : t("barTip");
     this.minEl.title = t("minTip");
     this.maxEl.title = t("maxTip");
     this.stepEl.title = t("stepTip");
@@ -255,6 +271,10 @@ app.registerExtension({
 
     chain(nodeType.prototype, "onConfigure", function () {
       this.__arborNumber?.sync();
+    });
+
+    chain(nodeType.prototype, "onConnectionsChange", function () {
+      this.__arborNumber?.render();
     });
   },
 });

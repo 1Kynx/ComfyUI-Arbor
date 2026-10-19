@@ -102,6 +102,9 @@ const CSS = `
   font:600 13.5px/1 "JetBrains Mono","Cascadia Code",Consolas,monospace;letter-spacing:-.01em;
   white-space:nowrap;overflow:hidden;}
 .arb-num-val.editing{pointer-events:auto;padding:3px;}
+.arb-num-bar.int::after{content:attr(data-tag);position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  font:600 9px/1 "JetBrains Mono",Consolas,monospace;letter-spacing:.04em;color:var(--arb-sub);
+  padding:2px 4px;border-radius:4px;border:1px solid var(--arb-line);pointer-events:none;}
 .arb-num-foot{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;padding:0 2px;}
 .arb-num-field{font:10.5px/1 "JetBrains Mono","Cascadia Code",Consolas,monospace;color:var(--arb-sub);
   cursor:text;padding:3px 5px;border-radius:4px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -259,6 +262,7 @@ const STRINGS = {
     stepTip: "Click to set the step — 1 gives whole numbers, 0 is continuous",
     minTip: "Click to set the minimum", maxTip: "Click to set the maximum",
     stepIs: "step {s}", stepFree: "no step",
+    intMode: "Connected to an INT input — the value is sent as a whole number",
   },
   zh: {
     flip: "切换", wipe: "对比", real: "原比例", fit: "填充",
@@ -295,6 +299,7 @@ const STRINGS = {
     stepTip: "点击设置步长 — 1 为整数，0 为连续取值",
     minTip: "点击设置最小值", maxTip: "点击设置最大值",
     stepIs: "步长 {s}", stepFree: "无步长",
+    intMode: "已连接到整数参数——数值会取整后传出",
   },
 };
 

@@ -33,5 +33,5 @@ Grasshopper-style number slider: drag the bar to set a value between min and max
 
 ## Tips
 - The single *value* output connects to any number input — FLOAT (cfg, denoise, LoRA strength) or INT (steps, seed, batch size). Drag it onto a widget to turn the widget into an input.
-- For INT inputs use a whole-number slider (step 1): a value like 7.5 would be passed as FLOAT.
+- Connected to an INT-only input (steps, seed, width…) the value is sent rounded to a whole number, and the bar shows an **INT** tag — so a slider at 4.5 can't break a sampler.
 - Live Panels downstream follow the slider while you drag.

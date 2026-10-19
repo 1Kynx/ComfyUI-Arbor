@@ -360,7 +360,7 @@ node("Arbor_NumberSlider", en=dict(
 
 ## Tips
 - The single *value* output connects to any number input — FLOAT (cfg, denoise, LoRA strength) or INT (steps, seed, batch size). Drag it onto a widget to turn the widget into an input.
-- For INT inputs use a whole-number slider (step 1): a value like 7.5 would be passed as FLOAT.
+- Connected to an INT-only input (steps, seed, width…) the value is sent rounded to a whole number, and the bar shows an **INT** tag — so a slider at 4.5 can't break a sampler.
 - Live Panels downstream follow the slider while you drag.
 """), zh=dict(
     name="数值滑块",
@@ -385,7 +385,7 @@ node("Arbor_NumberSlider", en=dict(
 
 ## 提示
 - 唯一的 *数值* 输出可接任何数值输入——FLOAT（cfg、denoise、LoRA 强度）或 INT（步数、种子、批次大小）。把它拖到参数上，参数会变成输入口。
-- 接 INT 参数时请用整数滑块（步长 1）：像 7.5 这样的值会以 FLOAT 传出。
+- 接到只收整数的参数（步数、种子、宽度……）时，数值会自动取整后传出，滑条上显示 **INT** 标记——滑块停在 4.5 也不会让采样器报错。
 - 拖动时，下游的实时面板会跟着变化。
 """))
 

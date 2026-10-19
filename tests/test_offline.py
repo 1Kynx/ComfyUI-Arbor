@@ -361,6 +361,25 @@ def test_v03_booleans_slider_text():
     assert slide(value=0.537, min=0.0, max=1.0, step=0.05) == 0.55
     assert slide(value=4.0, min=1.0, max=9.0, step=2.0) == 5, "snaps to min + k * step"
     assert slide(value=0.1234567, min=0.0, max=1.0, step=0.0) == 0.123457, "step 0 = continuous"
+    # wired to an INT-only input (KSampler steps / seed) the value is rounded
+    prompt = {"7": {"class_type": "Arbor_NumberSlider", "inputs": {}},
+              "9": {"class_type": "KSampler", "inputs": {"steps": ["7", 0], "cfg": 8.0}},
+              "11": {"class_type": "KSampler", "inputs": {"cfg": ["12", 0]}}}
+    assert nodes_data.feeds_int(prompt, "7"), "steps is INT-only"
+    assert not nodes_data.feeds_int(prompt, "12"), "cfg is FLOAT"
+    assert not nodes_data.feeds_int(None, "7")
+
+    class _Hidden:
+        def __init__(self, prompt, uid):
+            self.prompt, self.unique_id = prompt, uid
+    nodes_data.NumberSlider.hidden = _Hidden(prompt, "7")
+    try:
+        v = slide(value=4.5, min=0.0, max=10.0, step=0.05)
+        assert v == 5 and isinstance(v, int), "4.5 into steps arrives as INT 5 (half up, as shown)"
+        nodes_data.NumberSlider.hidden = _Hidden(prompt, "12")
+        assert slide(value=4.5, min=0.0, max=10.0, step=0.05) == 4.5, "FLOAT targets keep the fraction"
+    finally:
+        nodes_data.NumberSlider.hidden = None
     out = nodes_data.NumberSlider.define_schema().outputs
     assert len(out) == 1 and out[0].get_io_type() == "FLOAT,INT"
     from comfy_execution.validation import validate_node_input
