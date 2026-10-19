@@ -46,29 +46,29 @@ Connect a tree to *x* only: *x* becomes its items as plain data (ordinary nodes 
 - Any widget accepts these outputs: drag from *x* onto a widget to turn it into an input.
 """), zh=dict(
     name="XY 组合列表",
-    desc="从取值到批量运行：x、y（和 z）的所有组合输出为对齐的普通数据——接到普通节点上，每种组合运行一次——并输出运行结果的形状。只接 x 时，可把任意数据树展开成普通数据。",
+    desc="从取值到批量运行：x、y（和 z）的所有组合输出为对齐的普通数据——接到普通节点上，每种组合运行一次——并输出运行结果的结构。只接 x 时，可把任意数据树展开成普通数据。",
     inputs={"x": ("x", "行的取值——或任意要展开成普通数据的数据树。"),
             "y": ("y", "列的取值（可选）。"),
             "z": ("z", "可选的第三个参数：作为列，行变为 x × y。"),
             "mode": ("模式", "cross 交叉：所有组合 · zip 配对：逐项对应（最长列表，不够时重复最后一项）。")},
     outputs=[("x", "每次运行的 x——接到任意参数输入（cfg、步数、种子……），被接的节点会对每种组合各运行一次。"),
              ("y", "每次运行的 y。"), ("z", "每次运行的 z（未接 z 时为空值）。"),
-             ("形状", "运行结果的布局：接「图像网格」排成行 × 列，或接「构建数据树」收回成数据树。每行以 x 的取值命名，项就是列的取值，所以图像网格会自动标注行和列。只接 x 时，它就是 x 自己的数据树。"),
+             ("结构", "运行结果的布局：接「图像网格」排成行 × 列，或接「构建数据树」收回成数据树。每行以 x 的取值命名，项就是列的取值，所以图像网格会自动标注行和列。只接 x 时，它就是 x 自己的数据树。"),
              ("数量", "运行次数。")],
     doc="""## 四个节点做 XY 对比图
 ```
 面板(cfg) ─x─┐               ┌─ x ─► KSampler.cfg ─┐
              ├─ XY 组合列表 ──┤─ y ─► CLIP 文本 ────┴─► VAE 解码 ─► 图像网格
-面板(提示词)─y┘               └─ 形状 ────────────────────────────────┘
+面板(提示词)─y┘               └─ 结构 ────────────────────────────────┘
 ```
 1. 在两个 **面板** 里分别输入 x 和 y 的取值（或用 **数列**），接到 x、y 上。
 2. 把 *x* / *y* 接到想要变化的参数上——普通节点会对每种组合各运行一次。
-3. 解码后的图片和 *形状* 一起接 **图像网格**：自动排成行 × 列，行和列都自动标注——行以 x 命名，列是 y 的取值。
+3. 解码后的图片和 *结构* 一起接 **图像网格**：自动排成行 × 列，行和列都自动标注——行以 x 命名，列是 y 的取值。
 
 示例模板：*模板 → ComfyUI-Arbor → arbor_xy_sampler*。
 
 ## 展开任意数据树
-只接 *x*：*x* 输出它的所有项（普通数据，普通节点逐项运行），*形状* 就是这棵树本身。逐项处理后，用 **构建数据树**（*形状* 接这里）把结果收回原来的分支。
+只接 *x*：*x* 输出它的所有项（普通数据，普通节点逐项运行），*结构* 就是这棵树本身。逐项处理后，用 **构建数据树**（*结构* 接这里）把结果收回原来的分支。
 
 ## 提示
 - 3 × 4 个值 = 运行 12 次；上限 1 万次。
@@ -95,6 +95,7 @@ node("Arbor_ReshapeTree", en=dict(
 ## Tips
 - *flip matrix* before **Image Grid** swaps the axes of a sheet.
 - *graft* then a per-item operation, then *shift paths −1*, groups the results back.
+- Names travel with the structure: after *graft* the old branch's name names the group, and *shift paths −1* lands back on it — `Mira · lab coat` rows fold into a `Mira` row.
 - Search for graft, flatten, flip matrix… — they all find this node.
 """), zh=dict(
     name="重组数据树",
@@ -117,6 +118,7 @@ node("Arbor_ReshapeTree", en=dict(
 ## 提示
 - 在 **图像网格** 前用 *翻转矩阵* 可以交换对比图的行列。
 - 先 *升树*，逐项处理后再 *移动路径 −1*，结果就重新分好组。
+- 分支名跟着结构走：*升树* 后原分支的名字成为这一组的名字，*移动路径 −1* 又回到它——`Mira · lab coat` 这样的行会合并成 `Mira` 一行。
 - 搜索 graft、flatten、flip matrix 等都能找到本节点。
 """))
 
@@ -302,7 +304,7 @@ A `3, 5`, B `x, y, z`, group on:
 
 ## Tips
 - For an XY plot, **XY Lists** does this and the flattening in one node.
-- With group on, each row is named after its A value, so **Image Grid** labels the rows by itself; B works as its column labels.
+- With group on, each sub-branch is named after its A value (pictures and other non-text values get their number), and the branch it came from becomes the parent and keeps its name: `Mira · lab coat`, `Arrival · 2`. **Image Grid** labels its rows with these; B works as column labels.
 """), zh=dict(
     name="交叉组合",
     desc="按分支生成 A × B 的所有组合（对应 Grasshopper 的 Cross Reference）。开启分组时：行 = A，列 = B。",
@@ -316,7 +318,7 @@ A `3, 5`，B `x, y, z`，开启分组：
 
 ## 提示
 - 做 XY 对比图时，**XY 组合列表** 一个节点就能完成组合和展开。
-- 开启分组时，每行以对应的 A 值命名，**图像网格** 会自动用它标注行；B 可作为列标签。
+- 开启分组时，每个子分支以对应的 A 值命名（图片等非文字的值用序号），原来的分支成为父分支并保留名字：`Mira · lab coat`、`Arrival · 2`。**图像网格** 会用它标注行；B 可作为列标签。
 """))
 
 # =============================================================== Util

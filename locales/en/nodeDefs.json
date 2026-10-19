@@ -475,7 +475,7 @@
   },
   "Arbor_Expression": {
     "display_name": "Expression",
-    "description": "Evaluate a formula for every item of x (y matched longest-list), like Grasshopper's Expression.",
+    "description": "Evaluate a formula for every item of x (y matched by path, then longest-list), like Grasshopper's Expression.",
     "inputs": {
       "expression": {
         "name": "expression",
@@ -487,7 +487,7 @@
       },
       "y": {
         "name": "y",
-        "tooltip": "Optional second value, matched to x branch by branch, item by item (the last item repeats)."
+        "tooltip": "Optional second value. Matched by path: the same branch, or the nearest parent — a y on {0} goes with every {0;…} of x — otherwise branch by branch in order; item by item, the last item repeats."
       }
     },
     "outputs": {

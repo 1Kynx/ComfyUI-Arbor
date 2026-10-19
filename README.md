@@ -33,6 +33,19 @@ nodes run once per item. To run something per item and keep the branches: **XY L
 connected flattens a tree and outputs its shape, and **Construct Tree** (or **Image Grid**) with that
 *shape* puts the results back into the same branches.
 
+### Nesting
+
+Branches can hold branches — `{scene;shot}`, `{character;outfit}` — and the operations understand it:
+
+- **Parents pair with their children.** Expression and Dispatch match a second tree by path: a value on
+  `{0}` (Mira's description, a scene's sound) goes with every `{0;…}` (her outfits, the scene's shots).
+- **Names ride along.** A branch can carry a name (`# Arrival` in a Panel, a folder in Load Folder,
+  an x value in XY Lists). After Graft or Cross Reference it names the group, labels read `Mira · lab coat`,
+  Shift Paths −1 folds back to `Mira`, and grids, Panels, sliders and saved folders show them.
+  Expression sees it as `name`.
+- **Uneven is fine.** Three outfits for one character, two for the next; two edits for one scene, one for
+  another — counts per branch never have to line up.
+
 ## Nodes
 
 | Category | Nodes |
@@ -110,21 +123,30 @@ input or output is undocumented.
 
 ## Example workflows
 
-*Templates → ComfyUI-Arbor*. Each one has a note explaining what the nodes are doing.
+*Templates → ComfyUI-Arbor*. Each one has a note explaining what the nodes are doing. Times are for a 16 GB card.
 
-| Workflow | Shows |
-|---|---|
-| `arbor_qwen_prompt_matrix` | **Prompt Template** crosses 3 subjects × 3 styles into 9 prompts; the sampler runs once per prompt; **Image Grid** lays the results out with the template's tree — rows named after the subjects, columns after the styles. |
-| `arbor_qwen_lora_sweep` | **XY Lists** drives LoRA strength (from **Number Sequence**) against subjects (expanded by **Prompt Template** in zip mode); the seed is a **Number Slider**; the sheet labels itself from XY Lists' shape. |
-| `arbor_qwen_storyboard` | A nested structure through a batch run: a **Panel** storyboard (`# scene title` lines, one shot per line) → **Expression** adds the style → **XY Lists** flattens it for the sampler → **Image Grid** with one row per scene, **Construct Tree** + **Save Images by Path** write one folder per scene. |
-| `arbor_folder_review` | No model: **Load Folder** reads the storyboard folders back as a named tree; contact sheet, **List Item** picks, **Reshape Tree** (flip matrix) compares shot by shot, **Image Slider** flips through. |
-| `arbor_xy_demo` | No model: the XY idea with plain coloured images. |
-| `arbor_xy_sampler` | A classic XY plot for any SD-style checkpoint. |
+**Trees of pictures, video and sound** — where branches pay off:
 
-The `arbor_qwen_*` workflows use Qwen Image 2.1 Turbo (8 steps, cfg 1): `qwen_image_2.1_turbo_int8_convrot.safetensors`
-(diffusion_models), `qwen3vl_8b_int8_convrot.safetensors` (text_encoders), `texture_fix_vae_for_qwen_image_2.1_bf16.safetensors`
-(vae), and for the sweep the LoRA `Qwen-2.1\mj_aesthetic_qwen21_turbo_v2_632_r32.safetensors` — swap in any LoRA you have.
-On a 16 GB card a 9-image sheet takes about a minute.
+| Workflow | Shows | Run |
+|---|---|---|
+| `arbor_qwen_storyboard` | A **Panel** storyboard (`# scene` lines, one shot per line) → **Expression** adds the style → **XY Lists** flattens it for the sampler → **Image Grid** with one row per scene; **Construct Tree** + **Save Images by Path** write one folder per scene. Start here — the next three use its output. | 6 images, 30 s |
+| `arbor_qwen_edit_by_scene` | Pictures × instructions as one tree: **Load Folder** gives the frames per scene, a **Panel** gives each scene its *own* edits (2 / 1 / 2). **Cross Reference** pairs them per shot, two **XY Lists** flatten both side by side for the edit model, **Construct Tree** + **Merge** put each original in front of its edits. | 10 edits, 75 s |
+| `arbor_h3_storyboard_video` | Keyframes (images), a motion line per shot and a sound line per scene (text) drive MiniMax H3 image-to-video **with audio**. The sound line reaches every shot of its scene by path; **Expression** `name` files each clip under its scene; **Batch Pick** + **Construct Tree** make a contact sheet per scene. | 6 clips, 110 s |
+| `arbor_folder_review` | No model: **Load Folder** reads the folders back as a named tree; contact sheet, **List Item** picks, **Reshape Tree** (flip matrix) compares shot by shot, **Image Slider** flips through. | — |
+| `arbor_qwen_character_sheet` | Three uneven levels — character → outfit → pose (Mira 3 outfits, Theo 2). **List Item** splits description from outfits per branch, **Cross Reference** nests the poses, **Expression** pairs each outfit with its *parent's* description, **Reshape Tree** *shift paths −1* folds outfits back into one row per character. | 15 images, 65 s |
+
+**Grids and sweeps:**
+
+| Workflow | Shows | Run |
+|---|---|---|
+| `arbor_qwen_prompt_matrix` | **Prompt Template** crosses 3 subjects × 3 styles; **Image Grid** lays the results out with the template's tree — rows named after the subjects. | 9 images, 50 s |
+| `arbor_qwen_lora_sweep` | **XY Lists** drives LoRA strength (from **Number Sequence**) against subjects (expanded by **Prompt Template** in zip mode); the seed is a **Number Slider**. | 9 images, 35 s |
+| `arbor_xy_demo` | No model: the XY idea with plain coloured images. | — |
+| `arbor_xy_sampler` | A classic XY plot for any SD-style checkpoint. | — |
+
+Models used:
+- **Qwen Image 2.1 Turbo** (`arbor_qwen_*`): `qwen_image_2.1_turbo_int8_convrot.safetensors` (diffusion_models), `qwen3vl_8b_int8_convrot.safetensors` (text_encoders), `texture_fix_vae_for_qwen_image_2.1_bf16.safetensors` for generating and `qwen_image_2.1_vae_bf16.safetensors` for editing (vae); text to image uses 8 steps, editing 6. The sweep uses the LoRA `Qwen-2.1\mj_aesthetic_qwen21_turbo_v2_632_r32.safetensors` — swap in any LoRA you have. Editing works best with concrete, local instructions (add, remove or recolor something).
+- **MiniMax H3** (`arbor_h3_*`): `minimax_h3_fl2va_pruned_int8_convrot.safetensors` (diffusion_models) + the LoRA `minimax h3\minimax_h3_turbo_v4_step600_ema_pruned_comfyui.safetensors` (6 steps), `qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors` (text_encoders, type *minimax*), `minimax_h3_video_vae_int8_convrot.safetensors` and `minimax_h3_audio_vae_fp32.safetensors` (vae). The demo renders 56 frames at 0.3 MP; raise both for real shots.
 
 ## Install
 

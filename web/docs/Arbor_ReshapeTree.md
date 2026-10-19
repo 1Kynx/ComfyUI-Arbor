@@ -31,4 +31,5 @@ Change how items are grouped into branches — Grasshopper's Graft, Flatten, Sim
 ## Tips
 - *flip matrix* before **Image Grid** swaps the axes of a sheet.
 - *graft* then a per-item operation, then *shift paths −1*, groups the results back.
+- Names travel with the structure: after *graft* the old branch's name names the group, and *shift paths −1* lands back on it — `Mira · lab coat` rows fold into a `Mira` row.
 - Search for graft, flatten, flip matrix… — they all find this node.

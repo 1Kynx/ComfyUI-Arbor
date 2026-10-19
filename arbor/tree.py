@@ -30,7 +30,9 @@ class DataTree:
         if branches:
             for path, items in branches.items():
                 self.branches[tuple(int(i) for i in path)] = list(items)
-        self.names: dict[Path, Any] = {p: v for p, v in (names or {}).items() if p in self.branches}
+        # a name sits on a branch or on a parent path: {0} "Mira" names the group {0;0}, {0;1}, …
+        prefixes = {p[:k] for p in self.branches for k in range(1, len(p) + 1)}
+        self.names: dict[Path, Any] = {p: v for p, v in (names or {}).items() if p in prefixes}
 
     # ------------------------------------------------------------ queries
     def paths(self) -> list[Path]:
@@ -56,6 +58,11 @@ class DataTree:
     @property
     def depth(self) -> int:
         return max((len(p) for p in self.branches), default=0)
+
+    def label(self, path: Path, fmt: Callable[[Any], str] = str) -> str | None:
+        """The names along a path joined: {0} "Mira" + {0;1} "lab coat" -> "Mira · lab coat"."""
+        parts = [fmt(self.names[path[:k]]) for k in range(1, len(path) + 1) if path[:k] in self.names]
+        return " · ".join(parts) if parts else None
 
     def map_items(self, fn: Callable[[Any], Any]) -> "DataTree":
         return DataTree({p: [fn(v) for v in items] for p, items in self.branches.items()}, self.names)
@@ -119,11 +126,7 @@ def to_tree(value) -> DataTree:
     if value and all(isinstance(v, DataTree) for v in value):
         if len(value) == 1:
             return value[0]
-        out: dict[Path, list] = {}
-        for i, t in enumerate(value):
-            for p, items in t.items():
-                out[(i,) + p] = items
-        return DataTree(out)
+        return entwine(value)
     return DataTree({(0,): value})
 
 
@@ -151,7 +154,7 @@ def graft(tree: DataTree) -> DataTree:
             out[p] = []
         for j, v in enumerate(items):
             out[p + (j,)] = [v]
-    return DataTree(out)
+    return DataTree(out, tree.names)
 
 
 def flatten(tree: DataTree, path: Path = (0,)) -> DataTree:
@@ -195,7 +198,7 @@ def shift_paths(tree: DataTree, offset: int) -> DataTree:
         else:
             np_ = p
         out.setdefault(np_ or (0,), []).extend(items)
-    return DataTree(out)
+    return DataTree(out, tree.names if offset < 0 else None)
 
 
 def merge(trees: list[DataTree]) -> DataTree:
@@ -203,29 +206,52 @@ def merge(trees: list[DataTree]) -> DataTree:
     for t in trees:
         for p, items in t.items():
             out.setdefault(p, []).extend(items)
-    return DataTree(out)
+    return DataTree(out, {p: v for t in reversed(trees) for p, v in t.names.items()})
 
 
 def entwine(trees: list[DataTree]) -> DataTree:
     out: dict[Path, list] = {}
+    names: dict[Path, Any] = {}
     for i, t in enumerate(trees):
         for p, items in t.items():
             out[(i,) + p] = list(items)
-    return DataTree(out)
+        names.update({(i,) + p: v for p, v in t.names.items()})
+    return DataTree(out, names)
 
 
 def renumber(tree: DataTree) -> DataTree:
+    """{0}, {1}, {2}, … in order; a branch keeps its name (group names joined in: "Mira · lab coat")."""
     paths = tree.paths()
-    return DataTree({(i,): tree.branches[p] for i, p in enumerate(paths)},
-                    {(i,): tree.names[p] for i, p in enumerate(paths) if p in tree.names})
+    names = {}
+    for i, p in enumerate(paths):
+        own = [p[:k] for k in range(1, len(p) + 1) if p[:k] in tree.names]
+        if len(own) == 1:
+            names[(i,)] = tree.names[own[0]]
+        elif own:
+            names[(i,)] = tree.label(p)
+    return DataTree({(i,): tree.branches[p] for i, p in enumerate(paths)}, names)
 
 
-def match_item(tree: DataTree, k: int, j: int):
-    """Longest-list matching: item j of branch k, repeating the last branch / item."""
-    rows = list(tree.branches.values())
-    if not rows:
+def branch_for(tree: DataTree, path: Path | None, k: int) -> list | None:
+    """The branch of ``tree`` that goes with branch ``k`` (at ``path``) of another tree.
+
+    The same path first, then the nearest parent — so {0} "Mira's description"
+    goes with every {0;i} of Mira's outfits — and otherwise longest-list order:
+    branch k, repeating the last branch.
+    """
+    if not tree.branches:
         return None
-    items = rows[min(k, len(rows) - 1)]
+    if path is not None:
+        for n in range(len(path), 0, -1):
+            if path[:n] in tree.branches:
+                return tree.branches[path[:n]]
+    rows = list(tree.branches.values())
+    return rows[min(k, len(rows) - 1)]
+
+
+def match_item(tree: DataTree, k: int, j: int, path: Path | None = None):
+    """Item j of the matching branch (see branch_for), repeating the last item."""
+    items = branch_for(tree, path, k)
     return items[min(j, len(items) - 1)] if items else None
 
 
@@ -296,11 +322,9 @@ def resolve_pattern(value) -> "list[bool] | DataTree":
     return t.map_items(to_bool)
 
 
-def _branch_pattern(pattern, k: int) -> list[bool]:
+def _branch_pattern(pattern, k: int, path: Path) -> list[bool]:
     if isinstance(pattern, DataTree):
-        rows = list(pattern.branches.values())
-        row = rows[min(k, len(rows) - 1)] if rows else []
-        return row or [True]
+        return branch_for(pattern, path, k) or [True]
     return pattern or [True]
 
 
@@ -345,7 +369,7 @@ def dispatch(tree: DataTree, pattern) -> tuple[DataTree, DataTree]:
     """Split by a repeating pattern (list) or a per-branch boolean tree."""
     a, b = {}, {}
     for k, (path, items) in enumerate(tree.items()):
-        pat = _branch_pattern(pattern, k)
+        pat = _branch_pattern(pattern, k, path)
         a[path] = [v for j, v in enumerate(items) if pat[j % len(pat)]]
         b[path] = [v for j, v in enumerate(items) if not pat[j % len(pat)]]
     return DataTree(a, tree.names), DataTree(b, tree.names)
@@ -359,7 +383,7 @@ def partition(tree: DataTree, size: int) -> DataTree:
             chunk = items[k:k + size]
             if chunk or not items:
                 out[p + (k // size,)] = chunk
-    return DataTree(out)
+    return DataTree(out, tree.names)
 
 
 def repeat(tree: DataTree, count: int, mode: str = "each") -> DataTree:
@@ -390,8 +414,9 @@ def sort_list(tree: DataTree, order: str = "ascending") -> DataTree:
 def cross_reference(a: DataTree, b: DataTree, group: bool = True) -> tuple[DataTree, DataTree]:
     """Every combination of A and B items, branch-matched (longest list).
 
-    With ``group`` each A item gets its own sub-branch, so the result is a
-    ready-made grid: rows = A values, columns = B values.
+    With ``group`` each A item gets its own sub-branch, named after it, so the
+    result is a ready-made grid: rows = A values, columns = B values. The
+    branch it came from becomes the parent and keeps its name.
     """
     pa, pb = a.paths(), b.paths()
     if not pa or not pb:
@@ -399,7 +424,7 @@ def cross_reference(a: DataTree, b: DataTree, group: bool = True) -> tuple[DataT
     n = max(len(pa), len(pb))
     out_a: dict[Path, list] = {}
     out_b: dict[Path, list] = {}
-    names: dict[Path, Any] = {}
+    names: dict[Path, Any] = dict((a if len(pa) >= len(pb) else b).names)  # the side the paths come from
     for k in range(n):
         path = pa[min(k, len(pa) - 1)] if len(pa) >= len(pb) else pb[min(k, len(pb) - 1)]
         items_a = a.branches[pa[min(k, len(pa) - 1)]]
@@ -408,8 +433,8 @@ def cross_reference(a: DataTree, b: DataTree, group: bool = True) -> tuple[DataT
             key = path + (i,) if group else path
             out_a.setdefault(key, []).extend([va] * len(items_b))
             out_b.setdefault(key, []).extend(items_b)
-            if group:
-                names[key] = va
+            if group:  # named after the A value; a picture or a latent just gets its number
+                names[key] = va if isinstance(va, (str, int, float)) else i + 1
     return DataTree(out_a, names), DataTree(out_b, names)
 
 

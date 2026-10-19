@@ -25,4 +25,4 @@ A `3, 5`, B `x, y, z`, group on:
 
 ## Tips
 - For an XY plot, **XY Lists** does this and the flattening in one node.
-- With group on, each row is named after its A value, so **Image Grid** labels the rows by itself; B works as its column labels.
+- With group on, each sub-branch is named after its A value (pictures and other non-text values get their number), and the branch it came from becomes the parent and keeps its name: `Mira · lab coat`, `Arrival · 2`. **Image Grid** labels its rows with these; B works as column labels.

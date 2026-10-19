@@ -20,7 +20,7 @@ def _slides(slot: str, value) -> list[tuple[torch.Tensor, str]]:
     Frames of a named branch are labelled with its name, the rest with the slot name;
     a label shared by several frames is numbered."""
     tree = to_tree(value)
-    pairs = [(v[i], label_of(tree.names[p]) if p in tree.names else slot)
+    pairs = [(v[i], tree.label(p, label_of) or slot)
              for p, items in tree.items() for v in items if is_image(v) for i in range(v.shape[0])]
     total = {lab: sum(1 for _, l in pairs if l == lab) for _, lab in pairs}
     seen: dict[str, int] = {}
@@ -95,8 +95,8 @@ class ImageGrid(IO.ComfyNode):
             if not connected(col_labels) and all(r == rows[0] for r in rows):
                 col_labels = shape  # a true matrix (XY Lists): every row holds the column values
         rows, cols = grid_size(tree)
-        if not connected(row_labels) and tree.names:
-            row_labels = [tree.names.get(p, "") for p in tree.paths()]  # e.g. XY Lists' x values
+        if not connected(row_labels) and tree.names:  # e.g. XY Lists' x values, "Mira · lab coat"
+            row_labels = [tree.label(p, label_of) or "" for p in tree.paths()]
         sheet = build_grid(tree, row_labels_for(row_labels if connected(row_labels) else None, rows),
                            col_labels_for(col_labels if connected(col_labels) else None, cols),
                            unwrap(fit), unwrap(cell_size), unwrap(gap), unwrap(font_size), unwrap(theme),

@@ -169,10 +169,10 @@ node("Arbor_ImageGrid", en=dict(
 """), zh=dict(
     name="图像网格",
     desc="把图片排成 XY 对比图：每个分支一行，每项一列。",
-    inputs={"images": ("图像", "图像数据树——或批量运行得到的普通图片（配合形状使用）。"),
-            "shape": ("形状", "XY 组合列表的形状：把普通图片排成行 × 列并标注（行是 x，列是 y）。"),
-            "row_labels": ("行标签", "每行一个标签——列表，或每行一个分支的数据树。数据树或形状自带行名时（XY 组合列表、提示词模板、交叉组合）不用接。"),
-            "col_labels": ("列标签", "每列一个标签——会覆盖从形状得到的列标签（形状每行取值都相同时才用来标注列，例如 XY 组合列表）。"),
+    inputs={"images": ("图像", "图像数据树——或批量运行得到的普通图片（配合结构使用）。"),
+            "shape": ("结构", "XY 组合列表的结构：把普通图片排成行 × 列并标注（行是 x，列是 y）。"),
+            "row_labels": ("行标签", "每行一个标签——列表，或每行一个分支的数据树。数据树或结构自带行名时（XY 组合列表、提示词模板、交叉组合）不用接。"),
+            "col_labels": ("列标签", "每列一个标签——会覆盖从结构得到的列标签（结构每行取值都相同时才用来标注列，例如 XY 组合列表）。"),
             "fit": ("适配", "不同尺寸的图片如何填充格子：fit 缩放适配、original 原尺寸、stretch 拉伸。"),
             "cell_size": ("格子尺寸", "格子长边像素；0 = 最大图片的尺寸。"),
             "gap": ("间距", "格子之间以及四周的留白像素。"),
@@ -181,7 +181,7 @@ node("Arbor_ImageGrid", en=dict(
             "path_labels": ("路径作行标签", "既没有行标签也没有行名时，用分支路径作为行标签。")},
     outputs=[("图像", "合成后的对比图（一张）。")],
     doc="""## 用法
-- **批量运行之后**：解码后的图片接 *图像*，**XY 组合列表** 的 *形状* 接 *形状*，行列自动排好并标注——行是 x 的取值，列是 y 的取值，不用再接别的。
+- **批量运行之后**：解码后的图片接 *图像*，**XY 组合列表** 的 *结构* 接 *结构*，行列自动排好并标注——行是 x 的取值，列是 y 的取值，不用再接别的。
 - **来自数据树**：直接接任意图像数据树，每个分支一行。想交换行列，先接 **重组数据树**（*翻转矩阵*）。
 
 ## 提示
@@ -456,14 +456,14 @@ Template `a photo of {a}, {b} style`, a = `cat, dog`, b = `oil, ink`:
 
 ## 提示
 - 在 **面板** 里逐行输入取值，接它的 *数据* 输出（想保留分支就接 *数据树*）。
-- *数据* 接文本编码器，采样器每个提示词各跑一次；*数据树* 接 **图像网格** 的 *形状*，图片按同样的行排列。最多 1 万种组合。
+- *数据* 接文本编码器，采样器每个提示词各跑一次；*数据树* 接 **图像网格** 的 *结构*，图片按同样的行排列。最多 1 万种组合。
 """))
 
 node("Arbor_Expression", en=dict(
-    desc="Evaluate a formula for every item of x (y matched longest-list), like Grasshopper's Expression.",
+    desc="Evaluate a formula for every item of x (y matched by path, then longest-list), like Grasshopper's Expression.",
     inputs={"expression": "Python-style formula, e.g. x * 2 + 1, x > 3, upper(x), x if i % 2 else -x.",
             "x": "Main input — the result has the same tree layout. Leave empty for a single constant result.",
-            "y": "Optional second value, matched to x branch by branch, item by item (the last item repeats)."},
+            "y": "Optional second value. Matched by path: the same branch, or the nearest parent — a y on {0} goes with every {0;…} of x — otherwise branch by branch in order; item by item, the last item repeats."},
     outputs=["Every result as plain data.",
              "Results in x's tree layout. Comparisons give booleans — ready for Dispatch."],
     doc="""## Names
@@ -473,7 +473,12 @@ node("Arbor_Expression", en=dict(
 | `i` | item index in the branch |
 | `b` | branch index |
 | `n` | branch length |
+| `name` | the branch's name (`Mira`, `Mira · lab coat`), or empty |
 | `pi`, `e` | constants |
+
+## Parent branches
+x = outfits on `{0;0}`, `{0;1}`, `{1;0}`; y = one description per character on `{0}`, `{1}`.
+`y + " wearing " + x` gives every outfit its own character's description — the parent `{0}` goes with all of `{0;…}`. Template: *arbor_qwen_character_sheet*.
 
 ## Functions
 `abs min max round int float str bool len sum sqrt sin cos tan atan2 floor ceil log exp clamp(v, lo, hi) lerp(a, b, t) upper lower strip replace(s, a, b) join(sep, …)`
@@ -484,15 +489,16 @@ node("Arbor_Expression", en=dict(
 | `x * 2 + i` | 2, 5, 8 |
 | `x > 1` | False, True, True |
 | `lerp(0, 10, i / (n - 1))` | 0, 5, 10 |
+| `"shots/" + name + "/" + str(i + 1)` | shots/Arrival/1, … — a file name per item from the tree |
 
 ## Safety
 Attribute access, imports, lambdas and comprehensions are rejected, and results that would be huge (e.g. `9 ** 9 ** 9`) stop with an error.
 """), zh=dict(
     name="表达式",
-    desc="对 x 的每一项计算公式（y 按最长列表匹配），对应 Grasshopper 的 Expression。",
+    desc="对 x 的每一项计算公式（y 先按路径匹配，再按最长列表），对应 Grasshopper 的 Expression。",
     inputs={"expression": ("表达式", "Python 风格的公式，例如 x * 2 + 1、x > 3、upper(x)、x if i % 2 else -x。"),
             "x": ("x", "主输入——结果与它的数据树结构相同。不接则只计算一个常量结果。"),
-            "y": ("y", "可选的第二个值，按分支、按项与 x 对应（不够时重复最后一项）。")},
+            "y": ("y", "可选的第二个值。按路径匹配：同一分支，或最近的父分支——y 在 {0} 上就对应 x 的所有 {0;…}——否则按分支顺序；逐项对应，不够时重复最后一项。")},
     outputs=[("数据", "所有计算结果（普通数据）。"),
              ("数据树", "计算结果，结构与 x 相同。比较运算得到布尔值——可直接接「分流」。")],
     doc="""## 可用名称
@@ -502,7 +508,12 @@ Attribute access, imports, lambdas and comprehensions are rejected, and results 
 | `i` | 项在分支内的序号 |
 | `b` | 分支序号 |
 | `n` | 分支长度 |
+| `name` | 分支名（`Mira`、`Mira · lab coat`），没有则为空 |
 | `pi`、`e` | 常数 |
+
+## 父分支
+x = 服装，在 `{0;0}`、`{0;1}`、`{1;0}` 上；y = 每个角色一条描述，在 `{0}`、`{1}` 上。
+`y + " wearing " + x` 让每套服装都配上自己角色的描述——父分支 `{0}` 对应所有 `{0;…}`。模板：*arbor_qwen_character_sheet*。
 
 ## 函数
 `abs min max round int float str bool len sum sqrt sin cos tan atan2 floor ceil log exp clamp(v, lo, hi) lerp(a, b, t) upper lower strip replace(s, a, b) join(sep, …)`
@@ -513,6 +524,7 @@ Attribute access, imports, lambdas and comprehensions are rejected, and results 
 | `x * 2 + i` | 2, 5, 8 |
 | `x > 1` | False, True, True |
 | `lerp(0, 10, i / (n - 1))` | 0, 5, 10 |
+| `"shots/" + name + "/" + str(i + 1)` | shots/Arrival/1……——用数据树给每一项生成文件名 |
 
 ## 安全
 不允许属性访问、import、lambda 和推导式；会产生超大结果的写法（如 `9 ** 9 ** 9`）会直接报错。
@@ -564,24 +576,24 @@ Tree → **XY Lists** (x only) → ordinary nodes run per item → **Construct T
 - Every Arbor tree input already accepts plain data (as `{0}`); use this node for a specific path, a shape or split batches.
 """), zh=dict(
     name="构建数据树",
-    desc="用普通数据构建数据树：所有项放在一个路径上，或——接入形状时——按另一棵树的分支把项收回去。",
+    desc="用普通数据构建数据树：所有项放在一个路径上，或——接入结构时——按另一棵树的分支把项收回去。",
     inputs={"data": ("数据", "任意值或普通数据（原生列表），例如批量运行的结果。"),
-            "path": ("路径", "未接形状时放置这些项的分支路径，例如 {0} 或 {0;2}。"),
-            "shape": ("形状", "要复制其分支结构的数据树——XY 组合列表的形状，或当初展开的那棵树。项数必须一致。"),
+            "path": ("路径", "未接结构时放置这些项的分支路径，例如 {0} 或 {0;2}。"),
+            "shape": ("结构", "要复制其分支结构的数据树——XY 组合列表的结构，或当初展开的那棵树。项数必须一致。"),
             "split_batch": ("拆分批次", "先把 IMAGE / MASK / LATENT 批次拆成每帧一项。")},
     outputs=[("数据树", "构建好的数据树。")],
     doc="""## 两种用法
 | 接入 | 结果 |
 |---|---|
 | 只接数据 | 所有项放在 *路径* 上：`{0}: a, b, c` |
-| 数据 + 形状 | 按形状的分支收回：形状 `{0}: ·, · · {1}: ·, ·` + `a b c d` → `{0}: a, b · {1}: c, d` |
+| 数据 + 结构 | 按结构的分支收回：结构 `{0}: ·, · · {1}: ·, ·` + `a b c d` → `{0}: a, b · {1}: c, d` |
 
 ## 往返
-数据树 → **XY 组合列表**（只接 x）→ 普通节点逐项运行 → **构建数据树**（*形状* 接 XY 组合列表的形状）→ 结果回到原来的分支。
+数据树 → **XY 组合列表**（只接 x）→ 普通节点逐项运行 → **构建数据树**（*结构* 接 XY 组合列表的结构）→ 结果回到原来的分支。
 
 ## 提示
-- 数量不一致会报错，并给出两边的数量——通常是形状接错了树，和当初展开的那棵不是同一棵。
-- Arbor 的每个数据树输入本来就接受普通数据（作为 `{0}`）；需要指定路径、按形状收回或拆分批次时才用本节点。
+- 数量不一致会报错，并给出两边的数量——通常是结构接错了树，和当初展开的那棵不是同一棵。
+- Arbor 的每个数据树输入本来就接受普通数据（作为 `{0}`）；需要指定路径、按结构收回或拆分批次时才用本节点。
 """))
 
 node("Arbor_NumberSequence", en=dict(

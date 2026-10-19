@@ -141,8 +141,9 @@ def panel_payload(value) -> dict:
                 thumbs += 1
             rows.append(row)
         branch = {"path": ps, "n": len(items), "items": rows}
-        if path in tree.names:
-            branch["name"] = label_of(tree.names[path])
+        name = tree.label(path, label_of)
+        if name:
+            branch["name"] = name
         branches.append(branch)
     return {
         "kind": kind,

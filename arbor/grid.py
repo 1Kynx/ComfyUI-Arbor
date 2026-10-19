@@ -91,12 +91,14 @@ def _flat_labels(value) -> list[str]:
 
 
 def row_labels_for(value, n_rows: int) -> list[str] | None:
-    """One label per row. A tree with one branch per row (e.g. Cross Reference's
-    A output, where every item of a branch repeats the row value) gives the
-    first item of each branch; anything else is read flat."""
+    """One label per row. A tree with one branch per row gives its branch names
+    when every branch has one, else the first item of each branch (Cross
+    Reference's A repeats the row value); anything else is read flat."""
     if value is None:
         return None
     t = to_tree(value)
+    if t.branch_count == n_rows and t.names and all(t.label(p) for p in t.paths()):
+        return [t.label(p, label_of) for p in t.paths()]
     if t.branch_count == n_rows > 1 and all(t.branches.values()):
         return [label_of(items[0]) for items in t.branches.values()]
     return _flat_labels(t)

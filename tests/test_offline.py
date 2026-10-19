@@ -344,6 +344,50 @@ def test_list_nodes():
     print("list nodes: OK")
 
 
+# ====================================================================== nested trees
+
+def test_nested_trees():
+    """character -> outfit -> pose: parents name their groups and pair with their children."""
+    chars = res(run(nodes_panel.Panel, text="# Mira\nbotanist\nraincoat\nlab coat\n\n# Theo\nbaker\njacket",
+                    parse_numbers=False, multiline=False))[1]
+    first = lambda spec: res(run(nodes_list.ListItem, tree=[chars], index=spec, wrap=True))[0]
+    desc, outfits = first("0"), first("1:")
+    assert outfits.branches == {(0,): ["raincoat", "lab coat"], (1,): ["jacket"]} and outfits.names == chars.names
+    ca, cb = res(run(nodes_list.CrossReference, A=[outfits], B=["front", "side"], group=True))
+    assert ca.paths() == [(0, 0), (0, 1), (1, 0)]
+    assert ca.label((0, 1)) == "Mira · lab coat", "the parent keeps its name, the sub-branch is named after A"
+    # {0} Mira's description goes with every {0;i} of Mira's outfits — matched by path, not by index
+    who = res(run(nodes_data.Expression, expression='y + " in " + x', x=[ca], y=[desc]))[1]
+    assert who.branches[(1, 0)] == ["baker in jacket"] * 2, who.branches
+    full = res(run(nodes_data.Expression, expression='x + ", " + y', x=[who], y=[cb]))[1]
+    assert full.branches[(0, 1)] == ["botanist in lab coat, front", "botanist in lab coat, side"]
+    # flatten for the sampler, then put the results back and regroup per character
+    x, *_, shape, n = res(run(nodes_tree.XYLists, x=[full], mode="cross"))
+    assert n == 6 and shape.label((0, 0)) == "Mira · raincoat"
+    imgs = res(run(nodes_tree.ConstructTree, data=[f"img{k}" for k in range(n)], path="{0}", split_batch=False,
+                   shape=[shape]))[0]
+    per_char = res(run(nodes_tree.ReshapeTree, tree=[imgs], mode={"mode": ["shift paths"], "offset": [-1]}))[0]
+    assert per_char.branches == {(0,): ["img0", "img1", "img2", "img3"], (1,): ["img4", "img5"]}
+    assert per_char.names == {(0,): "Mira", (1,): "Theo"}, "shifting back up lands on the named parents"
+    # graft / entwine / renumber carry names too
+    assert T.graft(chars).label((1, 0)) == "Theo"
+    assert T.entwine([outfits, outfits]).label((1, 0)) == "Mira"
+    assert T.renumber(ca).names[(1,)] == "Mira · lab coat"
+    # a boolean tree on the parent masks all of its children (Dispatch)
+    keep, _ = res(run(nodes_list.Dispatch, tree=[ca], pattern=[T.DataTree({(0,): [True], (1,): [False]})]))
+    assert keep.item_count == 4 and keep.branches[(1, 0)] == []
+    # Image Grid rows read "Mira · raincoat"; row labels from another tree use its branch names
+    assert grid.row_labels_for([desc], 2) == ["Mira", "Theo"]
+    # Expression knows the branch name: per-shot file names from the structure
+    files = res(run(nodes_data.Expression, expression='name + "/shot_" + str(i + 1)', x=[outfits]))[0]
+    assert files == ["Mira/shot_1", "Mira/shot_2", "Theo/shot_1"], files
+    # pictures cross-referenced with edits: sub-branches are numbered, not named "Image 8×8"
+    pics = T.DataTree({(0,): [torch.rand(1, 8, 8, 3), torch.rand(1, 8, 8, 3)]}, {(0,): "Arrival"})
+    pa, pb = res(run(nodes_list.CrossReference, A=[pics], B=["snow", "ink"], group=True))
+    assert [pa.label(p) for p in pa.paths()] == ["Arrival · 1", "Arrival · 2"] and pb.branches[(0, 1)] == ["snow", "ink"]
+    print("nested trees: OK")
+
+
 # ====================================================================== XY workflow
 
 def test_xy_lists():
@@ -607,7 +651,7 @@ def test_registration():
 
 if __name__ == "__main__":
     for test in [test_tree_algebra, test_cross_and_rebuild, test_data_nodes, test_number_slider, test_panel,
-                 test_tree_nodes, test_list_nodes, test_xy_lists, test_image_grid, test_image_nodes, test_files,
+                 test_tree_nodes, test_list_nodes, test_nested_trees, test_xy_lists, test_image_grid, test_image_nodes, test_files,
                  test_live_preview, test_docs_and_locales, test_example_workflows, test_registration]:
         test()
     print("ALL OK")

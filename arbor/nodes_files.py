@@ -199,12 +199,13 @@ class SaveImagesByPath(IO.ComfyNode):
         saved, previews = {}, []
         for b, (path, items) in enumerate(tree.items()):
             tag = "-".join(map(str, path))
-            if path in tree.names:  # a named branch (a scene, a folder…) keeps its name on disk
-                tag = f"{tag} · {_safe(label_of(tree.names[path]), 60)}"
+            name = tree.label(path, label_of)
+            if name:  # a named branch (a scene, a folder, "Mira · lab coat") keeps its name on disk
+                tag = f"{tag} · {_safe(name, 60)}"
             frames = [v[f] for v in items if is_image(v) for f in range(v.shape[0])]
             row = []
             for j, frame in enumerate(frames):
-                label = T.match_item(name_tree, b, j) if name_tree else None
+                label = T.match_item(name_tree, b, j, path) if name_tree else None
                 stem = _safe(label_of(label)) if label is not None else f"{j:03d}"
                 target = _unique(os.path.join(folder, f"{filename}_{tag}_{stem}.png") if flat
                                  else os.path.join(folder, filename, tag, f"{stem}.png"))

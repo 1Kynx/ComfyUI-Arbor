@@ -228,8 +228,9 @@ class Expression(IO.ComfyNode):
     def define_schema(cls):
         return schema(
             "Arbor_Expression", "Expression", CAT_DATA,
-            "Evaluate an expression for every item of x (y matched longest-list). "
-            "Names: x, y, i (item index), b (branch index), n (branch length). "
+            "Evaluate an expression for every item of x (y matched by path — a parent branch of y goes "
+            "with all of its children in x — otherwise longest-list). Names: x, y, i (item index), "
+            "b (branch index), n (branch length), name (the branch's name, e.g. a scene title). "
             "Functions: abs min max round int float str sqrt sin cos floor ceil log exp "
             "clamp lerp upper lower strip replace join len sum.",
             [IO.String.Input("expression", default="x * 2"), tree_in("x", optional=True), tree_in("y", optional=True)],
@@ -243,8 +244,9 @@ class Expression(IO.ComfyNode):
         ty = to_tree(y) if y is not None else None
         out = {}
         for b, (path, items) in enumerate(tx.items()):
-            out[path] = [E.evaluate(code, {"x": v, "y": T.match_item(ty, b, j) if ty is not None else None,
-                                           "i": j, "b": b, "n": len(items)})
+            name = tx.label(path, label_of) or ""
+            out[path] = [E.evaluate(code, {"x": v, "y": T.match_item(ty, b, j, path) if ty is not None else None,
+                                           "i": j, "b": b, "n": len(items), "name": name})
                          for j, v in enumerate(items)]
         return both(T.DataTree(out, tx.names))
 
