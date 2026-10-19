@@ -1,0 +1,39 @@
+# Image Grid
+
+Lay images out as an XY comparison sheet: each branch is a row, each item a column.
+
+## Inputs
+
+- **images** · *any*  
+  An image tree — or the plain images of a batch run, together with shape.
+- **shape** · *any, optional*  
+  XY Lists' shape: pours plain images into rows × columns and labels the columns with the column values.
+- **row_labels** · *any, optional*  
+  One label per row: a list (e.g. the x Panel), or a tree with one branch per row (Cross Reference A works too).
+- **col_labels** · *any, optional*  
+  One label per column — overrides the labels taken from shape.
+- **fit** · *COMBO (fit · original · stretch)*  
+  How images of different sizes fill a cell: fit (scale to fit), original (no scaling), stretch.
+- **cell_size** · *INT*  
+  Longest side of a cell in pixels; 0 = the largest image's size.
+- **gap** · *INT*  
+  Space between cells and around the sheet, in pixels.
+- **font_size** · *INT*  
+  Label font size. Chinese labels render with a CJK font when one is installed.
+- **theme** · *COMBO (light · dark)*  
+  Light or dark sheet background.
+- **path_labels** · *BOOLEAN*  
+  Label rows with their branch path when no row labels are connected.
+
+## Outputs
+
+- **image** · *IMAGE*  
+  The comparison sheet as one image.
+
+## How to use
+- **After a batch run**: connect the decoded images to *images* and **XY Lists'** *shape* to *shape*. Rows and columns come out right, and the columns are labelled. Connect the x values to *row_labels*.
+- **From a tree**: connect any image tree — each branch becomes a row. Use **Flip Matrix** first to swap rows and columns.
+
+## Tips
+- Long labels wrap to three lines and are cut with "…".
+- Save the sheet with Save Image, or every image separately with **Save Images by Path**.

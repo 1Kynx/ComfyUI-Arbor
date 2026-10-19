@@ -146,11 +146,12 @@ node("Arbor_BatchPick", en=dict(
 - 序号超出批次范围会直接报错而不是跳过，避免输错了却没发现。
 """))
 
-node("Arbor_TreeToGrid", en=dict(
-    desc="Lay an image tree out as an XY comparison sheet: each branch is a row, each item a column.",
-    inputs={"images": "Image tree — one branch per row. A plain image list becomes a single row; batches add columns.",
-            "row_labels": "One label per row: a list, or a tree with one branch per row (XY Lists' x input or Cross Reference A work directly).",
-            "col_labels": "One label per column: a list, or a tree whose branches hold the column values (XY Lists' shape or Cross Reference B work directly).",
+node("Arbor_ImageGrid", en=dict(
+    desc="Lay images out as an XY comparison sheet: each branch is a row, each item a column.",
+    inputs={"images": "An image tree — or the plain images of a batch run, together with shape.",
+            "shape": "XY Lists' shape: pours plain images into rows × columns and labels the columns with the column values.",
+            "row_labels": "One label per row: a list (e.g. the x Panel), or a tree with one branch per row (Cross Reference A works too).",
+            "col_labels": "One label per column — overrides the labels taken from shape.",
             "fit": "How images of different sizes fill a cell: fit (scale to fit), original (no scaling), stretch.",
             "cell_size": "Longest side of a cell in pixels; 0 = the largest image's size.",
             "gap": "Space between cells and around the sheet, in pixels.",
@@ -159,19 +160,19 @@ node("Arbor_TreeToGrid", en=dict(
             "path_labels": "Label rows with their branch path when no row labels are connected."},
     outputs=["The comparison sheet as one image."],
     doc="""## How to use
-1. Get the images into a tree whose branches are rows — e.g. **List → Tree** with the *shape* from **XY Lists**.
-2. Connect the x values to *row_labels* and the shape (or y values) to *col_labels*.
-3. Use **Flip Matrix** before this node to swap rows and columns.
+- **After a batch run**: connect the decoded images to *images* and **XY Lists'** *shape* to *shape*. Rows and columns come out right, and the columns are labelled. Connect the x values to *row_labels*.
+- **From a tree**: connect any image tree — each branch becomes a row. Use **Flip Matrix** first to swap rows and columns.
 
 ## Tips
 - Long labels wrap to three lines and are cut with "…".
-- Save the sheet with Save Image, or every cell separately with **Save Images by Path**.
+- Save the sheet with Save Image, or every image separately with **Save Images by Path**.
 """), zh=dict(
     name="图像网格",
-    desc="把图像数据树排成 XY 对比图：每个分支一行，每项一列。",
-    inputs={"images": ("图像", "图像数据树，每个分支一行。普通图像列表 = 一行；批次会增加列。"),
-            "row_labels": ("行标签", "每行一个标签：列表，或每行一个分支的数据树（XY 组合列表的 x 输入、交叉组合的 A 可直接接）。"),
-            "col_labels": ("列标签", "每列一个标签：列表，或每个分支存放列值的数据树（XY 组合列表的形状、交叉组合的 B 可直接接）。"),
+    desc="把图片排成 XY 对比图：每个分支一行，每项一列。",
+    inputs={"images": ("图像", "图像数据树——或批量运行得到的普通图片（配合形状使用）。"),
+            "shape": ("形状", "XY 组合列表的形状：把普通图片排成行 × 列，并用列的取值标注列。"),
+            "row_labels": ("行标签", "每行一个标签：列表（例如 x 的面板），或每行一个分支的数据树（交叉组合的 A 也可以）。"),
+            "col_labels": ("列标签", "每列一个标签——会覆盖从形状得到的列标签。"),
             "fit": ("适配", "不同尺寸的图片如何填充格子：fit 缩放适配、original 原尺寸、stretch 拉伸。"),
             "cell_size": ("格子尺寸", "格子长边像素；0 = 最大图片的尺寸。"),
             "gap": ("间距", "格子之间以及四周的留白像素。"),
@@ -180,13 +181,12 @@ node("Arbor_TreeToGrid", en=dict(
             "path_labels": ("路径作行标签", "没有接行标签时，用分支路径作为行标签。")},
     outputs=[("图像", "合成后的对比图（一张）。")],
     doc="""## 用法
-1. 把图片整理成「每个分支一行」的数据树——例如用 **列表 → 数据树** 并接上 **XY 组合列表** 的形状。
-2. x 的取值接 *行标签*，形状（或 y 的取值）接 *列标签*。
-3. 想交换行列，在本节点前加 **翻转矩阵**。
+- **批量运行之后**：解码后的图片接 *图像*，**XY 组合列表** 的 *形状* 接 *形状*，行列自动排好并标注列；x 的取值接 *行标签*。
+- **来自数据树**：直接接任意图像数据树，每个分支一行。想交换行列，先接 **翻转矩阵**。
 
 ## 提示
 - 过长的标签最多折成三行，超出部分用「…」省略。
-- 整张图用「保存图像」保存；想把每格单独存下来，用 **按路径保存图像**。
+- 整张图用「保存图像」保存；想把每张单独存下来，用 **按路径保存图像**。
 """))
 
 node("Arbor_LoadFolder", en=dict(
@@ -232,7 +232,7 @@ photos/            →  图像 {0}：2 张   文件夹：photos
 - 图片保持各自的尺寸；后续需要统一尺寸时用 **智能缩放**。
 """))
 
-node("Arbor_SaveByPath", en=dict(
+node("Arbor_SaveImagesByPath", en=dict(
     desc="Save an image tree keeping its structure: one subfolder (or filename part) per branch path, with optional names per file.",
     inputs={"images": "Image tree to save. Batches are saved frame by frame.",
             "filename_prefix": "Folder / prefix inside ComfyUI's output folder. Supports %date%-style variables like Save Image.",
@@ -406,7 +406,7 @@ Template `a photo of {a}, {b} style`, a = `cat, dog`, b = `oil, ink`:
 
 ## Tips
 - Type the values in **Panels** (one per line) and connect their *data* output (or *tree*, to keep branches).
-- Feed the result to **XY Lists** or **Tree → List** to run a sampler once per prompt. Up to 10 000 combinations.
+- Connect *data* to a text encoder: the sampler runs once per prompt. Connect *tree* to **Image Grid**'s *shape* to lay the images out in the same rows. Up to 10 000 combinations.
 """), zh=dict(
     name="提示词模板",
     desc="用数据树填充模板中的 {a} {b} ……。交叉：生成所有组合，直接得到可做网格的数据树；配对：逐项对应。",
@@ -425,7 +425,7 @@ Template `a photo of {a}, {b} style`, a = `cat, dog`, b = `oil, ink`:
 
 ## 提示
 - 在 **面板** 里逐行输入取值，接它的 *数据* 输出（想保留分支就接 *数据树*）。
-- 结果接 **XY 组合列表** 或 **数据树 → 列表**，就能让采样器每个提示词各跑一次。最多 1 万种组合。
+- *数据* 接文本编码器，采样器每个提示词各跑一次；*数据树* 接 **图像网格** 的 *形状*，图片按同样的行排列。最多 1 万种组合。
 """))
 
 node("Arbor_Expression", en=dict(
@@ -496,7 +496,7 @@ node("Arbor_Random", en=dict(
             "per_branch": "On: every branch separately. Off: all items as one list."},
     outputs=["The shuffled / picked items as plain data.", "The shuffled / picked items, branch by branch."],
     doc="""## Tips
-- Pick random prompts or styles for a batch: Panel (one per line) → **Random** (pick 4) → XY Lists / Tree → List.
+- Pick random prompts or styles for a batch: Panel (one per line) → **Random** (pick 4) → *data* to a text encoder.
 - Set the seed's *control after generate* to *randomize* for a new pick on every run.
 """), zh=dict(
     name="随机",
@@ -508,31 +508,53 @@ node("Arbor_Random", en=dict(
             "per_branch": ("逐分支", "开启：每个分支分别处理。关闭：所有项当作一个列表。")},
     outputs=[("数据", "打乱 / 抽取后的项（普通数据）。"), ("数据树", "打乱 / 抽取后的项，按分支排列。")],
     doc="""## 提示
-- 为批量出图随机挑选提示词或风格：面板（每行一个）→ **随机**（抽 4 个）→ XY 组合列表 / 数据树 → 列表。
+- 为批量出图随机挑选提示词或风格：面板（每行一个）→ **随机**（抽 4 个）→ *数据* 接文本编码器。
 - 把种子的「运行后操作」设为随机，每次运行都会重新抽取。
 """))
 
 node("Arbor_ConstructTree", en=dict(
-    desc="Wrap any value, native list or batch into one branch of a data tree.",
-    inputs={"data": "Any value or native list.", "path": "Branch path for the items, e.g. {0} or {0;2}.",
-            "split_batch": "Split IMAGE / MASK / LATENT batches into one item per frame."},
-    outputs=["A tree with a single branch at path."],
-    doc="""## Tips
-- Every Arbor tree input already accepts plain values and lists (they become `{0}`); use this node when you need a specific path or want batches split.
-- Combine several with **Merge** (same paths join) or **Entwine** (each input gets its own branch).
+    desc="Build a tree from plain data: put every item on one path, or — with shape connected — pour the items back into another tree's branches.",
+    inputs={"data": "Any value or plain data (a native list), e.g. the results of a batch run.",
+            "path": "Branch path for the items when no shape is connected, e.g. {0} or {0;2}.",
+            "shape": "A tree whose branch layout to copy — XY Lists' shape, or the tree you flattened. The item counts must match.",
+            "split_batch": "Split IMAGE / MASK / LATENT batches into one item per frame first."},
+    outputs=["The tree."],
+    doc="""## Two ways
+| connected | result |
+|---|---|
+| data only | every item on *path*: `{0}: a, b, c` |
+| data + shape | the items poured into shape's branches: shape `{0}: ·, · · {1}: ·, ·` + `a b c d` → `{0}: a, b · {1}: c, d` |
+
+## Round trip
+Tree → **XY Lists** (x only) → ordinary nodes run per item → **Construct Tree** with *shape* = XY Lists' shape → the results are back in the original branches.
+
+## Tips
+- A count mismatch is an error with both counts in the message — usually the shape is from a different tree than the one that was flattened.
+- Every Arbor tree input already accepts plain data (as `{0}`); use this node for a specific path, a shape or split batches.
 """), zh=dict(
     name="构建数据树",
-    desc="把任意值、原生列表或批次包装成数据树的一个分支。",
-    inputs={"data": ("数据", "任意值或原生列表。"), "path": ("路径", "放置这些项的分支路径，例如 {0} 或 {0;2}。"),
-            "split_batch": ("拆分批次", "把 IMAGE / MASK / LATENT 批次拆成每帧一项。")},
-    outputs=[("数据树", "只有一个分支（位于该路径）的数据树。")],
-    doc="""## 提示
-- Arbor 的每个数据树输入本来就接受普通值和列表（会变成 `{0}`）；需要指定路径或拆分批次时才用本节点。
-- 多个结果用 **合并**（相同路径合并）或 **编织**（每个输入各成一个分支）组合起来。
+    desc="用普通数据构建数据树：所有项放在一个路径上，或——接入形状时——按另一棵树的分支把项收回去。",
+    inputs={"data": ("数据", "任意值或普通数据（原生列表），例如批量运行的结果。"),
+            "path": ("路径", "未接形状时放置这些项的分支路径，例如 {0} 或 {0;2}。"),
+            "shape": ("形状", "要复制其分支结构的数据树——XY 组合列表的形状，或当初展开的那棵树。项数必须一致。"),
+            "split_batch": ("拆分批次", "先把 IMAGE / MASK / LATENT 批次拆成每帧一项。")},
+    outputs=[("数据树", "构建好的数据树。")],
+    doc="""## 两种用法
+| 接入 | 结果 |
+|---|---|
+| 只接数据 | 所有项放在 *路径* 上：`{0}: a, b, c` |
+| 数据 + 形状 | 按形状的分支收回：形状 `{0}: ·, · · {1}: ·, ·` + `a b c d` → `{0}: a, b · {1}: c, d` |
+
+## 往返
+数据树 → **XY 组合列表**（只接 x）→ 普通节点逐项运行 → **构建数据树**（*形状* 接 XY 组合列表的形状）→ 结果回到原来的分支。
+
+## 提示
+- 数量不一致会报错，并给出两边的数量——通常是形状接错了树，和当初展开的那棵不是同一棵。
+- Arbor 的每个数据树输入本来就接受普通数据（作为 `{0}`）；需要指定路径、按形状收回或拆分批次时才用本节点。
 """))
 
-node("Arbor_Sequence", en=dict(
-    desc="A list of numbers, defined by a step (series) or by both ends (range). Replaces Series and Range.",
+node("Arbor_NumberSequence", en=dict(
+    desc="A list of numbers, defined by a step (series) or by both ends (range).",
     inputs={"mode": "series: start, start + step, … · range: start → end split evenly. Only that mode's fields are shown.",
             "mode.start": "First number.",
             "mode.step": "series: difference between neighbours (negative counts down).",
@@ -556,7 +578,7 @@ Use **series** when you know the step, **range** when you know both ends (e.g. c
 - For a parameter sweep against a second value, connect it to **XY Lists**.
 """), zh=dict(
     name="数列",
-    desc="生成一串数字，按步长（series）或按两端（range）定义。取代原来的「等差数列」和「区间」。",
+    desc="生成一串数字，按步长（series）或按两端（range）定义。",
     inputs={"mode": ("模式", "series：起始值、起始值 + 步长…… · range：从起点到终点平均分。只显示当前模式需要的参数。"),
             "mode.start": ("起始值", "第一个数。"),
             "mode.step": ("步长", "series：相邻两数之差（负数为递减）。"),
@@ -578,58 +600,6 @@ Use **series** when you know the step, **range** when you know both ends (e.g. c
 ## 提示
 - 输出可直接接参数（cfg、步数、宽度……），被接的节点会对每个数各运行一次。
 - 要和另一个参数交叉对比，接 **XY 组合列表**。
-"""))
-
-node("Arbor_Series", en=dict(
-    desc="Deprecated — use Number Sequence (mode: series). Arithmetic sequence: start, start + step, … — count numbers.",
-    inputs={"start": "First number.", "step": "Difference between neighbours (negative counts down).",
-            "count": "How many numbers.", "as_int": "Output whole numbers — for seeds, steps, sizes."},
-    outputs=["The numbers as plain data — connect straight to cfg, steps, seed… (the node runs once per number) or to any Arbor input."],
-    doc="""## Examples
-| start | step | count | result |
-|---|---|---|---|
-| 0 | 1 | 5 | 0, 1, 2, 3, 4 |
-| 3 | 2 | 4 | 3, 5, 7, 9 |
-| 1000 | 1 | 4 (as_int) | four consecutive seeds |
-"""), zh=dict(
-    name="等差数列",
-    desc="已弃用——请改用「数列」（模式 series）。等差数列：起始值、起始值 + 步长……共 count 个数。",
-    inputs={"start": ("起始值", "第一个数。"), "step": ("步长", "相邻两数之差（负数为递减）。"),
-            "count": ("数量", "数的个数。"), "as_int": ("输出整数", "输出整数——用于种子、步数、尺寸。")},
-    outputs=[("数据", "这些数（普通数据）——可直接接 cfg、步数、种子等参数（每个数运行一次），也可接任何 Arbor 输入。")],
-    doc="""## 示例
-| 起始值 | 步长 | 数量 | 结果 |
-|---|---|---|---|
-| 0 | 1 | 5 | 0, 1, 2, 3, 4 |
-| 3 | 2 | 4 | 3, 5, 7, 9 |
-| 1000 | 1 | 4（输出整数） | 四个连续的种子 |
-"""))
-
-node("Arbor_Range", en=dict(
-    desc="Deprecated — use Number Sequence (mode: range). Evenly divide [start, end] into steps parts — steps + 1 numbers.",
-    inputs={"start": "First number.", "end": "Last number (included).", "steps": "Number of equal parts; you get steps + 1 numbers.",
-            "as_int": "Round to whole numbers (duplicates are possible for small ranges)."},
-    outputs=["The numbers as plain data — connect straight to cfg, steps, seed… (the node runs once per number) or to any Arbor input."],
-    doc="""## Examples
-| start | end | steps | result |
-|---|---|---|---|
-| 0 | 1 | 4 | 0, 0.25, 0.5, 0.75, 1 |
-| 3 | 9 | 3 | 3, 5, 7, 9 |
-
-Use **Range** when you know both ends (e.g. cfg 3 → 9), **Series** when you know the step.
-"""), zh=dict(
-    name="区间",
-    desc="已弃用——请改用「数列」（模式 range）。把 [起点, 终点] 平均分成 steps 段——共 steps + 1 个数。",
-    inputs={"start": ("起点", "第一个数。"), "end": ("终点", "最后一个数（包含）。"), "steps": ("段数", "等分的段数，得到 steps + 1 个数。"),
-            "as_int": ("输出整数", "取整（范围很小时可能出现重复）。")},
-    outputs=[("数据", "这些数（普通数据）——可直接接 cfg、步数、种子等参数（每个数运行一次），也可接任何 Arbor 输入。")],
-    doc="""## 示例
-| 起点 | 终点 | 段数 | 结果 |
-|---|---|---|---|
-| 0 | 1 | 4 | 0, 0.25, 0.5, 0.75, 1 |
-| 3 | 9 | 3 | 3, 5, 7, 9 |
-
-知道两端（例如 cfg 3 → 9）时用 **区间**，知道步长时用 **等差数列**。
 """))
 
 node("Arbor_SplitText", en=dict(

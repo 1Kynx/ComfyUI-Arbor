@@ -1,6 +1,6 @@
 # Number Sequence
 
-A list of numbers, defined by a step (series) or by both ends (range). Replaces Series and Range.
+A list of numbers, defined by a step (series) or by both ends (range).
 
 ## Inputs
 

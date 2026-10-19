@@ -23,5 +23,5 @@ Seeded shuffle, or pick a number of items (with or without repeats). Same seed, 
   The shuffled / picked items, branch by branch.
 
 ## Tips
-- Pick random prompts or styles for a batch: Panel (one per line) → **Random** (pick 4) → XY Lists / Tree → List.
+- Pick random prompts or styles for a batch: Panel (one per line) → **Random** (pick 4) → *data* to a text encoder.
 - Set the seed's *control after generate* to *randomize* for a new pick on every run.

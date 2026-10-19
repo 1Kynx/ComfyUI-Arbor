@@ -1,6 +1,8 @@
+"""Panel: inspect anything, or type data in (Grasshopper's Panel)."""
+
 import re
 
-from .common import IO, CAT_DATA, tree_out, to_tree, unwrap
+from .common import IO, CAT_DATA, schema, data_out, tree_out, to_tree, unwrap
 from .preview import panel_payload
 from .tree import DataTree
 
@@ -41,40 +43,35 @@ def parse_text(text: str, numbers: bool = True, multiline: bool = False) -> Data
 class Panel(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
-        return IO.Schema(
-            node_id="Arbor_Panel", display_name="Panel", category=CAT_DATA,
-            description="Inspect anything, or type data in. Connected: shows the input (trees with "
-                        "branches and paths, images as thumbnails) and passes it through. "
-                        "Unconnected: each line you type is an item, an empty line starts a new branch.",
-            search_aliases=["preview any", "show", "inspect", "debug", "watch", "display",
-                            "text", "note", "input", "list input", "prompt list"],
-            is_output_node=True, is_input_list=True,
-            inputs=[
-                IO.AnyType.Input("data", optional=True),
-                IO.String.Input("text", multiline=True, default="",
-                                tooltip="Typed data, used when nothing is connected"),
-                IO.Boolean.Input("parse_numbers", default=True,
-                                 tooltip="Lines like 7 / 3.5 / true become INT / FLOAT / BOOLEAN"),
-                IO.Boolean.Input("multiline", default=False,
-                                 tooltip="Whole text is one item instead of one item per line"),
-            ],
-            outputs=[IO.AnyType.Output(display_name="data", is_output_list=True,
-                                       tooltip="Native list: downstream nodes run once per item"),
-                     tree_out("tree")])
+        return schema(
+            "Arbor_Panel", "Panel", CAT_DATA,
+            "Inspect anything, or type data in. Connected: shows the input (trees with branches and "
+            "paths, images as thumbnails) and passes it on. Unconnected: each line you type is an "
+            "item, an empty line starts a new branch.",
+            [IO.AnyType.Input("data", optional=True),
+             IO.String.Input("text", multiline=True, default="", tooltip="Typed data, used when nothing is connected"),
+             IO.Boolean.Input("parse_numbers", default=True,
+                              tooltip="Lines like 7 / 3.5 / true become INT / FLOAT / BOOLEAN"),
+             IO.Boolean.Input("multiline", default=False,
+                              tooltip="Whole text is one item instead of one item per line")],
+            [data_out(tooltip="Every item as plain data (a tree is flattened): downstream nodes run once per item"),
+             tree_out(tooltip="The data as a tree — keeps the branches")],
+            ["preview any", "show", "inspect", "debug", "watch", "display", "text", "note", "input",
+             "list input", "prompt list"],
+            is_output_node=True)
 
     @classmethod
     def execute(cls, data=None, text=None, parse_numbers=None, multiline=None) -> IO.NodeOutput:
-        if data is not None:
+        if data is not None:  # viewing: show what arrived, pass it on as data + tree
             values = data if isinstance(data, list) else [data]
             tree = to_tree(values)
-            source = "input"
-        else:
-            tree = parse_text(unwrap(text, ""), unwrap(parse_numbers, True), unwrap(multiline, False))
-            values = tree.flat() or [""]
-            source = "text"
-        payload = panel_payload(values if source == "input" else [tree])
-        payload["source"] = source
-        return IO.NodeOutput(values, tree, ui={"arbor_panel": [payload]})
+            payload = panel_payload(values)
+            payload["source"] = "input"
+            return IO.NodeOutput(tree.flat(), tree, ui={"arbor_panel": [payload]})
+        tree = parse_text(unwrap(text, ""), unwrap(parse_numbers, True), unwrap(multiline, False))
+        payload = panel_payload([tree])
+        payload["source"] = "text"
+        return IO.NodeOutput(tree.flat() or [""], tree, ui={"arbor_panel": [payload]})
 
 
 NODES = [Panel]

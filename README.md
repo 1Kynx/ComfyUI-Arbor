@@ -10,22 +10,27 @@ Built on the v3 node schema; the custom widgets work in both the classic canvas 
 ComfyUI natively only has flat lists. A data tree keeps *structure*: every item lives on a path like `{0;2}`,
 so "6 images" can stay "3 rows × 2 columns" all the way to your comparison sheet.
 
-### XY plot in five nodes
+### XY plot in four nodes
 
 ```
 Panel (cfg: 3 5 7) ──x─┐                ┌─ x ──► KSampler.cfg ─┐
-                       ├─ XY Lists ─────┤                       ├─► VAE Decode ─► List → Tree ─► Image Grid
-Panel (prompts) ────y──┘                ├─ y ──► CLIP Text ─────┘          ▲ shape        ▲ row / col labels
-                                        └─ shape ──────────────────────────┘
+                       ├─ XY Lists ─────┤                       ├─► VAE Decode ─► Image Grid
+Panel (prompts) ────y──┘                ├─ y ──► CLIP Text ─────┘                    ▲ shape
+                                        └─ shape ────────────────────────────────────┘
 ```
 
-**XY Lists** turns parameter values into every combination as aligned native lists — ordinary nodes run once
-per combination — plus the grid **shape**. **List → Tree** pours the results back into rows × columns and
-**Image Grid** draws the sheet (row labels = the x Panel, column labels = the shape).
+**XY Lists** turns parameter values into every combination as aligned plain data — ordinary nodes run once
+per combination — plus the **shape** of the runs. **Image Grid** takes the decoded images and that shape and
+draws the sheet as rows × columns (column labels come from the shape; connect the x Panel to its row labels).
 Open *Templates → ComfyUI-Arbor → arbor_xy_sampler* and pick your checkpoint.
 
-For finer control use the building blocks: `Tree → List` hands any tree to ordinary nodes,
-`List → Tree` collects the results, `Cross Reference` builds combinations per branch.
+### Trees and plain data
+
+There are no conversion nodes to remember. Every tree input accepts plain values and native lists (they
+become branch `{0}`); nodes that produce trees also output their items as plain `data`, so ordinary
+nodes run once per item. To run something per item and keep the branches: **XY Lists** with only *x*
+connected flattens a tree and outputs its shape, and **Construct Tree** (or **Image Grid**) with that
+*shape* puts the results back into the same branches.
 
 ## Nodes
 
@@ -33,15 +38,11 @@ For finer control use the building blocks: `Tree → List` hands any tree to ord
 |---|---|
 | **Arbor/Image** | Image Slider · Image Grid · Load Folder · Save Images by Path · Smart Resize · Batch Pick |
 | **Arbor/Data** | Panel · Number Slider · Number Sequence · Split Text · Prompt Template · Expression · Random · Index Switch |
-| **Arbor/Tree** | XY Lists · Tree → List · List → Tree · Construct Tree · Graft · Flatten · Simplify · Flip Matrix · Shift Paths · Renumber · Tree Branch · Merge · Entwine · Tree Statistics |
+| **Arbor/Tree** | XY Lists · Construct Tree · Graft · Flatten · Simplify · Flip Matrix · Shift Paths · Renumber · Tree Branch · Merge · Entwine · Tree Statistics |
 | **Arbor/List** | List Item · Sub List · Dispatch · Partition · Repeat · Reverse List · Sort List · Cross Reference |
 
-Older nodes kept only so saved workflows still open (hidden from the library, marked [DEPR]):
-*Series* and *Range* → **Number Sequence**; *Cull Pattern* → **Dispatch** (its A output).
-
 *Image*: viewing, gridding, loading, saving and resizing images. *Data*: where values come from (typed,
-slid, generated, computed) and which one goes on. *Tree*: building and reshaping trees, and the bridge to
-ComfyUI's native lists. *List*: the same operation on every branch.
+slid, generated, computed) and which one goes on. *Tree*: building, reshaping and flattening trees. *List*: the same operation on every branch.
 
 **Image Slider** — connect any number of images (inputs grow as you connect) of any size.
 *Flip*: drag the scrubber or press ← → to step through them. *Wipe*: A/B split that follows the pointer.
@@ -57,7 +58,7 @@ Anything heavier upstream (samplers, loaders, …) never runs on its own; the Pa
 *Unconnected*: type data in. **Lines** mode: each line is an item, an empty line starts a new branch,
 and a gutter shows every line's branch path and index (coloured by type). **Text** mode: the whole text
 is one item. **123 / abc** toggles reading values (`7` → INT, `3.5` → FLOAT, `true` → BOOLEAN).
-Long lines wrap; ⤢ opens a large editor; Ctrl+Enter still queues. Outputs `data` (native list) and `tree`.
+Long lines wrap; ⤢ opens a large editor; Ctrl+Enter still queues. Outputs `data` (every item, flattened) and `tree`.
 
 **Number Slider** — one bar: drag across it to set the value (Shift = fine), click it to type
 (a value outside the range widens the range), scroll or ← → to step. Click *min*, *step* or *max* under
@@ -83,7 +84,6 @@ subfolders (or filename parts) on the way out, with optional names per file.
 
 **Index Switch** — pick input N; unselected inputs are lazy and never execute.
 
-Every tree input also accepts plain values or native lists (they become branch `{0}`).
 
 ## Languages and help
 

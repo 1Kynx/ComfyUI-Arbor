@@ -28,4 +28,4 @@ Template `a photo of {a}, {b} style`, a = `cat, dog`, b = `oil, ink`:
 
 ## Tips
 - Type the values in **Panels** (one per line) and connect their *data* output (or *tree*, to keep branches).
-- Feed the result to **XY Lists** or **Tree → List** to run a sampler once per prompt. Up to 10 000 combinations.
+- Connect *data* to a text encoder: the sampler runs once per prompt. Connect *tree* to **Image Grid**'s *shape* to lay the images out in the same rows. Up to 10 000 combinations.

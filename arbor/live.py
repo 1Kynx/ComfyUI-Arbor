@@ -28,8 +28,8 @@ CORE_SAFE = {
     "ComfyMathExpression",
 }
 # file I/O, heavy image work, or lazy evaluation the in-place evaluator doesn't model
-ARBOR_UNSAFE = {"Arbor_ImageSlider", "Arbor_LoadFolder", "Arbor_SaveByPath", "Arbor_TreeToGrid",
-                "Arbor_SmartResize", "Arbor_BatchPick", "Arbor_IndexSwitch"}
+ARBOR_UNSAFE = {"Arbor_ImageSlider", "Arbor_ImageGrid", "Arbor_SmartResize", "Arbor_BatchPick",
+                "Arbor_LoadFolder", "Arbor_SaveImagesByPath", "Arbor_IndexSwitch"}
 MAX_NODES = 200
 
 
@@ -154,7 +154,7 @@ def evaluate(prompt: dict, target: str, input_name: str = "data") -> dict:
 def register_routes():
     import sys
     if "server" not in sys.modules:  # imported by tests / tools, not by a running ComfyUI
-        raise RuntimeError("no running server")
+        return
     from aiohttp import web
     from server import PromptServer
 

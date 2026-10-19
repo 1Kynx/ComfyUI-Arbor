@@ -1,4 +1,7 @@
-"""Data generators and per-item math: Number Slider, Prompt Template, Expression, Random."""
+"""Data nodes: where values come from (slid, generated, split, templated, computed) and which one goes on.
+
+(The Panel, which both shows and types data, lives in nodes_panel.py.)
+"""
 
 import itertools
 import math
@@ -7,19 +10,35 @@ import re
 
 from . import expr as E
 from . import tree as T
-from .common import IO, NUMBER, CAT_DATA, connected, data_out, tree_in, tree_out, to_tree, unwrap
+from .common import IO, NUMBER, CAT_DATA, schema, connected, data_out, tree_in, tree_out, to_tree, unwrap
 from .preview import label_of
 
-TEMPLATE_VARS = ["a", "b", "c", "d", "e", "f"]
-_VAR_RE = re.compile(r"\{([a-f])\}")
 MAX_COMBOS = 10000
 
 
-def _match(tree: T.DataTree, k: int, j: int):
-    """Longest-list matching: item j of branch k, repeating the last ones."""
-    paths = tree.paths()
-    items = tree.branches[paths[min(k, len(paths) - 1)]]
-    return items[min(j, len(items) - 1)] if items else None
+def both(tree: T.DataTree) -> IO.NodeOutput:
+    """data (every item, flat) + tree (with its branches)."""
+    return IO.NodeOutput(tree.flat(), tree)
+
+
+# ======================================================================= Number Slider
+
+def step_decimals(step: float) -> int:
+    """Decimal places a step implies: 1 -> 0, 0.1 -> 1, 0.05 -> 2 (max 6)."""
+    if not step or step <= 0:
+        return 6
+    text = f"{step:.6f}".rstrip("0").rstrip(".")
+    return len(text.split(".")[1]) if "." in text else 0
+
+
+def slider_value(value: float, lo: float, hi: float, step: float) -> float:
+    """Clamp to [lo, hi] and snap to lo + k * step (step 0 = no snapping)."""
+    lo, hi = (lo, hi) if lo <= hi else (hi, lo)
+    v = min(hi, max(lo, float(value)))
+    if step and step > 0:
+        v = lo + round((v - lo) / step) * step
+        v = min(hi, max(lo, v))
+    return float(round(v, step_decimals(step)))
 
 
 def as_number(v: float) -> int | float:
@@ -55,48 +74,20 @@ def feeds_int(prompt: dict | None, node_id) -> bool:
     return False
 
 
-def both(tree: T.DataTree) -> IO.NodeOutput:
-    """data (every item, flat) + tree (with its branches)."""
-    return IO.NodeOutput(tree.flat(), tree)
-
-
-def step_decimals(step: float) -> int:
-    """Decimal places a step implies: 1 -> 0, 0.1 -> 1, 0.05 -> 2 (max 6)."""
-    if not step or step <= 0:
-        return 6
-    text = f"{step:.6f}".rstrip("0").rstrip(".")
-    return len(text.split(".")[1]) if "." in text else 0
-
-
-def slider_value(value: float, lo: float, hi: float, step: float) -> float:
-    """Clamp to [lo, hi] and snap to lo + k * step (step 0 = no snapping)."""
-    lo, hi = (lo, hi) if lo <= hi else (hi, lo)
-    v = min(hi, max(lo, float(value)))
-    if step and step > 0:
-        v = lo + round((v - lo) / step) * step
-        v = min(hi, max(lo, v))
-    return float(round(v, step_decimals(step)))
-
-
 class NumberSlider(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
-        big = 1e9
-        return IO.Schema(
-            node_id="Arbor_NumberSlider", display_name="Number Slider", category=CAT_DATA,
-            description="Grasshopper-style number slider: drag the bar to set a value between min and max, "
-                        "click it to type. A step of 1 gives whole numbers.",
-            search_aliases=["slider", "number", "float", "int", "value", "parameter", "range slider"],
-            hidden=[IO.Hidden.prompt, IO.Hidden.unique_id],
-            inputs=[
-                IO.Float.Input("value", default=0.5, min=-big, max=big, step=0.0001, round=False),
-                IO.Float.Input("min", default=0.0, min=-big, max=big, step=0.0001, round=False),
-                IO.Float.Input("max", default=1.0, min=-big, max=big, step=0.0001, round=False),
-                IO.Float.Input("step", default=0.01, min=0.0, max=big, step=0.0001, round=False),
-            ],
-            outputs=[NUMBER.Output(display_name="data",
-                                   tooltip="One output for both: connects to INT and FLOAT inputs. "
-                                           "Whole numbers come out as INT, others as FLOAT.")])
+        num = lambda id, d, lo=-1e9: IO.Float.Input(id, default=d, min=lo, max=1e9, step=0.0001, round=False)
+        return schema(
+            "Arbor_NumberSlider", "Number Slider", CAT_DATA,
+            "Grasshopper-style number slider: drag the bar to set a value between min and max, "
+            "click it to type. A step of 1 gives whole numbers.",
+            [num("value", 0.5), num("min", 0.0), num("max", 1.0), num("step", 0.01, lo=0.0)],
+            [NUMBER.Output(display_name="data",
+                           tooltip="One output for both: connects to INT and FLOAT inputs. "
+                                   "Whole numbers come out as INT, others as FLOAT.")],
+            ["slider", "number", "float", "int", "value", "parameter", "range slider"],
+            input_list=False, hidden=[IO.Hidden.prompt, IO.Hidden.unique_id])
 
     @classmethod
     def execute(cls, value, min, max, step) -> IO.NodeOutput:
@@ -107,25 +98,98 @@ class NumberSlider(IO.ComfyNode):
         return IO.NodeOutput(as_number(v))
 
 
+# ======================================================================= Number Sequence
+
+def sequence_values(mode: str, a: float, b: float, n: int, as_int: bool) -> list:
+    """series: a, a+b, … (n numbers) · range: a → b split into n parts (n + 1 numbers)."""
+    n = max(1, int(n))
+    vals = [a + (b - a) * i / n for i in range(n + 1)] if mode == "range" else [a + b * i for i in range(n)]
+    return [int(round(v)) for v in vals] if as_int else [round(v, 10) for v in vals]
+
+
+class NumberSequence(IO.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        num = lambda id, d: IO.Float.Input(id, default=d, step=0.1, min=-1e9, max=1e9)
+        return schema(
+            "Arbor_NumberSequence", "Number Sequence", CAT_DATA,
+            "A list of numbers. series: start, start + step, … (count numbers). "
+            "range: start → end split evenly (steps + 1 numbers, both ends included).",
+            [IO.DynamicCombo.Input("mode", options=[
+                IO.DynamicCombo.Option("series", [num("start", 0.0), num("step", 1.0),
+                                                  IO.Int.Input("count", default=5, min=1, max=10000)]),
+                IO.DynamicCombo.Option("range", [num("start", 0.0), num("end", 1.0),
+                                                 IO.Int.Input("steps", default=4, min=1, max=10000)]),
+            ]),
+             IO.Boolean.Input("as_int", default=False, tooltip="Output whole numbers (for seeds, steps, sizes)")],
+            [data_out(NUMBER, "The numbers as plain data — connect straight to cfg, steps, seed…, "
+                              "or to any Arbor input")],
+            ["series", "range", "sequence", "linspace", "arithmetic", "number list", "domain"],
+            input_list=False)
+
+    @classmethod
+    def execute(cls, mode, as_int) -> IO.NodeOutput:
+        if mode["mode"] == "range":
+            return IO.NodeOutput(sequence_values("range", mode["start"], mode["end"], mode["steps"], as_int))
+        return IO.NodeOutput(sequence_values("series", mode["start"], mode["step"], mode["count"], as_int))
+
+
+# ======================================================================= Split Text
+
+class SplitText(IO.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return schema(
+            "Arbor_SplitText", "Split Text", CAT_DATA,
+            "Split text into items — one per line or separator; an empty line starts a new branch. "
+            "For text coming from other nodes (to type it, use a Panel).",
+            [IO.String.Input("text", multiline=True, default=""),
+             IO.Combo.Input("separator", options=["newline", ",", ";", "|"], default="newline"),
+             IO.Boolean.Input("blank_line_branches", default=True,
+                              tooltip="Paragraphs separated by an empty line become branches {0},{1},…"),
+             IO.Boolean.Input("strip", default=True)],
+            [data_out(IO.String, "Every item as plain text data (paragraphs one after another)"),
+             tree_out(tooltip="One branch per paragraph")],
+            ["prompt list", "lines", "text list", "wildcard"])
+
+    @classmethod
+    def execute(cls, text, separator, blank_line_branches, strip) -> IO.NodeOutput:
+        text = str(unwrap(text, "")).replace("\r\n", "\n")
+        sep = unwrap(separator)
+        blocks = re.split(r"\n\s*\n", text) if unwrap(blank_line_branches) else [text]
+        out = {}
+        for block in blocks:
+            parts = block.split("\n") if sep == "newline" else re.split(rf"[{re.escape(sep)}\n]", block)
+            if unwrap(strip):
+                parts = [p.strip() for p in parts]
+            parts = [p for p in parts if p != ""]
+            if parts:
+                out[(len(out),)] = parts
+        return both(T.DataTree(out or {(0,): []}))
+
+
+# ======================================================================= Prompt Template
+
+TEMPLATE_VARS = ["a", "b", "c", "d", "e", "f"]
+_VAR_RE = re.compile(r"\{([a-f])\}")
+
+
 class PromptTemplate(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
         vars_ = IO.Autogrow.TemplateNames(
-            tree_in("var", tooltip="Values for {a}, {b}, ... — a tree, list or single value"),
+            tree_in("var", tooltip="Values for {a}, {b}, … — a tree, list or single value"),
             names=TEMPLATE_VARS, min=1)
-        return IO.Schema(
-            node_id="Arbor_PromptTemplate", display_name="Prompt Template", category=CAT_DATA,
-            description="Fill {a} {b} ... in a template from trees. Cross: every combination, as a "
-                        "grid-ready tree (rows = a, columns = last variable). Zip: item by item.",
-            search_aliases=["template", "format", "prompt matrix", "combinations", "wildcard", "fill"],
-            is_input_list=True,
-            inputs=[
-                IO.String.Input("template", multiline=True, default="a photo of {a}, {b}"),
-                IO.Combo.Input("mode", options=["cross", "zip"], default="cross"),
-                IO.Autogrow.Input("vars", template=vars_, optional=True),
-            ],
-            outputs=[data_out(IO.String, "Every prompt as plain text data — connect straight to a text encoder"),
-                     tree_out(tooltip="The prompts as a tree (cross: rows × columns, ready for Image Grid)")])
+        return schema(
+            "Arbor_PromptTemplate", "Prompt Template", CAT_DATA,
+            "Fill {a} {b} … in a template from trees. Cross: every combination, as a grid-ready tree "
+            "(rows = a, columns = last variable). Zip: item by item.",
+            [IO.String.Input("template", multiline=True, default="a photo of {a}, {b}"),
+             IO.Combo.Input("mode", options=["cross", "zip"], default="cross"),
+             IO.Autogrow.Input("vars", template=vars_, optional=True)],
+            [data_out(IO.String, "Every prompt as plain text data — connect straight to a text encoder"),
+             tree_out(tooltip="The prompts as a tree (cross: rows × columns, ready for Image Grid)")],
+            ["template", "format", "prompt matrix", "combinations", "wildcard", "fill"])
 
     @classmethod
     def execute(cls, template, mode, vars=None) -> IO.NodeOutput:
@@ -133,8 +197,7 @@ class PromptTemplate(IO.ComfyNode):
         used = [v for v in TEMPLATE_VARS if f"{{{v}}}" in text]
         given = {k: to_tree(v) for k, v in (vars or {}).items() if connected(v)}
         lists = {k: [label_of(x) for x in given[k].flat()] for k in used if k in given}
-        lists = {k: v for k, v in lists.items() if v}
-        names = [k for k in used if k in lists]
+        names = [k for k in used if lists.get(k)]
 
         def fill(values: dict) -> str:
             return _VAR_RE.sub(lambda m: values.get(m.group(1), m.group(0)), text)
@@ -143,12 +206,9 @@ class PromptTemplate(IO.ComfyNode):
             return both(T.DataTree({(0,): [fill({})]}))
         if unwrap(mode) == "zip":
             n = max(len(lists[k]) for k in names)
-            out = [fill({k: lists[k][min(i, len(lists[k]) - 1)] for k in names}) for i in range(n)]
-            return both(T.DataTree({(0,): out}))
-
-        total = 1
-        for k in names:
-            total *= len(lists[k])
+            return both(T.DataTree({(0,): [fill({k: lists[k][min(i, len(lists[k]) - 1)] for k in names})
+                                           for i in range(n)]}))
+        total = math.prod(len(lists[k]) for k in names)
         if total > MAX_COMBOS:
             raise ValueError(f"Prompt Template: {total} combinations (max {MAX_COMBOS})")
         *outer, last = names
@@ -159,24 +219,20 @@ class PromptTemplate(IO.ComfyNode):
         return both(T.DataTree(out))
 
 
+# ======================================================================= Expression
+
 class Expression(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
-        return IO.Schema(
-            node_id="Arbor_Expression", display_name="Expression", category=CAT_DATA,
-            description="Evaluate an expression for every item of x (y matched longest-list). "
-                        "Names: x, y, i (item index), b (branch index), n (branch length). "
-                        "Functions: abs min max round int float str sqrt sin cos floor ceil log exp "
-                        "clamp lerp upper lower strip replace join len sum.",
-            search_aliases=["math", "formula", "evaluate", "calculate", "eval"],
-            is_input_list=True,
-            inputs=[
-                IO.String.Input("expression", default="x * 2"),
-                tree_in("x", optional=True),
-                tree_in("y", optional=True),
-            ],
-            outputs=[data_out(tooltip="Every result as plain data"),
-                     tree_out(tooltip="The results in x's tree layout")])
+        return schema(
+            "Arbor_Expression", "Expression", CAT_DATA,
+            "Evaluate an expression for every item of x (y matched longest-list). "
+            "Names: x, y, i (item index), b (branch index), n (branch length). "
+            "Functions: abs min max round int float str sqrt sin cos floor ceil log exp "
+            "clamp lerp upper lower strip replace join len sum.",
+            [IO.String.Input("expression", default="x * 2"), tree_in("x", optional=True), tree_in("y", optional=True)],
+            [data_out(tooltip="Every result as plain data"), tree_out(tooltip="The results in x's tree layout")],
+            ["math", "formula", "evaluate", "calculate", "eval"])
 
     @classmethod
     def execute(cls, expression, x=None, y=None) -> IO.NodeOutput:
@@ -185,38 +241,32 @@ class Expression(IO.ComfyNode):
         ty = to_tree(y) if y is not None else None
         out = {}
         for b, (path, items) in enumerate(tx.items()):
-            n = len(items)
-            out[path] = [E.evaluate(code, {"x": v, "y": _match(ty, b, j) if ty is not None else None,
-                                           "i": j, "b": b, "n": n})
+            out[path] = [E.evaluate(code, {"x": v, "y": T.match_item(ty, b, j) if ty is not None else None,
+                                           "i": j, "b": b, "n": len(items)})
                          for j, v in enumerate(items)]
         return both(T.DataTree(out))
 
 
-class RandomPick(IO.ComfyNode):
+# ======================================================================= Random
+
+class Random(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
-        return IO.Schema(
-            node_id="Arbor_Random", display_name="Random", category=CAT_DATA,
-            description="Seeded shuffle, or pick count items (with or without repeats). "
-                        "Same seed, same result.",
-            search_aliases=["random", "shuffle", "sample", "jitter", "pick random"],
-            is_input_list=True,
-            inputs=[
-                tree_in(),
-                IO.Combo.Input("mode", options=["shuffle", "pick", "pick (repeats)"], default="pick"),
-                IO.Int.Input("count", default=1, min=1, max=10000, tooltip="Items to pick per branch"),
-                IO.Int.Input("seed", default=0, min=0, max=0xFFFFFFFFFFFFFFFF, control_after_generate=True),
-                IO.Boolean.Input("per_branch", default=True,
-                                 tooltip="Work on every branch separately; off = on all items as one list"),
-            ],
-            outputs=[data_out(tooltip="The picked items as plain data"),
-                     tree_out(tooltip="The picked items, branch by branch")])
+        return schema(
+            "Arbor_Random", "Random", CAT_DATA,
+            "Seeded shuffle, or pick count items (with or without repeats). Same seed, same result.",
+            [tree_in(),
+             IO.Combo.Input("mode", options=["shuffle", "pick", "pick (repeats)"], default="pick"),
+             IO.Int.Input("count", default=1, min=1, max=10000, tooltip="Items to pick per branch"),
+             IO.Int.Input("seed", default=0, min=0, max=0xFFFFFFFFFFFFFFFF, control_after_generate=True),
+             IO.Boolean.Input("per_branch", default=True,
+                              tooltip="Work on every branch separately; off = on all items as one list")],
+            [data_out(tooltip="The picked items as plain data"), tree_out(tooltip="The picked items, branch by branch")],
+            ["random", "shuffle", "sample", "jitter", "pick random"])
 
     @classmethod
     def execute(cls, tree, mode, count, seed, per_branch) -> IO.NodeOutput:
-        t = to_tree(tree)
-        if not unwrap(per_branch):
-            t = T.flatten(t)
+        t = to_tree(tree) if unwrap(per_branch) else T.flatten(to_tree(tree))
         rng = random.Random(unwrap(seed))
         m, k = unwrap(mode), unwrap(count)
 
@@ -224,9 +274,7 @@ class RandomPick(IO.ComfyNode):
             if not items:
                 return []
             if m == "shuffle":
-                items = list(items)
-                rng.shuffle(items)
-                return items
+                return rng.sample(items, len(items))
             if m == "pick":
                 return rng.sample(items, min(k, len(items)))
             return [rng.choice(items) for _ in range(k)]
@@ -234,4 +282,60 @@ class RandomPick(IO.ComfyNode):
         return both(t.map_branches(run))
 
 
-NODES = [NumberSlider, PromptTemplate, Expression, RandomPick]
+# ======================================================================= Index Switch
+
+class IndexSwitch(IO.ComfyNode):
+    """Pick one of many inputs by index. Inputs are lazy: only the chosen one runs."""
+
+    @classmethod
+    def define_schema(cls):
+        slot = IO.Autogrow.TemplatePrefix(
+            IO.AnyType.Input("input", lazy=True, tooltip="Only evaluated when selected"),
+            prefix="input", min=1, max=32)
+        index = IO.MultiType.Input(
+            IO.Int.Input("index", default=0, min=-1000, max=1000,
+                         tooltip="0 = first connected input; negative counts from the end. "
+                                 "A BOOLEAN works too: False = 0, True = 1"),
+            types=[IO.Boolean])
+        return schema(
+            "Arbor_IndexSwitch", "Index Switch", CAT_DATA,
+            "Pass through input N (counting connected inputs, wrapping around). "
+            "Unselected branches are not executed at all.",
+            [index, IO.Autogrow.Input("inputs", template=slot)],
+            [IO.AnyType.Output(display_name="data", tooltip="The selected input, passed through"),
+             IO.Int.Output(display_name="count")],
+            ["switch", "select", "stream filter", "choose", "multiplexer", "any switch"],
+            input_list=False, hidden=[IO.Hidden.prompt, IO.Hidden.unique_id])
+
+    @classmethod
+    def _connected(cls, inputs) -> list[str]:
+        """Names of linked slots, in slot order.
+
+        Unlinked slots arrive as None just like linked-but-not-yet-evaluated
+        lazy ones, so the links are read from the prompt itself.
+        """
+        names = list((inputs or {}).keys())
+        prompt = getattr(cls.hidden, "prompt", None)
+        uid = getattr(cls.hidden, "unique_id", None)
+        if prompt and uid in prompt:
+            linked = {k.split(".", 1)[1] for k, v in prompt[uid].get("inputs", {}).items()
+                      if k.startswith("inputs.") and isinstance(v, list)}
+            names = [n for n in names if n in linked]
+        names.sort(key=lambda k: int(k.removeprefix("input") or 0))
+        if not names:
+            raise ValueError("Index Switch: connect at least one input")
+        return names
+
+    @classmethod
+    def check_lazy_status(cls, index, inputs=None):
+        names = cls._connected(inputs)
+        value, full_key = inputs[names[int(index) % len(names)]]  # int(): BOOLEAN -> 0 / 1
+        return [full_key] if value is None else []
+
+    @classmethod
+    def execute(cls, index, inputs=None) -> IO.NodeOutput:
+        names = cls._connected(inputs)
+        return IO.NodeOutput(inputs[names[int(index) % len(names)]], len(names))
+
+
+NODES = [NumberSlider, NumberSequence, SplitText, PromptTemplate, Expression, Random, IndexSwitch]

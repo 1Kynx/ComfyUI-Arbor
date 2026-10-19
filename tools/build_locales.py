@@ -16,6 +16,7 @@ node, input and output must be documented or the build fails.
 import importlib.util
 import json
 import os
+import shutil
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -25,7 +26,7 @@ if len(sys.argv) > 1:
 
 from comfy_api.latest import IO  # noqa: E402
 from node_info import INFO  # noqa: E402
-import node_info_tree  # noqa: E402,F401  (registers the tree / list / util nodes)
+import node_info_tree  # noqa: E402,F401  (registers the tree and list nodes)
 
 LANGS = ("en", "zh")
 CATEGORIES_ZH = {"Arbor": "Arbor", "Image": "图像", "Data": "数据", "Tree": "数据树", "List": "列表"}
@@ -199,17 +200,33 @@ def write_text(path, text):
         f.write(text)
 
 
+def prune_docs(docs, ids):
+    """Remove help pages of nodes that no longer exist."""
+    for name in os.listdir(docs):
+        path = os.path.join(docs, name)
+        if os.path.splitext(name)[0] in ids:
+            continue
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
+        print(f"removed stale web/docs/{name}")
+
+
 def main():
     nodes = load_nodes()
     check(nodes)
     for lang in LANGS:
         write_json(os.path.join(ROOT, "locales", lang, "nodeDefs.json"), node_defs(nodes, lang))
     write_json(os.path.join(ROOT, "locales", "zh", "main.json"), {"nodeCategories": CATEGORIES_ZH})
+    docs = os.path.join(ROOT, "web", "docs")
+    ids = {n.define_schema().node_id for n in nodes}
     for n in nodes:
         nid = n.define_schema().node_id
         for lang in LANGS:
-            write_text(os.path.join(ROOT, "web", "docs", nid, f"{lang}.md"), help_page(n, lang))
-        write_text(os.path.join(ROOT, "web", "docs", f"{nid}.md"), help_page(n, "en"))
+            write_text(os.path.join(docs, nid, f"{lang}.md"), help_page(n, lang))
+        write_text(os.path.join(docs, f"{nid}.md"), help_page(n, "en"))
+    prune_docs(docs, ids)
     print(f"wrote locales (en, zh) and help pages for {len(nodes)} nodes")
 
 

@@ -214,6 +214,15 @@ def renumber(tree: DataTree) -> DataTree:
     return DataTree({(i,): items for i, items in enumerate(tree.branches.values())})
 
 
+def match_item(tree: DataTree, k: int, j: int):
+    """Longest-list matching: item j of branch k, repeating the last branch / item."""
+    rows = list(tree.branches.values())
+    if not rows:
+        return None
+    items = rows[min(k, len(rows) - 1)]
+    return items[min(j, len(items) - 1)] if items else None
+
+
 def get_branch(tree: DataTree, path: Path | None = None, index: int | None = None) -> DataTree:
     if path is not None:
         if path not in tree.branches:
@@ -310,10 +319,6 @@ def dispatch(tree: DataTree, pattern) -> tuple[DataTree, DataTree]:
     return DataTree(a), DataTree(b)
 
 
-def cull_pattern(tree: DataTree, pattern) -> DataTree:
-    return dispatch(tree, pattern)[0]
-
-
 def partition(tree: DataTree, size: int) -> DataTree:
     size = max(1, int(size))
     out = {}
@@ -376,8 +381,8 @@ def rebuild(values: list, shape: DataTree) -> DataTree:
     total = shape.item_count
     if len(values) != total:
         raise ValueError(
-            f"List → Tree: got {len(values)} values but the shape tree holds {total} items. "
-            "Feed the same tree you flattened with Tree → List.")
+            f"shape: got {len(values)} values but the shape holds {total} items. "
+            "Connect the shape of the run that produced these values.")
     out, k = {}, 0
     for p, items in shape.items():
         out[p] = values[k:k + len(items)]

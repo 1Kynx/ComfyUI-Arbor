@@ -1,4 +1,4 @@
-"""Docs for the Tree, List and Util nodes (see node_info.py for the format)."""
+"""Docs for the Tree and List nodes (see node_info.py for the format)."""
 
 from node_info import node
 
@@ -7,116 +7,73 @@ TREE_ZH = ("数据树", "数据树，或任意值 / 列表（会成为分支 {0}
 OUT_EN = "The resulting tree."
 OUT_ZH = ("数据树", "处理后的数据树。")
 
-# =============================================================== Tree
-
-node("Arbor_XYLists", en=dict(
-    desc="One step from parameter values to a batch run: every combination of x, y (and z) as aligned native lists, plus the grid shape for List → Tree.",
-    inputs={"x": "Values for the rows: a tree, a list or a single value (e.g. a Panel with 3 / 5 / 7).",
-            "y": "Values for the columns (optional).",
-            "z": "Optional third parameter: becomes the columns, rows become x × y.",
-            "mode": "cross: every combination · zip: item by item (longest list, the last item repeats)."},
-    outputs=["x of every run — connect to any widget input (cfg, steps, seed…). The node it feeds runs once per combination.",
-             "y of every run.", "z of every run (empty values when z is not connected).",
-             "Grid layout of the runs — connect to List → Tree's shape. Its items are the column values, so it also works as Image Grid's col_labels.",
-             "Number of runs."],
-    doc="""## XY plot in five nodes
-```
-Panel (cfg) ─x─┐               ┌─ x ─► KSampler.cfg ─┐
-               ├─ XY Lists ────┤─ y ─► CLIP Text ────┴─► VAE Decode ─► List → Tree ─► Image Grid
-Panel (text)─y─┘               └─ shape ──────────────────────────────┘
-```
-1. Type the x values and the y values in two **Panels** (or use **Number Sequence**) and connect them.
-2. Connect XY Lists' *x* / *y* to the inputs you want to vary — ordinary nodes run once per combination.
-3. Collect the images with **List → Tree** (*shape* from this node), then **Image Grid** (row labels = the x Panel, column labels = *shape*).
-
-Example template: *Templates → ComfyUI-Arbor → arbor_xy_sampler*.
-
-## Tips
-- 3 × 4 values = 12 runs; the limit is 10 000.
-- Any widget accepts these outputs: drag from *x* onto a widget to turn it into an input.
-"""), zh=dict(
-    name="XY 组合列表",
-    desc="一步从参数值到批量运行：x、y（和 z）的所有组合输出为对齐的原生列表，并输出给「列表 → 数据树」用的网格形状。",
-    inputs={"x": ("x", "行的取值：数据树、列表或单个值（例如写着 3 / 5 / 7 的面板）。"),
-            "y": ("y", "列的取值（可选）。"),
-            "z": ("z", "可选的第三个参数：作为列，行变为 x × y。"),
-            "mode": ("模式", "cross 交叉：所有组合 · zip 配对：逐项对应（最长列表，不够时重复最后一项）。")},
-    outputs=[("x", "每次运行的 x——接到任意参数输入（cfg、步数、种子……），被接的节点会对每种组合各运行一次。"),
-             ("y", "每次运行的 y。"), ("z", "每次运行的 z（未接 z 时为空值）。"),
-             ("形状", "运行结果的网格布局——接「列表 → 数据树」的形状。它的项就是列的取值，也可以直接当「图像网格」的列标签。"),
-             ("数量", "运行次数。")],
-    doc="""## 五个节点做 XY 对比图
-```
-面板(cfg) ─x─┐               ┌─ x ─► KSampler.cfg ─┐
-             ├─ XY 组合列表 ──┤─ y ─► CLIP 文本 ────┴─► VAE 解码 ─► 列表 → 数据树 ─► 图像网格
-面板(提示词)─y┘               └─ 形状 ─────────────────────────────┘
-```
-1. 在两个 **面板** 里分别输入 x 和 y 的取值（或用 **数列**），接到 x、y 上。
-2. 把 *x* / *y* 接到想要变化的参数上——普通节点会对每种组合各运行一次。
-3. 用 **列表 → 数据树**（*形状* 接本节点）收集图片，再接 **图像网格**（行标签 = x 的面板，列标签 = *形状*）。
-
-示例模板：*模板 → ComfyUI-Arbor → arbor_xy_sampler*。
-
-## 提示
-- 3 × 4 个值 = 运行 12 次；上限 1 万次。
-- 任何参数都能接这些输出：把 *x* 拖到参数上，它就会变成输入口。
-"""))
-
-node("Arbor_TreeToList", en=dict(
-    desc="Flatten a tree into a native ComfyUI list: downstream nodes then run once per item. Collect the results with List → Tree.",
-    inputs={"tree": TREE_EN},
-    outputs=["Every item as plain data, branch order then item order — downstream nodes run once per item.", "Number of items."],
-    doc="""## How it works
-ComfyUI runs a node once per item when it receives a list. **Tree → List** turns a tree into such a list, so an ordinary node (a sampler, a text encoder…) processes every item. Afterwards **List → Tree** with the same tree as *shape* restores the branches.
-
-## Tips
-- For an XY plot, **XY Lists** does the combining and flattening in one node.
-- Feeding several lists into one node pairs them by index; the shorter list repeats its last item.
-"""), zh=dict(
-    name="数据树 → 列表",
-    desc="把数据树展开成 ComfyUI 原生列表，下游节点会对每一项各运行一次；再用「列表 → 数据树」收回结果。",
-    inputs={"tree": TREE_ZH},
-    outputs=[("数据", "所有项（普通数据，先按分支、再按项的顺序）——下游节点会对每一项各运行一次。"), ("数量", "项数。")],
-    doc="""## 原理
-ComfyUI 的节点收到列表时会对每一项各运行一次。**数据树 → 列表** 把数据树变成这样的列表，于是普通节点（采样器、文本编码器……）会处理每一项；之后用 **列表 → 数据树** 并接上同一棵树作为 *形状*，即可还原分支。
-
-## 提示
-- 做 XY 对比图时，**XY 组合列表** 一个节点就能完成组合和展开。
-- 同一个节点接入多个列表时按序号配对，较短的列表重复最后一项。
-"""))
-
-node("Arbor_ListToTree", en=dict(
-    desc="Collect a native list back into a tree. Connect the tree you fed into Tree → List (or XY Lists' shape) as shape to restore its branches.",
-    inputs={"list": "Native list, e.g. the per-item results of a batch run.",
-            "shape": "Tree whose branch layout to copy. Its item count must match the list. Without it everything goes into {0}.",
-            "split_batch": "Split batches into single frames before rebuilding."},
-    outputs=["The values arranged like shape."],
-    doc="""## Example
-shape `{0}: a, b · {1}: c, d`, list `1, 2, 3, 4` → `{0}: 1, 2 · {1}: 3, 4`.
-
-## Tips
-- A count mismatch is an error with both counts in the message — usually the shape is from a different tree than the one that was flattened.
-- With a batch size above 1 every result is a batch; that is fine, the batch stays one item.
-"""), zh=dict(
-    name="列表 → 数据树",
-    desc="把原生列表收回成数据树。把当初送进「数据树 → 列表」的那棵树（或 XY 组合列表的形状）接到形状上，即可还原分支。",
-    inputs={"list": ("列表", "原生列表，例如批量运行的逐项结果。"),
-            "shape": ("形状", "要复制其分支结构的数据树，项数必须与列表一致；不接则全部放进 {0}。"),
-            "split_batch": ("拆分批次", "重建前先把批次拆成单帧。")},
-    outputs=[("数据树", "按形状排列好的值。")],
-    doc="""## 示例
-形状 `{0}: a, b · {1}: c, d`，列表 `1, 2, 3, 4` → `{0}: 1, 2 · {1}: 3, 4`。
-
-## 提示
-- 数量不一致会报错，并给出两边的数量——通常是形状接错了树，和当初展开的那棵不是同一棵。
-- 批次大小大于 1 时，每个结果都是一个批次；没关系，一个批次仍算一项。
-"""))
 
 def simple(node_id, en_desc, zh_name, zh_desc, en_doc, zh_doc, extra_en=None, extra_zh=None):
     node(node_id,
          en=dict(desc=en_desc, inputs={"tree": TREE_EN, **(extra_en or {})}, outputs=[OUT_EN], doc=en_doc),
          zh=dict(name=zh_name, desc=zh_desc, inputs={"tree": TREE_ZH, **(extra_zh or {})}, outputs=[OUT_ZH], doc=zh_doc))
 
+
+# =============================================================== Tree
+
+node("Arbor_XYLists", en=dict(
+    desc="From values to a batch run: every combination of x, y (and z) as aligned plain data — wire them into ordinary nodes and they run once per combination — plus the shape of the runs. With only x connected it flattens any tree into plain data.",
+    inputs={"x": "Values for the rows — or any tree to flatten into plain data.",
+            "y": "Values for the columns (optional).",
+            "z": "Optional third parameter: becomes the columns, rows become x × y.",
+            "mode": "cross: every combination · zip: item by item (longest list, the last item repeats)."},
+    outputs=["x of every run — connect to any widget input (cfg, steps, seed…). The node it feeds runs once per combination.",
+             "y of every run.", "z of every run (empty values when z is not connected).",
+             "Layout of the runs: connect to Image Grid (rows × columns) or Construct Tree (back into a tree). Its items are the column values, so Image Grid labels its columns from it. With only x, it is x's own tree.",
+             "Number of runs."],
+    doc="""## XY plot in four nodes
+```
+Panel (cfg) ─x─┐               ┌─ x ─► KSampler.cfg ─┐
+               ├─ XY Lists ────┤─ y ─► CLIP Text ────┴─► VAE Decode ─► Image Grid
+Panel (text)─y─┘               └─ shape ─────────────────────────────────┘
+```
+1. Type the x values and the y values in two **Panels** (or use **Number Sequence**) and connect them.
+2. Connect *x* / *y* to the inputs you want to vary — ordinary nodes run once per combination.
+3. Connect the decoded images and *shape* to **Image Grid**. It lays them out as rows × columns and labels the columns; connect the x Panel to its *row_labels*.
+
+Example template: *Templates → ComfyUI-Arbor → arbor_xy_sampler*.
+
+## Flatten any tree
+Connect a tree to *x* only: *x* becomes its items as plain data (ordinary nodes run once per item) and *shape* is the tree itself. Run something per item, then put the results back with **Construct Tree** (*shape* = this shape).
+
+## Tips
+- 3 × 4 values = 12 runs; the limit is 10 000.
+- Any widget accepts these outputs: drag from *x* onto a widget to turn it into an input.
+"""), zh=dict(
+    name="XY 组合列表",
+    desc="从取值到批量运行：x、y（和 z）的所有组合输出为对齐的普通数据——接到普通节点上，每种组合运行一次——并输出运行结果的形状。只接 x 时，可把任意数据树展开成普通数据。",
+    inputs={"x": ("x", "行的取值——或任意要展开成普通数据的数据树。"),
+            "y": ("y", "列的取值（可选）。"),
+            "z": ("z", "可选的第三个参数：作为列，行变为 x × y。"),
+            "mode": ("模式", "cross 交叉：所有组合 · zip 配对：逐项对应（最长列表，不够时重复最后一项）。")},
+    outputs=[("x", "每次运行的 x——接到任意参数输入（cfg、步数、种子……），被接的节点会对每种组合各运行一次。"),
+             ("y", "每次运行的 y。"), ("z", "每次运行的 z（未接 z 时为空值）。"),
+             ("形状", "运行结果的布局：接「图像网格」排成行 × 列，或接「构建数据树」收回成数据树。它的项就是列的取值，图像网格会用它标注列。只接 x 时，它就是 x 自己的数据树。"),
+             ("数量", "运行次数。")],
+    doc="""## 四个节点做 XY 对比图
+```
+面板(cfg) ─x─┐               ┌─ x ─► KSampler.cfg ─┐
+             ├─ XY 组合列表 ──┤─ y ─► CLIP 文本 ────┴─► VAE 解码 ─► 图像网格
+面板(提示词)─y┘               └─ 形状 ────────────────────────────────┘
+```
+1. 在两个 **面板** 里分别输入 x 和 y 的取值（或用 **数列**），接到 x、y 上。
+2. 把 *x* / *y* 接到想要变化的参数上——普通节点会对每种组合各运行一次。
+3. 解码后的图片和 *形状* 一起接 **图像网格**：自动排成行 × 列并标注列；行标签接 x 的面板。
+
+示例模板：*模板 → ComfyUI-Arbor → arbor_xy_sampler*。
+
+## 展开任意数据树
+只接 *x*：*x* 输出它的所有项（普通数据，普通节点逐项运行），*形状* 就是这棵树本身。逐项处理后，用 **构建数据树**（*形状* 接这里）把结果收回原来的分支。
+
+## 提示
+- 3 × 4 个值 = 运行 12 次；上限 1 万次。
+- 任何参数都能接这些输出：把 *x* 拖到参数上，它就会变成输入口。
+"""))
 
 simple("Arbor_Graft",
        "Every item gets its own branch: {p} → {p;i} (Grasshopper's Graft).",
@@ -234,7 +191,7 @@ node("Arbor_Entwine", en=dict(
 `{0}: a, b` + `{0}: c` → `{0;0}: a, b · {1;0}: c`
 """))
 
-node("Arbor_TreeInfo", en=dict(
+node("Arbor_TreeStatistics", en=dict(
     desc="Branch count, item count, depth and the list of paths.",
     inputs={"tree": TREE_EN},
     outputs=["Number of branches.", "Total number of items.", "Longest path length.", "One line per branch: path and item count."],
@@ -289,31 +246,6 @@ PATTERN_EN = ("Typed repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), or
               "(e.g. Expression 'x > 2'), matched branch by branch.")
 PATTERN_ZH = ("模式", "输入重复模式（'T F'、'true,false'、'1 0 1'、'TFT'），或接入 BOOLEAN 值 / 布尔数据树"
               "（例如表达式 'x > 2'），按分支匹配。")
-
-node("Arbor_CullPattern", en=dict(
-    desc="Deprecated — use Dispatch: its A output is exactly this. Keeps the items where the pattern is true.",
-    inputs={"tree": TREE_EN, "pattern": PATTERN_EN},
-    outputs=["The kept items."],
-    doc="""## Examples
-| pattern | `a, b, c, d` |
-|---|---|
-| `T F` | a, c |
-| `F F T` | c |
-| Expression `i % 2 == 1` | b, d |
-| a native Boolean = False | (nothing) |
-"""), zh=dict(
-    name="按模式剔除",
-    desc="已弃用——请改用「分流」：它的 A 输出就是这个结果。保留模式为真的项。",
-    inputs={"tree": TREE_ZH, "pattern": PATTERN_ZH},
-    outputs=[("数据树", "保留下来的项。")],
-    doc="""## 示例
-| 模式 | `a, b, c, d` |
-|---|---|
-| `T F` | a, c |
-| `F F T` | c |
-| 表达式 `i % 2 == 1` | b, d |
-| 原生 Boolean = False | （全部剔除） |
-"""))
 
 node("Arbor_Dispatch", en=dict(
     desc="Split items by a true / false pattern: A keeps the true ones, B the false ones — use A alone to cull a list (Grasshopper's Dispatch and Cull Pattern).",
@@ -378,12 +310,12 @@ count 2: `a, b` → each `a, a, b, b` · whole `a, b, a, b`
 次数 2：`a, b` → each `a, a, b, b` · whole `a, b, a, b`
 """))
 
-simple("Arbor_Reverse",
+simple("Arbor_ReverseList",
        "Reverse the item order in every branch.",
        "反转列表", "反转每个分支内的项顺序。",
        "## Example\n`a, b, c` → `c, b, a`\n", "## 示例\n`a, b, c` → `c, b, a`\n")
 
-simple("Arbor_Sort",
+simple("Arbor_SortList",
        "Sort every branch — numbers first (by value), then text (alphabetically).",
        "列表排序", "对每个分支排序——数字在前（按数值），文本在后（按字母）。",
        "## Example\n`3, b, 1, a` → `1, 3, a, b`\n", "## 示例\n`3, b, 1, a` → `1, 3, a, b`\n",

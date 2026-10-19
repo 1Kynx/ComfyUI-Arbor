@@ -73,6 +73,58 @@
       }
     }
   },
+  "Arbor_ImageGrid": {
+    "display_name": "图像网格",
+    "description": "把图片排成 XY 对比图：每个分支一行，每项一列。",
+    "inputs": {
+      "images": {
+        "name": "图像",
+        "tooltip": "图像数据树——或批量运行得到的普通图片（配合形状使用）。"
+      },
+      "shape": {
+        "name": "形状",
+        "tooltip": "XY 组合列表的形状：把普通图片排成行 × 列，并用列的取值标注列。"
+      },
+      "row_labels": {
+        "name": "行标签",
+        "tooltip": "每行一个标签：列表（例如 x 的面板），或每行一个分支的数据树（交叉组合的 A 也可以）。"
+      },
+      "col_labels": {
+        "name": "列标签",
+        "tooltip": "每列一个标签——会覆盖从形状得到的列标签。"
+      },
+      "fit": {
+        "name": "适配",
+        "tooltip": "不同尺寸的图片如何填充格子：fit 缩放适配、original 原尺寸、stretch 拉伸。"
+      },
+      "cell_size": {
+        "name": "格子尺寸",
+        "tooltip": "格子长边像素；0 = 最大图片的尺寸。"
+      },
+      "gap": {
+        "name": "间距",
+        "tooltip": "格子之间以及四周的留白像素。"
+      },
+      "font_size": {
+        "name": "字号",
+        "tooltip": "标签字号。系统装有中日韩字体时，中文标签会正常显示。"
+      },
+      "theme": {
+        "name": "主题",
+        "tooltip": "浅色或深色背景。"
+      },
+      "path_labels": {
+        "name": "路径作行标签",
+        "tooltip": "没有接行标签时，用分支路径作为行标签。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "图像",
+        "tooltip": "合成后的对比图（一张）。"
+      }
+    }
+  },
   "Arbor_SmartResize": {
     "display_name": "智能缩放",
     "description": "按长边 / 短边 / 百万像素 / 框内适配 / 填满裁切 / 倍数缩放，并把两边对齐到 8、16、64 的倍数。",
@@ -165,54 +217,6 @@
       }
     }
   },
-  "Arbor_TreeToGrid": {
-    "display_name": "图像网格",
-    "description": "把图像数据树排成 XY 对比图：每个分支一行，每项一列。",
-    "inputs": {
-      "images": {
-        "name": "图像",
-        "tooltip": "图像数据树，每个分支一行。普通图像列表 = 一行；批次会增加列。"
-      },
-      "row_labels": {
-        "name": "行标签",
-        "tooltip": "每行一个标签：列表，或每行一个分支的数据树（XY 组合列表的 x 输入、交叉组合的 A 可直接接）。"
-      },
-      "col_labels": {
-        "name": "列标签",
-        "tooltip": "每列一个标签：列表，或每个分支存放列值的数据树（XY 组合列表的形状、交叉组合的 B 可直接接）。"
-      },
-      "fit": {
-        "name": "适配",
-        "tooltip": "不同尺寸的图片如何填充格子：fit 缩放适配、original 原尺寸、stretch 拉伸。"
-      },
-      "cell_size": {
-        "name": "格子尺寸",
-        "tooltip": "格子长边像素；0 = 最大图片的尺寸。"
-      },
-      "gap": {
-        "name": "间距",
-        "tooltip": "格子之间以及四周的留白像素。"
-      },
-      "font_size": {
-        "name": "字号",
-        "tooltip": "标签字号。系统装有中日韩字体时，中文标签会正常显示。"
-      },
-      "theme": {
-        "name": "主题",
-        "tooltip": "浅色或深色背景。"
-      },
-      "path_labels": {
-        "name": "路径作行标签",
-        "tooltip": "没有接行标签时，用分支路径作为行标签。"
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "图像",
-        "tooltip": "合成后的对比图（一张）。"
-      }
-    }
-  },
   "Arbor_LoadFolder": {
     "display_name": "加载文件夹",
     "description": "加载文件夹里的所有图片；开启子文件夹后，每个文件夹就是一个分支——目录结构直接变成数据树。",
@@ -257,7 +261,7 @@
       }
     }
   },
-  "Arbor_SaveByPath": {
+  "Arbor_SaveImagesByPath": {
     "display_name": "按路径保存图像",
     "description": "按数据树结构保存图片：每个分支路径一个子文件夹（或文件名的一部分），可选为每个文件命名。",
     "inputs": {
@@ -342,6 +346,78 @@
       "0": {
         "name": "数据",
         "tooltip": "一个输出兼顾所有数值输入：INT（步数、种子）和 FLOAT（cfg、denoise）都能直接连接。整数以 INT 输出，其余以 FLOAT 输出。"
+      }
+    }
+  },
+  "Arbor_NumberSequence": {
+    "display_name": "数列",
+    "description": "生成一串数字，按步长（series）或按两端（range）定义。",
+    "inputs": {
+      "mode": {
+        "name": "模式",
+        "tooltip": "series：起始值、起始值 + 步长…… · range：从起点到终点平均分。只显示当前模式需要的参数。"
+      },
+      "mode_start": {
+        "name": "起始值",
+        "tooltip": "第一个数。"
+      },
+      "mode_step": {
+        "name": "步长",
+        "tooltip": "series：相邻两数之差（负数为递减）。"
+      },
+      "mode_count": {
+        "name": "数量",
+        "tooltip": "series：数的个数。"
+      },
+      "mode_end": {
+        "name": "终点",
+        "tooltip": "range：最后一个数（包含）。"
+      },
+      "mode_steps": {
+        "name": "段数",
+        "tooltip": "range：等分的段数，得到 段数 + 1 个数。"
+      },
+      "as_int": {
+        "name": "输出整数",
+        "tooltip": "取整——用于种子、步数、尺寸。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据",
+        "tooltip": "这些数（普通数据）——可直接接 cfg、步数、种子等参数（每个数运行一次），也可接任何 Arbor 输入。"
+      }
+    }
+  },
+  "Arbor_SplitText": {
+    "display_name": "拆分文本",
+    "description": "把文本拆成多项——每行或每个分隔符一项；空行开始新分支。",
+    "inputs": {
+      "text": {
+        "name": "文本",
+        "tooltip": "要拆分的文本，可以手动输入，也可以接任意 STRING 输出。"
+      },
+      "separator": {
+        "name": "分隔符",
+        "tooltip": "段落内用什么分隔各项：换行、逗号、分号或 |。"
+      },
+      "blank_line_branches": {
+        "name": "空行分支",
+        "tooltip": "用空行分隔的段落分别成为分支 {0}、{1}……"
+      },
+      "strip": {
+        "name": "去除首尾空白",
+        "tooltip": "去掉每一项两端的空格。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据",
+        "tooltip": "拆分后的所有项（普通文本数据，各段依次排列）。"
+      },
+      "1": {
+        "name": "数据树",
+        "tooltip": "拆分后的数据树：每个段落一个分支。"
       }
     }
   },
@@ -461,165 +537,165 @@
       }
     }
   },
-  "Arbor_ConstructTree": {
-    "display_name": "构建数据树",
-    "description": "把任意值、原生列表或批次包装成数据树的一个分支。",
+  "Arbor_IndexSwitch": {
+    "display_name": "数据序号切换",
+    "description": "按序号传出第 N 个输入（按已连接的输入计数，循环）。未选中的输入不会被计算。",
     "inputs": {
-      "data": {
-        "name": "数据",
-        "tooltip": "任意值或原生列表。"
+      "index": {
+        "name": "序号",
+        "tooltip": "0 = 第一个已连接的输入；负数从末尾数；会循环。也可接 BOOLEAN：False = 0，True = 1。"
       },
-      "path": {
-        "name": "路径",
-        "tooltip": "放置这些项的分支路径，例如 {0} 或 {0;2}。"
+      "inputs": {
+        "name": "输入",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
       },
-      "split_batch": {
-        "name": "拆分批次",
-        "tooltip": "把 IMAGE / MASK / LATENT 批次拆成每帧一项。"
+      "inputs_input0": {
+        "name": "输入0",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input1": {
+        "name": "输入1",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input2": {
+        "name": "输入2",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input3": {
+        "name": "输入3",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input4": {
+        "name": "输入4",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input5": {
+        "name": "输入5",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input6": {
+        "name": "输入6",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input7": {
+        "name": "输入7",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input8": {
+        "name": "输入8",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input9": {
+        "name": "输入9",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input10": {
+        "name": "输入10",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input11": {
+        "name": "输入11",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input12": {
+        "name": "输入12",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input13": {
+        "name": "输入13",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input14": {
+        "name": "输入14",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input15": {
+        "name": "输入15",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input16": {
+        "name": "输入16",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input17": {
+        "name": "输入17",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input18": {
+        "name": "输入18",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input19": {
+        "name": "输入19",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input20": {
+        "name": "输入20",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input21": {
+        "name": "输入21",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input22": {
+        "name": "输入22",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input23": {
+        "name": "输入23",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input24": {
+        "name": "输入24",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input25": {
+        "name": "输入25",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input26": {
+        "name": "输入26",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input27": {
+        "name": "输入27",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input28": {
+        "name": "输入28",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input29": {
+        "name": "输入29",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input30": {
+        "name": "输入30",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input31": {
+        "name": "输入31",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
       }
     },
     "outputs": {
       "0": {
-        "name": "数据树",
-        "tooltip": "只有一个分支（位于该路径）的数据树。"
-      }
-    }
-  },
-  "Arbor_Sequence": {
-    "display_name": "数列",
-    "description": "生成一串数字，按步长（series）或按两端（range）定义。取代原来的「等差数列」和「区间」。",
-    "inputs": {
-      "mode": {
-        "name": "模式",
-        "tooltip": "series：起始值、起始值 + 步长…… · range：从起点到终点平均分。只显示当前模式需要的参数。"
-      },
-      "mode_start": {
-        "name": "起始值",
-        "tooltip": "第一个数。"
-      },
-      "mode_step": {
-        "name": "步长",
-        "tooltip": "series：相邻两数之差（负数为递减）。"
-      },
-      "mode_count": {
-        "name": "数量",
-        "tooltip": "series：数的个数。"
-      },
-      "mode_end": {
-        "name": "终点",
-        "tooltip": "range：最后一个数（包含）。"
-      },
-      "mode_steps": {
-        "name": "段数",
-        "tooltip": "range：等分的段数，得到 段数 + 1 个数。"
-      },
-      "as_int": {
-        "name": "输出整数",
-        "tooltip": "取整——用于种子、步数、尺寸。"
-      }
-    },
-    "outputs": {
-      "0": {
         "name": "数据",
-        "tooltip": "这些数（普通数据）——可直接接 cfg、步数、种子等参数（每个数运行一次），也可接任何 Arbor 输入。"
-      }
-    }
-  },
-  "Arbor_Series": {
-    "display_name": "等差数列",
-    "description": "已弃用——请改用「数列」（模式 series）。等差数列：起始值、起始值 + 步长……共 count 个数。",
-    "inputs": {
-      "start": {
-        "name": "起始值",
-        "tooltip": "第一个数。"
-      },
-      "step": {
-        "name": "步长",
-        "tooltip": "相邻两数之差（负数为递减）。"
-      },
-      "count": {
-        "name": "数量",
-        "tooltip": "数的个数。"
-      },
-      "as_int": {
-        "name": "输出整数",
-        "tooltip": "输出整数——用于种子、步数、尺寸。"
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "数据",
-        "tooltip": "这些数（普通数据）——可直接接 cfg、步数、种子等参数（每个数运行一次），也可接任何 Arbor 输入。"
-      }
-    }
-  },
-  "Arbor_Range": {
-    "display_name": "区间",
-    "description": "已弃用——请改用「数列」（模式 range）。把 [起点, 终点] 平均分成 steps 段——共 steps + 1 个数。",
-    "inputs": {
-      "start": {
-        "name": "起点",
-        "tooltip": "第一个数。"
-      },
-      "end": {
-        "name": "终点",
-        "tooltip": "最后一个数（包含）。"
-      },
-      "steps": {
-        "name": "段数",
-        "tooltip": "等分的段数，得到 steps + 1 个数。"
-      },
-      "as_int": {
-        "name": "输出整数",
-        "tooltip": "取整（范围很小时可能出现重复）。"
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "数据",
-        "tooltip": "这些数（普通数据）——可直接接 cfg、步数、种子等参数（每个数运行一次），也可接任何 Arbor 输入。"
-      }
-    }
-  },
-  "Arbor_SplitText": {
-    "display_name": "拆分文本",
-    "description": "把文本拆成多项——每行或每个分隔符一项；空行开始新分支。",
-    "inputs": {
-      "text": {
-        "name": "文本",
-        "tooltip": "要拆分的文本，可以手动输入，也可以接任意 STRING 输出。"
-      },
-      "separator": {
-        "name": "分隔符",
-        "tooltip": "段落内用什么分隔各项：换行、逗号、分号或 |。"
-      },
-      "blank_line_branches": {
-        "name": "空行分支",
-        "tooltip": "用空行分隔的段落分别成为分支 {0}、{1}……"
-      },
-      "strip": {
-        "name": "去除首尾空白",
-        "tooltip": "去掉每一项两端的空格。"
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "数据",
-        "tooltip": "拆分后的所有项（普通文本数据，各段依次排列）。"
+        "tooltip": "被选中的输入，原样传出。"
       },
       "1": {
-        "name": "数据树",
-        "tooltip": "拆分后的数据树：每个段落一个分支。"
+        "name": "数量",
+        "tooltip": "已连接的输入数量。"
       }
     }
   },
   "Arbor_XYLists": {
     "display_name": "XY 组合列表",
-    "description": "一步从参数值到批量运行：x、y（和 z）的所有组合输出为对齐的原生列表，并输出给「列表 → 数据树」用的网格形状。",
+    "description": "从取值到批量运行：x、y（和 z）的所有组合输出为对齐的普通数据——接到普通节点上，每种组合运行一次——并输出运行结果的形状。只接 x 时，可把任意数据树展开成普通数据。",
     "inputs": {
       "x": {
         "name": "x",
-        "tooltip": "行的取值：数据树、列表或单个值（例如写着 3 / 5 / 7 的面板）。"
+        "tooltip": "行的取值——或任意要展开成普通数据的数据树。"
       },
       "y": {
         "name": "y",
@@ -649,7 +725,7 @@
       },
       "3": {
         "name": "形状",
-        "tooltip": "运行结果的网格布局——接「列表 → 数据树」的形状。它的项就是列的取值，也可以直接当「图像网格」的列标签。"
+        "tooltip": "运行结果的布局：接「图像网格」排成行 × 列，或接「构建数据树」收回成数据树。它的项就是列的取值，图像网格会用它标注列。只接 x 时，它就是 x 自己的数据树。"
       },
       "4": {
         "name": "数量",
@@ -657,47 +733,31 @@
       }
     }
   },
-  "Arbor_TreeToList": {
-    "display_name": "数据树 → 列表",
-    "description": "把数据树展开成 ComfyUI 原生列表，下游节点会对每一项各运行一次；再用「列表 → 数据树」收回结果。",
+  "Arbor_ConstructTree": {
+    "display_name": "构建数据树",
+    "description": "用普通数据构建数据树：所有项放在一个路径上，或——接入形状时——按另一棵树的分支把项收回去。",
     "inputs": {
-      "tree": {
-        "name": "数据树",
-        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
-      }
-    },
-    "outputs": {
-      "0": {
+      "data": {
         "name": "数据",
-        "tooltip": "所有项（普通数据，先按分支、再按项的顺序）——下游节点会对每一项各运行一次。"
+        "tooltip": "任意值或普通数据（原生列表），例如批量运行的结果。"
       },
-      "1": {
-        "name": "数量",
-        "tooltip": "项数。"
-      }
-    }
-  },
-  "Arbor_ListToTree": {
-    "display_name": "列表 → 数据树",
-    "description": "把原生列表收回成数据树。把当初送进「数据树 → 列表」的那棵树（或 XY 组合列表的形状）接到形状上，即可还原分支。",
-    "inputs": {
-      "list": {
-        "name": "列表",
-        "tooltip": "原生列表，例如批量运行的逐项结果。"
+      "path": {
+        "name": "路径",
+        "tooltip": "未接形状时放置这些项的分支路径，例如 {0} 或 {0;2}。"
       },
       "shape": {
         "name": "形状",
-        "tooltip": "要复制其分支结构的数据树，项数必须与列表一致；不接则全部放进 {0}。"
+        "tooltip": "要复制其分支结构的数据树——XY 组合列表的形状，或当初展开的那棵树。项数必须一致。"
       },
       "split_batch": {
         "name": "拆分批次",
-        "tooltip": "重建前先把批次拆成单帧。"
+        "tooltip": "先把 IMAGE / MASK / LATENT 批次拆成每帧一项。"
       }
     },
     "outputs": {
       "0": {
         "name": "数据树",
-        "tooltip": "按形状排列好的值。"
+        "tooltip": "构建好的数据树。"
       }
     }
   },
@@ -989,7 +1049,7 @@
       }
     }
   },
-  "Arbor_TreeInfo": {
+  "Arbor_TreeStatistics": {
     "display_name": "数据树统计",
     "description": "分支数、项数、深度和路径列表。",
     "inputs": {
@@ -1065,26 +1125,6 @@
       }
     }
   },
-  "Arbor_CullPattern": {
-    "display_name": "按模式剔除",
-    "description": "已弃用——请改用「分流」：它的 A 输出就是这个结果。保留模式为真的项。",
-    "inputs": {
-      "tree": {
-        "name": "数据树",
-        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
-      },
-      "pattern": {
-        "name": "模式",
-        "tooltip": "输入重复模式（'T F'、'true,false'、'1 0 1'、'TFT'），或接入 BOOLEAN 值 / 布尔数据树（例如表达式 'x > 2'），按分支匹配。"
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "数据树",
-        "tooltip": "保留下来的项。"
-      }
-    }
-  },
   "Arbor_Dispatch": {
     "display_name": "分流",
     "description": "按真 / 假模式拆分：A 是为真的项，B 是为假的项——只用 A 就是剔除（对应 Grasshopper 的 Dispatch 和 Cull Pattern）。",
@@ -1153,7 +1193,7 @@
       }
     }
   },
-  "Arbor_Reverse": {
+  "Arbor_ReverseList": {
     "display_name": "反转列表",
     "description": "反转每个分支内的项顺序。",
     "inputs": {
@@ -1169,7 +1209,7 @@
       }
     }
   },
-  "Arbor_Sort": {
+  "Arbor_SortList": {
     "display_name": "列表排序",
     "description": "对每个分支排序——数字在前（按数值），文本在后（按字母）。",
     "inputs": {
@@ -1214,158 +1254,6 @@
       "1": {
         "name": "B",
         "tooltip": "B 按 A 的个数循环。"
-      }
-    }
-  },
-  "Arbor_IndexSwitch": {
-    "display_name": "数据序号切换",
-    "description": "按序号传出第 N 个输入（按已连接的输入计数，循环）。未选中的输入不会被计算。",
-    "inputs": {
-      "index": {
-        "name": "序号",
-        "tooltip": "0 = 第一个已连接的输入；负数从末尾数；会循环。也可接 BOOLEAN：False = 0，True = 1。"
-      },
-      "inputs": {
-        "name": "输入",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input0": {
-        "name": "输入0",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input1": {
-        "name": "输入1",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input2": {
-        "name": "输入2",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input3": {
-        "name": "输入3",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input4": {
-        "name": "输入4",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input5": {
-        "name": "输入5",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input6": {
-        "name": "输入6",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input7": {
-        "name": "输入7",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input8": {
-        "name": "输入8",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input9": {
-        "name": "输入9",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input10": {
-        "name": "输入10",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input11": {
-        "name": "输入11",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input12": {
-        "name": "输入12",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input13": {
-        "name": "输入13",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input14": {
-        "name": "输入14",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input15": {
-        "name": "输入15",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input16": {
-        "name": "输入16",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input17": {
-        "name": "输入17",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input18": {
-        "name": "输入18",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input19": {
-        "name": "输入19",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input20": {
-        "name": "输入20",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input21": {
-        "name": "输入21",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input22": {
-        "name": "输入22",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input23": {
-        "name": "输入23",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input24": {
-        "name": "输入24",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input25": {
-        "name": "输入25",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input26": {
-        "name": "输入26",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input27": {
-        "name": "输入27",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input28": {
-        "name": "输入28",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input29": {
-        "name": "输入29",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input30": {
-        "name": "输入30",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      },
-      "inputs_input31": {
-        "name": "输入31",
-        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "数据",
-        "tooltip": "被选中的输入，原样传出。"
-      },
-      "1": {
-        "name": "数量",
-        "tooltip": "已连接的输入数量。"
       }
     }
   }
