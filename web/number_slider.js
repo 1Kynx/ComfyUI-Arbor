@@ -11,7 +11,7 @@
  */
 
 import { app } from "../../scripts/app.js";
-import { injectStyle, el, isolatePointer, isolateKeys, markChanged, chain } from "./arbor_common.js";
+import { injectStyle, el, isolatePointer, isolateKeys, markChanged, chain, t, onLocaleChange } from "./arbor_common.js";
 
 const NODE = "Arbor_NumberSlider";
 const MAX_DECIMALS = 4;
@@ -48,10 +48,8 @@ class SliderView {
 
     const top = el("div", "arb-num-top");
     this.valueEl = el("div", "arb-num-val");
-    this.valueEl.title = "Double-click to type a value";
     this.valueEl.addEventListener("dblclick", () => this.editField(this.valueEl, "value"));
     this.stepBtn = el("button", "arb-btn arb-num-step");
-    this.stepBtn.title = "Precision — click to change";
     this.stepBtn.addEventListener("click", () => {
       const { d } = this.state;
       this.write({ decimals: (d + 1) % (MAX_DECIMALS + 1) });
@@ -60,10 +58,8 @@ class SliderView {
 
     const row = el("div", "arb-num-row");
     this.minEl = el("span", "arb-num-end");
-    this.minEl.title = "Click to set the minimum";
     this.minEl.addEventListener("click", () => this.editField(this.minEl, "min"));
     this.maxEl = el("span", "arb-num-end");
-    this.maxEl.title = "Click to set the maximum";
     this.maxEl.addEventListener("click", () => this.editField(this.maxEl, "max"));
     this.track = el("div", "arb-num-track");
     this.fill = el("div", "arb-num-fill");
@@ -175,7 +171,11 @@ class SliderView {
     if (!this.valueEl.querySelector("input")) this.valueEl.textContent = fmt(v);
     if (!this.minEl.querySelector("input")) this.minEl.textContent = fmt(lo);
     if (!this.maxEl.querySelector("input")) this.maxEl.textContent = fmt(hi);
-    this.stepBtn.textContent = d ? `step ${Math.pow(10, -d).toFixed(d)}` : "step 1";
+    this.stepBtn.textContent = t("step", { s: d ? Math.pow(10, -d).toFixed(d) : "1" });
+    this.valueEl.title = t("valueTip");
+    this.stepBtn.title = t("precisionTip");
+    this.minEl.title = t("minTip");
+    this.maxEl.title = t("maxTip");
     const f = hi > lo ? (v - lo) / (hi - lo) : 0;
     this.fill.style.width = `${f * 100}%`;
     this.knob.style.left = `${f * 100}%`;
@@ -196,6 +196,8 @@ app.registerExtension({
     chain(nodeType.prototype, "onNodeCreated", function () {
       const view = new SliderView(this);
       this.__arborNumber = view;
+      const off = onLocaleChange(() => view.render());
+      chain(this, "onRemoved", off);
       this.addDOMWidget("arbor_number", "arbor-number", view.root, {
         serialize: false,
         hideOnZoom: false,

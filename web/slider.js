@@ -10,7 +10,7 @@
  */
 
 import { app } from "../../scripts/app.js";
-import { injectStyle, el, viewURL, isolatePointer, markChanged, chain, showMenu, ICONS } from "./arbor_common.js";
+import { injectStyle, el, viewURL, isolatePointer, markChanged, chain, showMenu, ICONS, t, onLocaleChange } from "./arbor_common.js";
 
 const NODE = "Arbor_ImageSlider";
 
@@ -31,17 +31,15 @@ class SliderView {
     root.tabIndex = 0;
 
     const bar = el("div", "arb-bar");
-    this.seg = el("div", "arb-seg", `<button data-m="flip">Flip</button><button data-m="wipe">Wipe</button>`);
+    this.seg = el("div", "arb-seg", `<button data-m="flip"></button><button data-m="wipe"></button>`);
     this.seg.addEventListener("click", (e) => {
       const m = e.target?.dataset?.m;
       if (m) this.setMode(m);
     });
     this.chipA = el("button", "arb-chip");
-    this.chipA.title = "Choose image A";
     this.chipA.addEventListener("click", () => this.pickA());
     this.info = el("span", "arb-sub");
     this.scaleBtn = el("button", "arb-btn");
-    this.scaleBtn.title = "Real: keep relative sizes · Fit: fill the stage";
     this.scaleBtn.addEventListener("click", () => {
       this.scale = this.scale === "real" ? "fit" : "real";
       this.node.properties.arbor_scale = this.scale;
@@ -49,7 +47,6 @@ class SliderView {
       this.render();
     });
     this.openBtn = el("button", "arb-btn", ICONS.open);
-    this.openBtn.title = "Open the current image in a new tab";
     this.openBtn.addEventListener("click", () => {
       const s = this.slides[this.index];
       if (s) window.open(viewURL(s), "_blank");
@@ -62,7 +59,7 @@ class SliderView {
     this.divEl = el("div", "arb-cmp-div");
     this.tagA = el("div", "arb-cmp-tag");
     this.tagB = el("div", "arb-cmp-tag");
-    this.empty = el("div", "arb-empty", "Connect images and run to compare");
+    this.empty = el("div", "arb-empty");
     stage.append(this.imgB, this.imgA, this.divEl, this.tagA, this.tagB, this.empty);
     stage.addEventListener("pointermove", (e) => {
       if (this.mode !== "wipe") return;
@@ -174,7 +171,13 @@ class SliderView {
     const n = this.slides.length;
     const wipe = this.mode === "wipe";
     for (const b of this.seg.children) b.classList.toggle("on", b.dataset.m === this.mode);
-    this.scaleBtn.textContent = this.scale === "real" ? "Real" : "Fit";
+    this.scaleBtn.textContent = t(this.scale === "real" ? "real" : "fit");
+    this.seg.children[0].textContent = t("flip");
+    this.seg.children[1].textContent = t("wipe");
+    this.chipA.title = t("chooseA");
+    this.scaleBtn.title = t("scaleTip");
+    this.openBtn.title = t("openTip");
+    this.empty.textContent = t("sliderEmpty");
     this.empty.style.display = n ? "none" : "";
     this.stage.classList.toggle("wipe", wipe);
     this.chipA.style.display = wipe && n ? "" : "none";
@@ -285,6 +288,8 @@ app.registerExtension({
     chain(nodeType.prototype, "onNodeCreated", function () {
       this.properties ||= {};
       const view = new SliderView(this);
+      const off = onLocaleChange(() => view.render());
+      chain(this, "onRemoved", off);
       this.__arborSlider = view;
       this.addDOMWidget("arbor_slider", "arbor-slider", view.root, {
         serialize: false,

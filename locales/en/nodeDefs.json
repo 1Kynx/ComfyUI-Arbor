@@ -1,0 +1,1320 @@
+{
+  "Arbor_ImageSlider": {
+    "display_name": "Image Slider",
+    "description": "Compare any number of images of any size: drag the slider to flip through them, or switch to Wipe for a before / after split.",
+    "inputs": {
+      "images": {
+        "name": "images",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      },
+      "images_image0": {
+        "name": "image0",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      },
+      "images_image1": {
+        "name": "image1",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      },
+      "images_image2": {
+        "name": "image2",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      },
+      "images_image3": {
+        "name": "image3",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      },
+      "images_image4": {
+        "name": "image4",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      },
+      "images_image5": {
+        "name": "image5",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      },
+      "images_image6": {
+        "name": "image6",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      },
+      "images_image7": {
+        "name": "image7",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      },
+      "images_image8": {
+        "name": "image8",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      },
+      "images_image9": {
+        "name": "image9",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      },
+      "images_image10": {
+        "name": "image10",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      },
+      "images_image11": {
+        "name": "image11",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      },
+      "images_image12": {
+        "name": "image12",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      },
+      "images_image13": {
+        "name": "image13",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      },
+      "images_image14": {
+        "name": "image14",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      },
+      "images_image15": {
+        "name": "image15",
+        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+      }
+    }
+  },
+  "Arbor_SmartResize": {
+    "display_name": "Smart Resize",
+    "description": "Resize by longest / shortest side, megapixels, a box or a scale factor, snapping both sides to a multiple (8 / 16 / 64 for latent-friendly sizes).",
+    "inputs": {
+      "image": {
+        "name": "image",
+        "tooltip": "Image or batch to resize."
+      },
+      "mode": {
+        "name": "mode",
+        "tooltip": "How the target size is chosen. Only the fields for the chosen mode are shown."
+      },
+      "mode_size": {
+        "name": "size",
+        "tooltip": "Target length of the longest / shortest side, in pixels."
+      },
+      "mode_megapixels": {
+        "name": "megapixels",
+        "tooltip": "Target area in megapixels (1.0 ≈ 1024 × 1024); aspect ratio is kept."
+      },
+      "mode_width": {
+        "name": "width",
+        "tooltip": "Target box width."
+      },
+      "mode_height": {
+        "name": "height",
+        "tooltip": "Target box height."
+      },
+      "mode_factor": {
+        "name": "factor",
+        "tooltip": "Scale factor (2.0 = twice as large)."
+      },
+      "multiple_of": {
+        "name": "multiple_of",
+        "tooltip": "Round both sides to a multiple of this — use 8 / 16 / 64 for diffusion models."
+      },
+      "method": {
+        "name": "method",
+        "tooltip": "Resampling filter. lanczos is sharpest; area is best for strong downscaling."
+      },
+      "allow_upscale": {
+        "name": "allow_upscale",
+        "tooltip": "Off: never make the image larger than it is."
+      },
+      "mask": {
+        "name": "mask",
+        "tooltip": "Optional mask, resized (and cropped) exactly like the image."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "image",
+        "tooltip": "Resized image."
+      },
+      "1": {
+        "name": "mask",
+        "tooltip": "Resized mask (all ones when no mask was given)."
+      },
+      "2": {
+        "name": "width",
+        "tooltip": "Final width."
+      },
+      "3": {
+        "name": "height",
+        "tooltip": "Final height."
+      }
+    }
+  },
+  "Arbor_BatchPick": {
+    "display_name": "Batch Pick",
+    "description": "Pick frames from an image batch by index, inclusive range or slice. Order and repeats are kept.",
+    "inputs": {
+      "images": {
+        "name": "images",
+        "tooltip": "Image batch to pick from."
+      },
+      "indices": {
+        "name": "indices",
+        "tooltip": "Comma / space separated: 0, 2, -1 (from the end), 3-5 (inclusive range), 1:8:2 or ::2 (Python slices)."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "images",
+        "tooltip": "The picked frames, as one batch."
+      },
+      "1": {
+        "name": "count",
+        "tooltip": "How many frames were picked."
+      }
+    }
+  },
+  "Arbor_TreeToGrid": {
+    "display_name": "Tree → Grid",
+    "description": "Lay an image tree out as an XY comparison sheet: each branch is a row, each item a column.",
+    "inputs": {
+      "images": {
+        "name": "images",
+        "tooltip": "Image tree — one branch per row. A plain image list becomes a single row; batches add columns."
+      },
+      "row_labels": {
+        "name": "row_labels",
+        "tooltip": "One label per row: a list, or a tree with one branch per row (XY Lists' x input or Cross Reference A work directly)."
+      },
+      "col_labels": {
+        "name": "col_labels",
+        "tooltip": "One label per column: a list, or a tree whose branches hold the column values (XY Lists' shape or Cross Reference B work directly)."
+      },
+      "fit": {
+        "name": "fit",
+        "tooltip": "How images of different sizes fill a cell: fit (scale to fit), original (no scaling), stretch."
+      },
+      "cell_size": {
+        "name": "cell_size",
+        "tooltip": "Longest side of a cell in pixels; 0 = the largest image's size."
+      },
+      "gap": {
+        "name": "gap",
+        "tooltip": "Space between cells and around the sheet, in pixels."
+      },
+      "font_size": {
+        "name": "font_size",
+        "tooltip": "Label font size. Chinese labels render with a CJK font when one is installed."
+      },
+      "theme": {
+        "name": "theme",
+        "tooltip": "Light or dark sheet background."
+      },
+      "path_labels": {
+        "name": "path_labels",
+        "tooltip": "Label rows with their branch path when no row labels are connected."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "image",
+        "tooltip": "The comparison sheet as one image."
+      }
+    }
+  },
+  "Arbor_LoadFolder": {
+    "display_name": "Load Folder as Tree",
+    "description": "Load every image in a folder; with subfolders on, each folder becomes a branch — the folder structure turns straight into a data tree.",
+    "inputs": {
+      "folder": {
+        "name": "folder",
+        "tooltip": "Absolute path, or a path relative to ComfyUI's input folder."
+      },
+      "pattern": {
+        "name": "pattern",
+        "tooltip": "File name patterns separated by spaces, e.g. *.png *.jpg."
+      },
+      "subfolders": {
+        "name": "subfolders",
+        "tooltip": "On: each subfolder (and the folder itself, if it has images) becomes a branch. Off: only this folder."
+      },
+      "sort": {
+        "name": "sort",
+        "tooltip": "name = natural order (img2 before img10); modified = oldest first."
+      },
+      "limit": {
+        "name": "limit",
+        "tooltip": "Maximum number of images in total; 0 = all. Every image is held in memory, so limit large folders."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "images",
+        "tooltip": "Image tree, one branch per folder."
+      },
+      "1": {
+        "name": "names",
+        "tooltip": "File names without extension, same layout — handy as labels or for Save by Path."
+      },
+      "2": {
+        "name": "folders",
+        "tooltip": "Folder names, one per branch — use as row labels."
+      },
+      "3": {
+        "name": "count",
+        "tooltip": "Total number of images."
+      }
+    }
+  },
+  "Arbor_SaveByPath": {
+    "display_name": "Save by Path",
+    "description": "Save an image tree keeping its structure: one subfolder (or filename part) per branch path, with optional names per file.",
+    "inputs": {
+      "images": {
+        "name": "images",
+        "tooltip": "Image tree to save. Batches are saved frame by frame."
+      },
+      "filename_prefix": {
+        "name": "filename_prefix",
+        "tooltip": "Folder / prefix inside ComfyUI's output folder. Supports %date%-style variables like Save Image."
+      },
+      "layout": {
+        "name": "layout",
+        "tooltip": "subfolders: prefix_0-1/000.png · flat: prefix_0-1_000.png"
+      },
+      "names": {
+        "name": "names",
+        "tooltip": "Optional file names, matched to the images item by item (e.g. Load Folder's names or a Prompt Template)."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "paths",
+        "tooltip": "Saved file paths, in the same tree layout."
+      }
+    }
+  },
+  "Arbor_Panel": {
+    "display_name": "Panel",
+    "description": "Inspect anything, or type data in. Connected: shows the input and passes it through. Unconnected: each line you type is an item, an empty line starts a new branch.",
+    "inputs": {
+      "data": {
+        "name": "data",
+        "tooltip": "Anything — a data tree, a native list, an image, a number… Leave it unconnected to type data instead."
+      },
+      "text": {
+        "name": "text",
+        "tooltip": "The typed data (used when nothing is connected). Edited in the panel itself."
+      },
+      "parse_numbers": {
+        "name": "parse_numbers",
+        "tooltip": "Typed values: lines like 7 / 3.5 / true become INT / FLOAT / BOOLEAN. The 123 / abc button in the panel."
+      },
+      "multiline": {
+        "name": "multiline",
+        "tooltip": "Text mode: the whole text is one item. The Lines / Text switch in the panel."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "data",
+        "tooltip": "The data as a native list: downstream nodes run once per item (a single item runs once)."
+      },
+      "1": {
+        "name": "tree",
+        "tooltip": "The data as a tree — for Arbor nodes, keeps the branches."
+      }
+    }
+  },
+  "Arbor_NumberSlider": {
+    "display_name": "Number Slider",
+    "description": "Grasshopper-style number slider: drag to set a value between min and max. decimals = 0 gives whole numbers.",
+    "inputs": {
+      "value": {
+        "name": "value",
+        "tooltip": "Current value (set by the slider)."
+      },
+      "min": {
+        "name": "min",
+        "tooltip": "Lower end of the range (click the left number to edit)."
+      },
+      "max": {
+        "name": "max",
+        "tooltip": "Upper end of the range (click the right number to edit)."
+      },
+      "decimals": {
+        "name": "decimals",
+        "tooltip": "Precision: 0 = whole numbers, 2 = steps of 0.01 (click the step chip to change)."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "value",
+        "tooltip": "The value as FLOAT."
+      },
+      "1": {
+        "name": "int",
+        "tooltip": "The value rounded to INT — for steps, seeds, counts."
+      }
+    }
+  },
+  "Arbor_PromptTemplate": {
+    "display_name": "Prompt Template",
+    "description": "Fill {a} {b} … in a template from trees. Cross builds every combination as a grid-ready tree; zip pairs items one by one.",
+    "inputs": {
+      "template": {
+        "name": "template",
+        "tooltip": "Text with placeholders {a} … {f}. Placeholders without a connected value stay as they are."
+      },
+      "mode": {
+        "name": "mode",
+        "tooltip": "cross: every combination — rows = {a}, columns = the last variable used. zip: item by item (longest list)."
+      },
+      "vars": {
+        "name": "vars",
+        "tooltip": "Values for {a}, {b}, … — a tree, a list or a single value. Each connection adds the next letter."
+      },
+      "vars_a": {
+        "name": "a",
+        "tooltip": "Values for {a}, {b}, … — a tree, a list or a single value. Each connection adds the next letter."
+      },
+      "vars_b": {
+        "name": "b",
+        "tooltip": "Values for {a}, {b}, … — a tree, a list or a single value. Each connection adds the next letter."
+      },
+      "vars_c": {
+        "name": "c",
+        "tooltip": "Values for {a}, {b}, … — a tree, a list or a single value. Each connection adds the next letter."
+      },
+      "vars_d": {
+        "name": "d",
+        "tooltip": "Values for {a}, {b}, … — a tree, a list or a single value. Each connection adds the next letter."
+      },
+      "vars_e": {
+        "name": "e",
+        "tooltip": "Values for {a}, {b}, … — a tree, a list or a single value. Each connection adds the next letter."
+      },
+      "vars_f": {
+        "name": "f",
+        "tooltip": "Values for {a}, {b}, … — a tree, a list or a single value. Each connection adds the next letter."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "prompts",
+        "tooltip": "The filled prompts as a tree (cross: one branch per combination of the outer variables)."
+      }
+    }
+  },
+  "Arbor_Expression": {
+    "display_name": "Expression",
+    "description": "Evaluate a formula for every item of x (y matched longest-list), like Grasshopper's Expression.",
+    "inputs": {
+      "expression": {
+        "name": "expression",
+        "tooltip": "Python-style formula, e.g. x * 2 + 1, x > 3, upper(x), x if i % 2 else -x."
+      },
+      "x": {
+        "name": "x",
+        "tooltip": "Main input — the result has the same tree layout. Leave empty for a single constant result."
+      },
+      "y": {
+        "name": "y",
+        "tooltip": "Optional second value, matched to x branch by branch, item by item (the last item repeats)."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "result",
+        "tooltip": "Results, in x's tree layout. Comparisons give booleans — ready for Cull Pattern / Dispatch."
+      }
+    }
+  },
+  "Arbor_Random": {
+    "display_name": "Random",
+    "description": "Seeded shuffle, or pick a number of items (with or without repeats). Same seed, same result.",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "Items to shuffle or pick from."
+      },
+      "mode": {
+        "name": "mode",
+        "tooltip": "shuffle: reorder everything · pick: choose count different items · pick (repeats): choose count items, repeats allowed."
+      },
+      "count": {
+        "name": "count",
+        "tooltip": "Items to pick per branch (ignored by shuffle)."
+      },
+      "seed": {
+        "name": "seed",
+        "tooltip": "Random seed — the same seed always gives the same result."
+      },
+      "per_branch": {
+        "name": "per_branch",
+        "tooltip": "On: every branch separately. Off: all items as one list."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The shuffled / picked items."
+      }
+    }
+  },
+  "Arbor_ConstructTree": {
+    "display_name": "Construct Tree",
+    "description": "Wrap any value, native list or batch into one branch of a data tree.",
+    "inputs": {
+      "data": {
+        "name": "data",
+        "tooltip": "Any value or native list."
+      },
+      "path": {
+        "name": "path",
+        "tooltip": "Branch path for the items, e.g. {0} or {0;2}."
+      },
+      "split_batch": {
+        "name": "split_batch",
+        "tooltip": "Split IMAGE / MASK / LATENT batches into one item per frame."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "A tree with a single branch at path."
+      }
+    }
+  },
+  "Arbor_Series": {
+    "display_name": "Series",
+    "description": "Arithmetic sequence: start, start + step, … — count numbers (Grasshopper's Series).",
+    "inputs": {
+      "start": {
+        "name": "start",
+        "tooltip": "First number."
+      },
+      "step": {
+        "name": "step",
+        "tooltip": "Difference between neighbours (negative counts down)."
+      },
+      "count": {
+        "name": "count",
+        "tooltip": "How many numbers."
+      },
+      "as_int": {
+        "name": "as_int",
+        "tooltip": "Output whole numbers — for seeds, steps, sizes."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The numbers in branch {0}."
+      }
+    }
+  },
+  "Arbor_Range": {
+    "display_name": "Range",
+    "description": "Evenly divide [start, end] into steps parts — steps + 1 numbers including both ends (Grasshopper's Range).",
+    "inputs": {
+      "start": {
+        "name": "start",
+        "tooltip": "First number."
+      },
+      "end": {
+        "name": "end",
+        "tooltip": "Last number (included)."
+      },
+      "steps": {
+        "name": "steps",
+        "tooltip": "Number of equal parts; you get steps + 1 numbers."
+      },
+      "as_int": {
+        "name": "as_int",
+        "tooltip": "Round to whole numbers (duplicates are possible for small ranges)."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The numbers in branch {0}."
+      }
+    }
+  },
+  "Arbor_SplitText": {
+    "display_name": "Split Text",
+    "description": "Split text into items — one per line or separator; an empty line starts a new branch.",
+    "inputs": {
+      "text": {
+        "name": "text",
+        "tooltip": "The text. Can be typed or connected from any STRING output."
+      },
+      "separator": {
+        "name": "separator",
+        "tooltip": "What separates items inside a paragraph: newline, comma, semicolon or |."
+      },
+      "blank_line_branches": {
+        "name": "blank_line_branches",
+        "tooltip": "Paragraphs separated by an empty line become branches {0}, {1}, …"
+      },
+      "strip": {
+        "name": "strip",
+        "tooltip": "Trim spaces around every item."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The items as a tree."
+      }
+    }
+  },
+  "Arbor_XYLists": {
+    "display_name": "XY Lists",
+    "description": "One step from parameter values to a batch run: every combination of x, y (and z) as aligned native lists, plus the grid shape for List → Tree.",
+    "inputs": {
+      "x": {
+        "name": "x",
+        "tooltip": "Values for the rows: a tree, a list or a single value (e.g. a Panel with 3 / 5 / 7)."
+      },
+      "y": {
+        "name": "y",
+        "tooltip": "Values for the columns (optional)."
+      },
+      "z": {
+        "name": "z",
+        "tooltip": "Optional third parameter: becomes the columns, rows become x × y."
+      },
+      "mode": {
+        "name": "mode",
+        "tooltip": "cross: every combination · zip: item by item (longest list, the last item repeats)."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "x",
+        "tooltip": "x of every run — connect to any widget input (cfg, steps, seed…). The node it feeds runs once per combination."
+      },
+      "1": {
+        "name": "y",
+        "tooltip": "y of every run."
+      },
+      "2": {
+        "name": "z",
+        "tooltip": "z of every run (empty values when z is not connected)."
+      },
+      "3": {
+        "name": "shape",
+        "tooltip": "Grid layout of the runs — connect to List → Tree's shape. Its items are the column values, so it also works as Tree → Grid's col_labels."
+      },
+      "4": {
+        "name": "count",
+        "tooltip": "Number of runs."
+      }
+    }
+  },
+  "Arbor_TreeToList": {
+    "display_name": "Tree → List",
+    "description": "Flatten a tree into a native ComfyUI list: downstream nodes then run once per item. Collect the results with List → Tree.",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "list",
+        "tooltip": "Every item as a native list (branch order, then item order)."
+      },
+      "1": {
+        "name": "count",
+        "tooltip": "Number of items."
+      }
+    }
+  },
+  "Arbor_ListToTree": {
+    "display_name": "List → Tree",
+    "description": "Collect a native list back into a tree. Connect the tree you fed into Tree → List (or XY Lists' shape) as shape to restore its branches.",
+    "inputs": {
+      "list": {
+        "name": "list",
+        "tooltip": "Native list, e.g. the per-item results of a batch run."
+      },
+      "shape": {
+        "name": "shape",
+        "tooltip": "Tree whose branch layout to copy. Its item count must match the list. Without it everything goes into {0}."
+      },
+      "split_batch": {
+        "name": "split_batch",
+        "tooltip": "Split batches into single frames before rebuilding."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The values arranged like shape."
+      }
+    }
+  },
+  "Arbor_Graft": {
+    "display_name": "Graft",
+    "description": "Every item gets its own branch: {p} → {p;i} (Grasshopper's Graft).",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The resulting tree."
+      }
+    }
+  },
+  "Arbor_Flatten": {
+    "display_name": "Flatten",
+    "description": "Put every item into one branch (Grasshopper's Flatten).",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      },
+      "path": {
+        "name": "path",
+        "tooltip": "Path of the single output branch, e.g. {0}."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The resulting tree."
+      }
+    }
+  },
+  "Arbor_Simplify": {
+    "display_name": "Simplify",
+    "description": "Remove path indices that every branch shares (Grasshopper's Simplify).",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The resulting tree."
+      }
+    }
+  },
+  "Arbor_FlipMatrix": {
+    "display_name": "Flip Matrix",
+    "description": "Swap rows and columns: item j of every branch goes to {j} (Grasshopper's Flip Matrix).",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The resulting tree."
+      }
+    }
+  },
+  "Arbor_ShiftPaths": {
+    "display_name": "Shift Paths",
+    "description": "Drop path indices: +1 removes the first, −1 the last; branches that end up on the same path are joined (Grasshopper's Shift Paths).",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      },
+      "offset": {
+        "name": "offset",
+        "tooltip": "Positive drops leading indices, negative drops trailing ones."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The resulting tree."
+      }
+    }
+  },
+  "Arbor_Renumber": {
+    "display_name": "Renumber",
+    "description": "Re-index branches as {0}, {1}, {2}, … keeping their order.",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The resulting tree."
+      }
+    }
+  },
+  "Arbor_TreeBranch": {
+    "display_name": "Tree Branch",
+    "description": "Pick one branch by path (e.g. {0;1}) or, when path is empty, by index (Grasshopper's Tree Branch).",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      },
+      "path": {
+        "name": "path",
+        "tooltip": "Exact path such as {0;1}; leave empty to pick by index."
+      },
+      "index": {
+        "name": "index",
+        "tooltip": "Branch index when path is empty; wraps around, −1 = last branch."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "branch",
+        "tooltip": "A tree with only that branch."
+      }
+    }
+  },
+  "Arbor_Merge": {
+    "display_name": "Merge",
+    "description": "Combine trees; items on the same path are appended in input order (Grasshopper's Merge).",
+    "inputs": {
+      "trees": {
+        "name": "trees",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      },
+      "trees_tree0": {
+        "name": "tree0",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      },
+      "trees_tree1": {
+        "name": "tree1",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      },
+      "trees_tree2": {
+        "name": "tree2",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      },
+      "trees_tree3": {
+        "name": "tree3",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      },
+      "trees_tree4": {
+        "name": "tree4",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      },
+      "trees_tree5": {
+        "name": "tree5",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      },
+      "trees_tree6": {
+        "name": "tree6",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      },
+      "trees_tree7": {
+        "name": "tree7",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      },
+      "trees_tree8": {
+        "name": "tree8",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      },
+      "trees_tree9": {
+        "name": "tree9",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      },
+      "trees_tree10": {
+        "name": "tree10",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      },
+      "trees_tree11": {
+        "name": "tree11",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      },
+      "trees_tree12": {
+        "name": "tree12",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      },
+      "trees_tree13": {
+        "name": "tree13",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      },
+      "trees_tree14": {
+        "name": "tree14",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      },
+      "trees_tree15": {
+        "name": "tree15",
+        "tooltip": "Trees to combine. Every connection adds a slot."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The resulting tree."
+      }
+    }
+  },
+  "Arbor_Entwine": {
+    "display_name": "Entwine",
+    "description": "Stack trees side by side: input i is placed under {i;…} (Grasshopper's Entwine).",
+    "inputs": {
+      "trees": {
+        "name": "trees",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      },
+      "trees_tree0": {
+        "name": "tree0",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      },
+      "trees_tree1": {
+        "name": "tree1",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      },
+      "trees_tree2": {
+        "name": "tree2",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      },
+      "trees_tree3": {
+        "name": "tree3",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      },
+      "trees_tree4": {
+        "name": "tree4",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      },
+      "trees_tree5": {
+        "name": "tree5",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      },
+      "trees_tree6": {
+        "name": "tree6",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      },
+      "trees_tree7": {
+        "name": "tree7",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      },
+      "trees_tree8": {
+        "name": "tree8",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      },
+      "trees_tree9": {
+        "name": "tree9",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      },
+      "trees_tree10": {
+        "name": "tree10",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      },
+      "trees_tree11": {
+        "name": "tree11",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      },
+      "trees_tree12": {
+        "name": "tree12",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      },
+      "trees_tree13": {
+        "name": "tree13",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      },
+      "trees_tree14": {
+        "name": "tree14",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      },
+      "trees_tree15": {
+        "name": "tree15",
+        "tooltip": "Trees to stack. Every connection adds a slot."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The resulting tree."
+      }
+    }
+  },
+  "Arbor_TreeInfo": {
+    "display_name": "Tree Statistics",
+    "description": "Branch count, item count, depth and the list of paths.",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "branches",
+        "tooltip": "Number of branches."
+      },
+      "1": {
+        "name": "items",
+        "tooltip": "Total number of items."
+      },
+      "2": {
+        "name": "depth",
+        "tooltip": "Longest path length."
+      },
+      "3": {
+        "name": "paths",
+        "tooltip": "One line per branch: path and item count."
+      }
+    }
+  },
+  "Arbor_ListItem": {
+    "display_name": "List Item",
+    "description": "Pick item i from every branch (Grasshopper's List Item).",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      },
+      "index": {
+        "name": "index",
+        "tooltip": "Item index; negative counts from the end (−1 = last)."
+      },
+      "wrap": {
+        "name": "wrap",
+        "tooltip": "Wrap the index around the branch length. Off: out-of-range gives an empty value."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "item",
+        "tooltip": "One item per branch."
+      }
+    }
+  },
+  "Arbor_SubList": {
+    "display_name": "Sub List",
+    "description": "Slice items [start, end) from every branch.",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      },
+      "start": {
+        "name": "start",
+        "tooltip": "First item to keep (negative counts from the end)."
+      },
+      "end": {
+        "name": "end",
+        "tooltip": "Stop before this item; −1 keeps through the last item."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The resulting tree."
+      }
+    }
+  },
+  "Arbor_CullPattern": {
+    "display_name": "Cull Pattern",
+    "description": "Keep the items where the pattern is true (Grasshopper's Cull Pattern).",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      },
+      "pattern": {
+        "name": "pattern",
+        "tooltip": "Typed repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), or connect BOOLEAN values / a boolean tree (e.g. Expression 'x > 2'), matched branch by branch."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The kept items."
+      }
+    }
+  },
+  "Arbor_Dispatch": {
+    "display_name": "Dispatch",
+    "description": "Split items into A (pattern true) and B (pattern false) (Grasshopper's Dispatch).",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      },
+      "pattern": {
+        "name": "pattern",
+        "tooltip": "Typed repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), or connect BOOLEAN values / a boolean tree (e.g. Expression 'x > 2'), matched branch by branch."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "A",
+        "tooltip": "Items where the pattern is true."
+      },
+      "1": {
+        "name": "B",
+        "tooltip": "Items where the pattern is false."
+      }
+    }
+  },
+  "Arbor_Partition": {
+    "display_name": "Partition",
+    "description": "Chop every branch into chunks of size items: {p} → {p;k} (Grasshopper's Partition).",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      },
+      "size": {
+        "name": "size",
+        "tooltip": "Items per chunk; the last chunk may be shorter."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The resulting tree."
+      }
+    }
+  },
+  "Arbor_Repeat": {
+    "display_name": "Repeat",
+    "description": "Repeat items: each gives aabbcc, whole gives abcabc.",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      },
+      "count": {
+        "name": "count",
+        "tooltip": "How many times."
+      },
+      "mode": {
+        "name": "mode",
+        "tooltip": "each: repeat every item in place · whole: repeat the whole list."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The resulting tree."
+      }
+    }
+  },
+  "Arbor_Reverse": {
+    "display_name": "Reverse List",
+    "description": "Reverse the item order in every branch.",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The resulting tree."
+      }
+    }
+  },
+  "Arbor_Sort": {
+    "display_name": "Sort List",
+    "description": "Sort every branch — numbers first (by value), then text (alphabetically).",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+      },
+      "descending": {
+        "name": "descending",
+        "tooltip": "Largest first."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "tree",
+        "tooltip": "The resulting tree."
+      }
+    }
+  },
+  "Arbor_CrossReference": {
+    "display_name": "Cross Reference",
+    "description": "Every combination of A × B, branch by branch (Grasshopper's Cross Reference). With group on: rows = A, columns = B.",
+    "inputs": {
+      "A": {
+        "name": "A",
+        "tooltip": "First set of values."
+      },
+      "B": {
+        "name": "B",
+        "tooltip": "Second set of values."
+      },
+      "group": {
+        "name": "group",
+        "tooltip": "One branch per A item — the result is grid-ready (rows = A, columns = B)."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "A",
+        "tooltip": "A repeated for every B."
+      },
+      "1": {
+        "name": "B",
+        "tooltip": "B cycled for every A."
+      }
+    }
+  },
+  "Arbor_IndexSwitch": {
+    "display_name": "Index Switch",
+    "description": "Pass through input N (counting connected inputs, wrapping around). Unselected inputs are lazy and never execute.",
+    "inputs": {
+      "index": {
+        "name": "index",
+        "tooltip": "0 = first connected input; negative counts from the end; wraps around. A BOOLEAN works too: False = 0, True = 1."
+      },
+      "inputs": {
+        "name": "inputs",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input0": {
+        "name": "input0",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input1": {
+        "name": "input1",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input2": {
+        "name": "input2",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input3": {
+        "name": "input3",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input4": {
+        "name": "input4",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input5": {
+        "name": "input5",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input6": {
+        "name": "input6",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input7": {
+        "name": "input7",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input8": {
+        "name": "input8",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input9": {
+        "name": "input9",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input10": {
+        "name": "input10",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input11": {
+        "name": "input11",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input12": {
+        "name": "input12",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input13": {
+        "name": "input13",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input14": {
+        "name": "input14",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input15": {
+        "name": "input15",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input16": {
+        "name": "input16",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input17": {
+        "name": "input17",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input18": {
+        "name": "input18",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input19": {
+        "name": "input19",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input20": {
+        "name": "input20",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input21": {
+        "name": "input21",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input22": {
+        "name": "input22",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input23": {
+        "name": "input23",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input24": {
+        "name": "input24",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input25": {
+        "name": "input25",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input26": {
+        "name": "input26",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input27": {
+        "name": "input27",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input28": {
+        "name": "input28",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input29": {
+        "name": "input29",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input30": {
+        "name": "input30",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      },
+      "inputs_input31": {
+        "name": "input31",
+        "tooltip": "Candidates of any type. Every connection adds a slot; only the selected one is computed."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "output",
+        "tooltip": "The selected input."
+      },
+      "1": {
+        "name": "count",
+        "tooltip": "Number of connected inputs."
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "nodeCategories": {
+    "Arbor": "Arbor",
+    "Image": "图像",
+    "Data": "数据",
+    "Tree": "数据树",
+    "List": "列表",
+    "Util": "工具"
+  }
+}

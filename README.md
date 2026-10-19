@@ -78,6 +78,22 @@ subfolders (or filename parts) on the way out, with optional names per file.
 
 Every tree input also accepts plain values or native lists (they become branch `{0}`).
 
+## Languages and help
+
+Node names, descriptions, inputs, outputs, tooltips and the widgets' own UI text follow ComfyUI's
+language setting (*Settings → Comfy → Locale*) — English and Simplified Chinese are included, other
+languages fall back to English. Every node has a help page (inputs, outputs, how to use, examples)
+in the **Info** tab of ComfyUI's right-side panel.
+
+All of it is generated from `tools/node_info.py` + `tools/node_info_tree.py`:
+
+```
+python_embeded\python.exe toolsuild_locales.py <path-to-ComfyUI>
+```
+
+writes `locales/<lang>/nodeDefs.json` and `web/docs/<node>/<lang>.md`; the offline tests fail when a node,
+input or output is undocumented.
+
 ## Install
 
 Clone into `ComfyUI/custom_nodes/` and restart. No extra dependencies.

@@ -1,0 +1,1320 @@
+{
+  "Arbor_ImageSlider": {
+    "display_name": "图像滑块对比",
+    "description": "对比任意数量、任意尺寸的图片：拖动滑条逐张切换，或切到「对比」模式左右分屏比较。",
+    "inputs": {
+      "images": {
+        "name": "图像",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      },
+      "images_image0": {
+        "name": "图像0",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      },
+      "images_image1": {
+        "name": "图像1",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      },
+      "images_image2": {
+        "name": "图像2",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      },
+      "images_image3": {
+        "name": "图像3",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      },
+      "images_image4": {
+        "name": "图像4",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      },
+      "images_image5": {
+        "name": "图像5",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      },
+      "images_image6": {
+        "name": "图像6",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      },
+      "images_image7": {
+        "name": "图像7",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      },
+      "images_image8": {
+        "name": "图像8",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      },
+      "images_image9": {
+        "name": "图像9",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      },
+      "images_image10": {
+        "name": "图像10",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      },
+      "images_image11": {
+        "name": "图像11",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      },
+      "images_image12": {
+        "name": "图像12",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      },
+      "images_image13": {
+        "name": "图像13",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      },
+      "images_image14": {
+        "name": "图像14",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      },
+      "images_image15": {
+        "name": "图像15",
+        "tooltip": "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。"
+      }
+    }
+  },
+  "Arbor_SmartResize": {
+    "display_name": "智能缩放",
+    "description": "按长边 / 短边 / 百万像素 / 框内适配 / 填满裁切 / 倍数缩放，并把两边对齐到 8、16、64 的倍数。",
+    "inputs": {
+      "image": {
+        "name": "图像",
+        "tooltip": "要缩放的图像或批次。"
+      },
+      "mode": {
+        "name": "模式",
+        "tooltip": "目标尺寸的计算方式，只显示所选模式需要的参数。"
+      },
+      "mode_size": {
+        "name": "尺寸",
+        "tooltip": "长边 / 短边的目标像素。"
+      },
+      "mode_megapixels": {
+        "name": "百万像素",
+        "tooltip": "目标面积（1.0 ≈ 1024 × 1024），保持宽高比。"
+      },
+      "mode_width": {
+        "name": "宽度",
+        "tooltip": "目标框宽度。"
+      },
+      "mode_height": {
+        "name": "高度",
+        "tooltip": "目标框高度。"
+      },
+      "mode_factor": {
+        "name": "倍数",
+        "tooltip": "缩放倍数（2.0 = 放大一倍）。"
+      },
+      "multiple_of": {
+        "name": "对齐倍数",
+        "tooltip": "两边都取整到这个数的倍数——扩散模型建议 8 / 16 / 64。"
+      },
+      "method": {
+        "name": "缩放算法",
+        "tooltip": "lanczos 最锐利；大幅缩小时 area 效果最好。"
+      },
+      "allow_upscale": {
+        "name": "允许放大",
+        "tooltip": "关闭后永远不会把图片放大。"
+      },
+      "mask": {
+        "name": "遮罩",
+        "tooltip": "可选遮罩，按与图像完全相同的方式缩放（和裁切）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "图像",
+        "tooltip": "缩放后的图像。"
+      },
+      "1": {
+        "name": "遮罩",
+        "tooltip": "缩放后的遮罩（未接遮罩时为全 1）。"
+      },
+      "2": {
+        "name": "宽度",
+        "tooltip": "最终宽度。"
+      },
+      "3": {
+        "name": "高度",
+        "tooltip": "最终高度。"
+      }
+    }
+  },
+  "Arbor_BatchPick": {
+    "display_name": "批次挑选",
+    "description": "按序号、闭区间或切片从图像批次中挑帧，保留顺序和重复。",
+    "inputs": {
+      "images": {
+        "name": "图像",
+        "tooltip": "要挑选的图像批次。"
+      },
+      "indices": {
+        "name": "序号",
+        "tooltip": "用逗号或空格分隔：0, 2, -1（倒数）, 3-5（闭区间）, 1:8:2 或 ::2（Python 切片）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "图像",
+        "tooltip": "挑出的帧，合成一个批次。"
+      },
+      "1": {
+        "name": "数量",
+        "tooltip": "挑出的帧数。"
+      }
+    }
+  },
+  "Arbor_TreeToGrid": {
+    "display_name": "数据树 → 网格",
+    "description": "把图像数据树排成 XY 对比图：每个分支一行，每项一列。",
+    "inputs": {
+      "images": {
+        "name": "图像",
+        "tooltip": "图像数据树，每个分支一行。普通图像列表 = 一行；批次会增加列。"
+      },
+      "row_labels": {
+        "name": "行标签",
+        "tooltip": "每行一个标签：列表，或每行一个分支的数据树（XY 组合列表的 x 输入、交叉组合的 A 可直接接）。"
+      },
+      "col_labels": {
+        "name": "列标签",
+        "tooltip": "每列一个标签：列表，或每个分支存放列值的数据树（XY 组合列表的形状、交叉组合的 B 可直接接）。"
+      },
+      "fit": {
+        "name": "适配",
+        "tooltip": "不同尺寸的图片如何填充格子：fit 缩放适配、original 原尺寸、stretch 拉伸。"
+      },
+      "cell_size": {
+        "name": "格子尺寸",
+        "tooltip": "格子长边像素；0 = 最大图片的尺寸。"
+      },
+      "gap": {
+        "name": "间距",
+        "tooltip": "格子之间以及四周的留白像素。"
+      },
+      "font_size": {
+        "name": "字号",
+        "tooltip": "标签字号。系统装有中日韩字体时，中文标签会正常显示。"
+      },
+      "theme": {
+        "name": "主题",
+        "tooltip": "浅色或深色背景。"
+      },
+      "path_labels": {
+        "name": "路径作行标签",
+        "tooltip": "没有接行标签时，用分支路径作为行标签。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "图像",
+        "tooltip": "合成后的对比图（一张）。"
+      }
+    }
+  },
+  "Arbor_LoadFolder": {
+    "display_name": "按文件夹加载为树",
+    "description": "加载文件夹里的所有图片；开启子文件夹后，每个文件夹就是一个分支——目录结构直接变成数据树。",
+    "inputs": {
+      "folder": {
+        "name": "文件夹",
+        "tooltip": "绝对路径，或相对 ComfyUI input 文件夹的路径。"
+      },
+      "pattern": {
+        "name": "文件匹配",
+        "tooltip": "用空格分隔的文件名模式，例如 *.png *.jpg。"
+      },
+      "subfolders": {
+        "name": "子文件夹",
+        "tooltip": "开启：每个子文件夹（以及本文件夹，如果里面有图）各成一个分支。关闭：只读本文件夹。"
+      },
+      "sort": {
+        "name": "排序",
+        "tooltip": "name = 自然排序（img2 排在 img10 前）；modified = 按修改时间从旧到新。"
+      },
+      "limit": {
+        "name": "数量上限",
+        "tooltip": "最多加载的图片总数；0 = 全部。所有图片都会载入内存，大文件夹请设上限。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "图像",
+        "tooltip": "图像数据树，每个文件夹一个分支。"
+      },
+      "1": {
+        "name": "文件名",
+        "tooltip": "不带扩展名的文件名，结构相同——可作标签或给「按路径保存」用。"
+      },
+      "2": {
+        "name": "文件夹",
+        "tooltip": "文件夹名，每个分支一个——可作行标签。"
+      },
+      "3": {
+        "name": "数量",
+        "tooltip": "图片总数。"
+      }
+    }
+  },
+  "Arbor_SaveByPath": {
+    "display_name": "按路径保存",
+    "description": "按数据树结构保存图片：每个分支路径一个子文件夹（或文件名的一部分），可选为每个文件命名。",
+    "inputs": {
+      "images": {
+        "name": "图像",
+        "tooltip": "要保存的图像数据树，批次会逐帧保存。"
+      },
+      "filename_prefix": {
+        "name": "文件名前缀",
+        "tooltip": "output 文件夹内的目录 / 前缀，和「保存图像」一样支持 %date% 等变量。"
+      },
+      "layout": {
+        "name": "布局",
+        "tooltip": "subfolders：前缀_0-1/000.png · flat：前缀_0-1_000.png"
+      },
+      "names": {
+        "name": "文件名",
+        "tooltip": "可选，与图像逐项对应的文件名（例如「按文件夹加载」的文件名或提示词模板的输出）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "路径",
+        "tooltip": "已保存文件的路径，结构与输入相同。"
+      }
+    }
+  },
+  "Arbor_Panel": {
+    "display_name": "面板",
+    "description": "查看任何数据，或直接输入数据。接入时：显示输入并原样传出。未接入时：每行是一项，空一行开始新分支。（对应 Grasshopper 的 Panel）",
+    "inputs": {
+      "data": {
+        "name": "数据",
+        "tooltip": "任何数据——数据树、原生列表、图片、数字…… 不接则改为手动输入。"
+      },
+      "text": {
+        "name": "文本",
+        "tooltip": "手动输入的数据（未接入输入时使用），直接在面板里编辑。"
+      },
+      "parse_numbers": {
+        "name": "识别数值",
+        "tooltip": "像 7 / 3.5 / true 这样的行变成 INT / FLOAT / BOOLEAN，对应面板里的 123 / abc 按钮。"
+      },
+      "multiline": {
+        "name": "整段文本",
+        "tooltip": "整段文字作为一项，对应面板里的「逐行 / 整段」开关。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据",
+        "tooltip": "原生列表：下游节点会对每一项各运行一次（只有一项时运行一次）。"
+      },
+      "1": {
+        "name": "数据树",
+        "tooltip": "数据树形式——给 Arbor 节点用，保留分支结构。"
+      }
+    }
+  },
+  "Arbor_NumberSlider": {
+    "display_name": "数值滑块",
+    "description": "Grasshopper 风格的数值滑块：在最小值和最大值之间拖动取值。小数位 = 0 时为整数。",
+    "inputs": {
+      "value": {
+        "name": "数值",
+        "tooltip": "当前数值（由滑块设置）。"
+      },
+      "min": {
+        "name": "最小值",
+        "tooltip": "范围下限（点击左侧数字修改）。"
+      },
+      "max": {
+        "name": "最大值",
+        "tooltip": "范围上限（点击右侧数字修改）。"
+      },
+      "decimals": {
+        "name": "小数位",
+        "tooltip": "精度：0 = 整数，2 = 步长 0.01（点击步长按钮切换）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数值",
+        "tooltip": "FLOAT 形式的数值。"
+      },
+      "1": {
+        "name": "整数",
+        "tooltip": "四舍五入为 INT——用于步数、种子、数量。"
+      }
+    }
+  },
+  "Arbor_PromptTemplate": {
+    "display_name": "提示词模板",
+    "description": "用数据树填充模板中的 {a} {b} ……。交叉：生成所有组合，直接得到可做网格的数据树；配对：逐项对应。",
+    "inputs": {
+      "template": {
+        "name": "模板",
+        "tooltip": "带占位符 {a} … {f} 的文本；没接值的占位符保持原样。"
+      },
+      "mode": {
+        "name": "模式",
+        "tooltip": "cross 交叉：所有组合——行 = {a}，列 = 最后一个用到的变量。zip 配对：逐项对应（最长列表）。"
+      },
+      "vars": {
+        "name": "变量",
+        "tooltip": "{a}、{b} …… 的取值——数据树、列表或单个值。每接一个就多出下一个字母。"
+      },
+      "vars_a": {
+        "name": "a",
+        "tooltip": "{a}、{b} …… 的取值——数据树、列表或单个值。每接一个就多出下一个字母。"
+      },
+      "vars_b": {
+        "name": "b",
+        "tooltip": "{a}、{b} …… 的取值——数据树、列表或单个值。每接一个就多出下一个字母。"
+      },
+      "vars_c": {
+        "name": "c",
+        "tooltip": "{a}、{b} …… 的取值——数据树、列表或单个值。每接一个就多出下一个字母。"
+      },
+      "vars_d": {
+        "name": "d",
+        "tooltip": "{a}、{b} …… 的取值——数据树、列表或单个值。每接一个就多出下一个字母。"
+      },
+      "vars_e": {
+        "name": "e",
+        "tooltip": "{a}、{b} …… 的取值——数据树、列表或单个值。每接一个就多出下一个字母。"
+      },
+      "vars_f": {
+        "name": "f",
+        "tooltip": "{a}、{b} …… 的取值——数据树、列表或单个值。每接一个就多出下一个字母。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "提示词",
+        "tooltip": "填好的提示词数据树（交叉模式下，外层变量的每种组合一个分支）。"
+      }
+    }
+  },
+  "Arbor_Expression": {
+    "display_name": "表达式",
+    "description": "对 x 的每一项计算公式（y 按最长列表匹配），对应 Grasshopper 的 Expression。",
+    "inputs": {
+      "expression": {
+        "name": "表达式",
+        "tooltip": "Python 风格的公式，例如 x * 2 + 1、x > 3、upper(x)、x if i % 2 else -x。"
+      },
+      "x": {
+        "name": "x",
+        "tooltip": "主输入——结果与它的数据树结构相同。不接则只计算一个常量结果。"
+      },
+      "y": {
+        "name": "y",
+        "tooltip": "可选的第二个值，按分支、按项与 x 对应（不够时重复最后一项）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "结果",
+        "tooltip": "计算结果，结构与 x 相同。比较运算得到布尔值——可直接接「按模式剔除 / 分流」。"
+      }
+    }
+  },
+  "Arbor_Random": {
+    "display_name": "随机",
+    "description": "带种子的打乱，或抽取若干项（可选允许重复）。种子相同，结果相同。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "要打乱或从中抽取的项。"
+      },
+      "mode": {
+        "name": "模式",
+        "tooltip": "shuffle 打乱：重新排序 · pick 抽取：抽 count 个不同的项 · pick (repeats)：抽 count 个，允许重复。"
+      },
+      "count": {
+        "name": "数量",
+        "tooltip": "每个分支抽取的项数（打乱模式忽略）。"
+      },
+      "seed": {
+        "name": "种子",
+        "tooltip": "随机种子——相同的种子总是得到相同的结果。"
+      },
+      "per_branch": {
+        "name": "逐分支",
+        "tooltip": "开启：每个分支分别处理。关闭：所有项当作一个列表。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "打乱 / 抽取后的项。"
+      }
+    }
+  },
+  "Arbor_ConstructTree": {
+    "display_name": "构建数据树",
+    "description": "把任意值、原生列表或批次包装成数据树的一个分支。",
+    "inputs": {
+      "data": {
+        "name": "数据",
+        "tooltip": "任意值或原生列表。"
+      },
+      "path": {
+        "name": "路径",
+        "tooltip": "放置这些项的分支路径，例如 {0} 或 {0;2}。"
+      },
+      "split_batch": {
+        "name": "拆分批次",
+        "tooltip": "把 IMAGE / MASK / LATENT 批次拆成每帧一项。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "只有一个分支（位于该路径）的数据树。"
+      }
+    }
+  },
+  "Arbor_Series": {
+    "display_name": "等差数列",
+    "description": "等差数列：起始值、起始值 + 步长……共 count 个数（对应 Grasshopper 的 Series）。",
+    "inputs": {
+      "start": {
+        "name": "起始值",
+        "tooltip": "第一个数。"
+      },
+      "step": {
+        "name": "步长",
+        "tooltip": "相邻两数之差（负数为递减）。"
+      },
+      "count": {
+        "name": "数量",
+        "tooltip": "数的个数。"
+      },
+      "as_int": {
+        "name": "输出整数",
+        "tooltip": "输出整数——用于种子、步数、尺寸。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "这些数，放在分支 {0}。"
+      }
+    }
+  },
+  "Arbor_Range": {
+    "display_name": "区间",
+    "description": "把 [起点, 终点] 平均分成 steps 段——共 steps + 1 个数，包含两端（对应 Grasshopper 的 Range）。",
+    "inputs": {
+      "start": {
+        "name": "起点",
+        "tooltip": "第一个数。"
+      },
+      "end": {
+        "name": "终点",
+        "tooltip": "最后一个数（包含）。"
+      },
+      "steps": {
+        "name": "段数",
+        "tooltip": "等分的段数，得到 steps + 1 个数。"
+      },
+      "as_int": {
+        "name": "输出整数",
+        "tooltip": "取整（范围很小时可能出现重复）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "这些数，放在分支 {0}。"
+      }
+    }
+  },
+  "Arbor_SplitText": {
+    "display_name": "拆分文本",
+    "description": "把文本拆成多项——每行或每个分隔符一项；空行开始新分支。",
+    "inputs": {
+      "text": {
+        "name": "文本",
+        "tooltip": "要拆分的文本，可以手动输入，也可以接任意 STRING 输出。"
+      },
+      "separator": {
+        "name": "分隔符",
+        "tooltip": "段落内用什么分隔各项：换行、逗号、分号或 |。"
+      },
+      "blank_line_branches": {
+        "name": "空行分支",
+        "tooltip": "用空行分隔的段落分别成为分支 {0}、{1}……"
+      },
+      "strip": {
+        "name": "去除首尾空白",
+        "tooltip": "去掉每一项两端的空格。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "拆分后的项。"
+      }
+    }
+  },
+  "Arbor_XYLists": {
+    "display_name": "XY 组合列表",
+    "description": "一步从参数值到批量运行：x、y（和 z）的所有组合输出为对齐的原生列表，并输出给「列表 → 数据树」用的网格形状。",
+    "inputs": {
+      "x": {
+        "name": "x",
+        "tooltip": "行的取值：数据树、列表或单个值（例如写着 3 / 5 / 7 的面板）。"
+      },
+      "y": {
+        "name": "y",
+        "tooltip": "列的取值（可选）。"
+      },
+      "z": {
+        "name": "z",
+        "tooltip": "可选的第三个参数：作为列，行变为 x × y。"
+      },
+      "mode": {
+        "name": "模式",
+        "tooltip": "cross 交叉：所有组合 · zip 配对：逐项对应（最长列表，不够时重复最后一项）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "x",
+        "tooltip": "每次运行的 x——接到任意参数输入（cfg、步数、种子……），被接的节点会对每种组合各运行一次。"
+      },
+      "1": {
+        "name": "y",
+        "tooltip": "每次运行的 y。"
+      },
+      "2": {
+        "name": "z",
+        "tooltip": "每次运行的 z（未接 z 时为空值）。"
+      },
+      "3": {
+        "name": "形状",
+        "tooltip": "运行结果的网格布局——接「列表 → 数据树」的形状。它的项就是列的取值，也可以直接当「数据树 → 网格」的列标签。"
+      },
+      "4": {
+        "name": "数量",
+        "tooltip": "运行次数。"
+      }
+    }
+  },
+  "Arbor_TreeToList": {
+    "display_name": "数据树 → 列表",
+    "description": "把数据树展开成 ComfyUI 原生列表，下游节点会对每一项各运行一次；再用「列表 → 数据树」收回结果。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "列表",
+        "tooltip": "所有项组成的原生列表（先按分支、再按项的顺序）。"
+      },
+      "1": {
+        "name": "数量",
+        "tooltip": "项数。"
+      }
+    }
+  },
+  "Arbor_ListToTree": {
+    "display_name": "列表 → 数据树",
+    "description": "把原生列表收回成数据树。把当初送进「数据树 → 列表」的那棵树（或 XY 组合列表的形状）接到形状上，即可还原分支。",
+    "inputs": {
+      "list": {
+        "name": "列表",
+        "tooltip": "原生列表，例如批量运行的逐项结果。"
+      },
+      "shape": {
+        "name": "形状",
+        "tooltip": "要复制其分支结构的数据树，项数必须与列表一致；不接则全部放进 {0}。"
+      },
+      "split_batch": {
+        "name": "拆分批次",
+        "tooltip": "重建前先把批次拆成单帧。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "按形状排列好的值。"
+      }
+    }
+  },
+  "Arbor_Graft": {
+    "display_name": "升树",
+    "description": "每一项单独成为一个分支：{p} → {p;i}（对应 Grasshopper 的 Graft）。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "处理后的数据树。"
+      }
+    }
+  },
+  "Arbor_Flatten": {
+    "display_name": "拍平",
+    "description": "所有项放进同一个分支（对应 Grasshopper 的 Flatten）。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      },
+      "path": {
+        "name": "路径",
+        "tooltip": "输出的唯一分支的路径，例如 {0}。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "处理后的数据树。"
+      }
+    }
+  },
+  "Arbor_Simplify": {
+    "display_name": "简化树",
+    "description": "去掉所有分支共有的路径层级（对应 Grasshopper 的 Simplify）。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "处理后的数据树。"
+      }
+    }
+  },
+  "Arbor_FlipMatrix": {
+    "display_name": "翻转矩阵",
+    "description": "行列互换：每个分支的第 j 项放到 {j}（对应 Grasshopper 的 Flip Matrix）。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "处理后的数据树。"
+      }
+    }
+  },
+  "Arbor_ShiftPaths": {
+    "display_name": "移动路径",
+    "description": "去掉路径层级：+1 去掉第一级，−1 去掉最后一级；落到同一路径的分支会合并（对应 Grasshopper 的 Shift Paths）。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      },
+      "offset": {
+        "name": "偏移",
+        "tooltip": "正数去掉开头的层级，负数去掉末尾的层级。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "处理后的数据树。"
+      }
+    }
+  },
+  "Arbor_Renumber": {
+    "display_name": "重新编号",
+    "description": "按原顺序把分支重新编号为 {0}、{1}、{2}……",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "处理后的数据树。"
+      }
+    }
+  },
+  "Arbor_TreeBranch": {
+    "display_name": "取分支",
+    "description": "按路径（如 {0;1}）取出一个分支；路径留空时按序号取（对应 Grasshopper 的 Tree Branch）。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      },
+      "path": {
+        "name": "路径",
+        "tooltip": "完整路径，如 {0;1}；留空则按序号取。"
+      },
+      "index": {
+        "name": "序号",
+        "tooltip": "路径为空时使用的分支序号；会循环，−1 = 最后一个分支。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "分支",
+        "tooltip": "只含该分支的数据树。"
+      }
+    }
+  },
+  "Arbor_Merge": {
+    "display_name": "合并",
+    "description": "合并多棵数据树；相同路径的项按输入顺序追加（对应 Grasshopper 的 Merge）。",
+    "inputs": {
+      "trees": {
+        "name": "数据树",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree0": {
+        "name": "数据树0",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree1": {
+        "name": "数据树1",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree2": {
+        "name": "数据树2",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree3": {
+        "name": "数据树3",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree4": {
+        "name": "数据树4",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree5": {
+        "name": "数据树5",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree6": {
+        "name": "数据树6",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree7": {
+        "name": "数据树7",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree8": {
+        "name": "数据树8",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree9": {
+        "name": "数据树9",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree10": {
+        "name": "数据树10",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree11": {
+        "name": "数据树11",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree12": {
+        "name": "数据树12",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree13": {
+        "name": "数据树13",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree14": {
+        "name": "数据树14",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree15": {
+        "name": "数据树15",
+        "tooltip": "要合并的数据树，每连一个就多出一个输入口。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "处理后的数据树。"
+      }
+    }
+  },
+  "Arbor_Entwine": {
+    "display_name": "编织",
+    "description": "把多棵数据树并排放置：第 i 个输入放在 {i;…} 下（对应 Grasshopper 的 Entwine）。",
+    "inputs": {
+      "trees": {
+        "name": "数据树",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree0": {
+        "name": "数据树0",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree1": {
+        "name": "数据树1",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree2": {
+        "name": "数据树2",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree3": {
+        "name": "数据树3",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree4": {
+        "name": "数据树4",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree5": {
+        "name": "数据树5",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree6": {
+        "name": "数据树6",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree7": {
+        "name": "数据树7",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree8": {
+        "name": "数据树8",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree9": {
+        "name": "数据树9",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree10": {
+        "name": "数据树10",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree11": {
+        "name": "数据树11",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree12": {
+        "name": "数据树12",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree13": {
+        "name": "数据树13",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree14": {
+        "name": "数据树14",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      },
+      "trees_tree15": {
+        "name": "数据树15",
+        "tooltip": "要并排的数据树，每连一个就多出一个输入口。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "处理后的数据树。"
+      }
+    }
+  },
+  "Arbor_TreeInfo": {
+    "display_name": "数据树统计",
+    "description": "分支数、项数、深度和路径列表。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "分支数",
+        "tooltip": "分支的数量。"
+      },
+      "1": {
+        "name": "项数",
+        "tooltip": "所有项的总数。"
+      },
+      "2": {
+        "name": "深度",
+        "tooltip": "最长路径的层数。"
+      },
+      "3": {
+        "name": "路径",
+        "tooltip": "每个分支一行：路径和项数。"
+      }
+    }
+  },
+  "Arbor_ListItem": {
+    "display_name": "列表取项",
+    "description": "从每个分支取第 i 项（对应 Grasshopper 的 List Item）。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      },
+      "index": {
+        "name": "序号",
+        "tooltip": "项序号；负数从末尾数（−1 = 最后一项）。"
+      },
+      "wrap": {
+        "name": "循环",
+        "tooltip": "序号超出长度时循环。关闭时超出范围得到空值。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "项",
+        "tooltip": "每个分支取出的一项。"
+      }
+    }
+  },
+  "Arbor_SubList": {
+    "display_name": "子列表",
+    "description": "从每个分支截取 [start, end) 的项。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      },
+      "start": {
+        "name": "起始",
+        "tooltip": "保留的第一项（负数从末尾数）。"
+      },
+      "end": {
+        "name": "结束",
+        "tooltip": "在这一项之前停止；−1 表示一直保留到最后一项。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "处理后的数据树。"
+      }
+    }
+  },
+  "Arbor_CullPattern": {
+    "display_name": "按模式剔除",
+    "description": "保留模式为真的项（对应 Grasshopper 的 Cull Pattern）。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      },
+      "pattern": {
+        "name": "模式",
+        "tooltip": "输入重复模式（'T F'、'true,false'、'1 0 1'、'TFT'），或接入 BOOLEAN 值 / 布尔数据树（例如表达式 'x > 2'），按分支匹配。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "保留下来的项。"
+      }
+    }
+  },
+  "Arbor_Dispatch": {
+    "display_name": "分流",
+    "description": "按模式把项分成 A（为真）和 B（为假）（对应 Grasshopper 的 Dispatch）。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      },
+      "pattern": {
+        "name": "模式",
+        "tooltip": "输入重复模式（'T F'、'true,false'、'1 0 1'、'TFT'），或接入 BOOLEAN 值 / 布尔数据树（例如表达式 'x > 2'），按分支匹配。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "A",
+        "tooltip": "模式为真的项。"
+      },
+      "1": {
+        "name": "B",
+        "tooltip": "模式为假的项。"
+      }
+    }
+  },
+  "Arbor_Partition": {
+    "display_name": "分组",
+    "description": "把每个分支切成每组 size 项：{p} → {p;k}（对应 Grasshopper 的 Partition）。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      },
+      "size": {
+        "name": "每组项数",
+        "tooltip": "每组的项数；最后一组可能不足。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "处理后的数据树。"
+      }
+    }
+  },
+  "Arbor_Repeat": {
+    "display_name": "重复",
+    "description": "重复项：each 得到 aabbcc，whole 得到 abcabc。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      },
+      "count": {
+        "name": "次数",
+        "tooltip": "重复的次数。"
+      },
+      "mode": {
+        "name": "模式",
+        "tooltip": "each：每项原地重复 · whole：整个列表重复。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "处理后的数据树。"
+      }
+    }
+  },
+  "Arbor_Reverse": {
+    "display_name": "反转列表",
+    "description": "反转每个分支内的项顺序。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "处理后的数据树。"
+      }
+    }
+  },
+  "Arbor_Sort": {
+    "display_name": "排序",
+    "description": "对每个分支排序——数字在前（按数值），文本在后（按字母）。",
+    "inputs": {
+      "tree": {
+        "name": "数据树",
+        "tooltip": "数据树，或任意值 / 列表（会成为分支 {0}）。"
+      },
+      "descending": {
+        "name": "降序",
+        "tooltip": "从大到小。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据树",
+        "tooltip": "处理后的数据树。"
+      }
+    }
+  },
+  "Arbor_CrossReference": {
+    "display_name": "交叉组合",
+    "description": "按分支生成 A × B 的所有组合（对应 Grasshopper 的 Cross Reference）。开启分组时：行 = A，列 = B。",
+    "inputs": {
+      "A": {
+        "name": "A",
+        "tooltip": "第一组取值。"
+      },
+      "B": {
+        "name": "B",
+        "tooltip": "第二组取值。"
+      },
+      "group": {
+        "name": "分组",
+        "tooltip": "每个 A 项一个分支——结果可直接做网格（行 = A，列 = B）。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "A",
+        "tooltip": "A 按 B 的个数重复。"
+      },
+      "1": {
+        "name": "B",
+        "tooltip": "B 按 A 的个数循环。"
+      }
+    }
+  },
+  "Arbor_IndexSwitch": {
+    "display_name": "序号切换",
+    "description": "按序号传出第 N 个输入（按已连接的输入计数，循环）。未选中的输入不会被计算。",
+    "inputs": {
+      "index": {
+        "name": "序号",
+        "tooltip": "0 = 第一个已连接的输入；负数从末尾数；会循环。也可接 BOOLEAN：False = 0，True = 1。"
+      },
+      "inputs": {
+        "name": "输入",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input0": {
+        "name": "输入0",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input1": {
+        "name": "输入1",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input2": {
+        "name": "输入2",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input3": {
+        "name": "输入3",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input4": {
+        "name": "输入4",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input5": {
+        "name": "输入5",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input6": {
+        "name": "输入6",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input7": {
+        "name": "输入7",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input8": {
+        "name": "输入8",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input9": {
+        "name": "输入9",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input10": {
+        "name": "输入10",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input11": {
+        "name": "输入11",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input12": {
+        "name": "输入12",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input13": {
+        "name": "输入13",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input14": {
+        "name": "输入14",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input15": {
+        "name": "输入15",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input16": {
+        "name": "输入16",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input17": {
+        "name": "输入17",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input18": {
+        "name": "输入18",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input19": {
+        "name": "输入19",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input20": {
+        "name": "输入20",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input21": {
+        "name": "输入21",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input22": {
+        "name": "输入22",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input23": {
+        "name": "输入23",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input24": {
+        "name": "输入24",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input25": {
+        "name": "输入25",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input26": {
+        "name": "输入26",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input27": {
+        "name": "输入27",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input28": {
+        "name": "输入28",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input29": {
+        "name": "输入29",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input30": {
+        "name": "输入30",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      },
+      "inputs_input31": {
+        "name": "输入31",
+        "tooltip": "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "输出",
+        "tooltip": "被选中的输入。"
+      },
+      "1": {
+        "name": "数量",
+        "tooltip": "已连接的输入数量。"
+      }
+    }
+  }
+}

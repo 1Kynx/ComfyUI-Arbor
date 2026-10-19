@@ -215,6 +215,117 @@ export function isolatePointer(element) {
   }
 }
 
+/* ------------------------------------------------------------- i18n
+ * UI text follows ComfyUI's own language setting (Comfy.Locale); node names,
+ * inputs and tooltips come from locales/<lang>/nodeDefs.json the same way.
+ * Languages without a table here fall back to English. */
+const STRINGS = {
+  en: {
+    flip: "Flip", wipe: "Wipe", real: "Real", fit: "Fit",
+    chooseA: "Choose image A",
+    scaleTip: "Real: keep relative sizes · Fit: fill the stage",
+    openTip: "Open the current image in a new tab",
+    sliderEmpty: "Connect images and run to compare",
+    live: "Live — updates as you edit, no need to run",
+    lines: "Lines", text: "Text",
+    linesTip: "Each line is an item · an empty line starts a new branch",
+    textTip: "The whole text is one item",
+    typedOn: "Typed values on: 7 → INT, 3.5 → FLOAT, true → BOOLEAN. Click to keep every line as text",
+    typedOff: "Typed values off: every line stays text. Click to read numbers and true/false",
+    collapseAll: "Collapse / expand all branches",
+    largeView: "Open large view",
+    copyAll: "Copy everything as text",
+    copyItem: "Copy this item",
+    done: "Done",
+    phLines: "Type data — one item per line\n\nAn empty line starts a new branch",
+    phText: "Type text — the whole text is one item",
+    runToInspect: "Run to inspect the input",
+    blocked: "Run to inspect\n{name} can't preview live",
+    noData: "No data",
+    truncated: "Display truncated — copy to get everything",
+    moreItems: "… {n} more",
+    emptyBranch: "empty",
+    more: "more", less: "less",
+    chars: "{n} chars", cutChars: "{n} chars, cut at {m}", linesCount: "{n} lines",
+    branch_one: "{n} branch", branch_other: "{n} branches",
+    item_one: "{n} item", item_other: "{n} items",
+    depth: "depth {n}", listOf: "List · {items}", value: "Value", emptyValue: "Empty",
+    largeGraph: "a large graph", missingLink: "a missing link",
+    valueTip: "Double-click to type a value",
+    precisionTip: "Precision — click to change",
+    minTip: "Click to set the minimum", maxTip: "Click to set the maximum",
+    step: "step {s}",
+  },
+  zh: {
+    flip: "切换", wipe: "对比", real: "原比例", fit: "填充",
+    chooseA: "选择图像 A",
+    scaleTip: "原比例：保持图片之间的相对大小 · 填充：每张图铺满画面",
+    openTip: "在新标签页打开当前图片",
+    sliderEmpty: "接入图片并运行后即可对比",
+    live: "实时 — 编辑时自动更新，无需运行",
+    lines: "逐行", text: "整段",
+    linesTip: "每行是一项 · 空一行开始新分支",
+    textTip: "整段文字作为一项",
+    typedOn: "识别数值：7 → INT，3.5 → FLOAT，true → BOOLEAN。点击改为全部保留文本",
+    typedOff: "不识别数值：每行都保留为文本。点击改为识别数字和 true/false",
+    collapseAll: "折叠 / 展开所有分支",
+    largeView: "打开大窗口",
+    copyAll: "复制全部文本",
+    copyItem: "复制这一项",
+    done: "完成",
+    phLines: "输入数据 — 每行一项\n\n空一行开始新分支",
+    phText: "输入文本 — 整段文字作为一项",
+    runToInspect: "运行后查看输入",
+    blocked: "运行后查看\n{name} 不支持实时预览",
+    noData: "没有数据",
+    truncated: "显示已截断 — 复制可获得全部内容",
+    moreItems: "… 还有 {n} 项",
+    emptyBranch: "空",
+    more: "展开", less: "收起",
+    chars: "{n} 字", cutChars: "共 {n} 字，显示前 {m} 字", linesCount: "{n} 行",
+    branch_one: "{n} 个分支", branch_other: "{n} 个分支",
+    item_one: "{n} 项", item_other: "{n} 项",
+    depth: "深度 {n}", listOf: "列表 · {items}", value: "单个值", emptyValue: "空",
+    largeGraph: "节点过多的工作流", missingLink: "缺失的连线",
+    valueTip: "双击直接输入数值",
+    precisionTip: "精度 — 点击切换",
+    minTip: "点击设置最小值", maxTip: "点击设置最大值",
+    step: "步长 {s}",
+  },
+};
+
+export function lang() {
+  let l = "en";
+  try { l = app.ui?.settings?.getSettingValue?.("Comfy.Locale") || "en"; } catch {}
+  return STRINGS[l] ? l : "en";
+}
+
+export function t(key, vars) {
+  const s = STRINGS[lang()][key] ?? STRINGS.en[key] ?? key;
+  return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m)) : s;
+}
+
+/* "{n} items" with the right plural form */
+export function tn(key, n) {
+  return t(`${key}_${n === 1 ? "one" : "other"}`, { n: n.toLocaleString("en-US") });
+}
+
+const localeListeners = new Set();
+let lastLang = null;
+export function onLocaleChange(fn) {
+  localeListeners.add(fn);
+  return () => localeListeners.delete(fn);
+}
+setInterval(() => {
+  const l = lang();
+  if (lastLang !== null && l !== lastLang) {
+    for (const fn of localeListeners) {
+      try { fn(l); } catch (e) { console.warn("[Arbor] locale change", e); }
+    }
+  }
+  lastLang = l;
+}, 800);
+
 /* Tell ComfyUI the workflow changed (unsaved marker, undo history) after an
  * edit made from our own DOM, which its keyboard / mouse tracking can't see. */
 let changeTimer = 0;

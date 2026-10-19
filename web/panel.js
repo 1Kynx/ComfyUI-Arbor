@@ -17,14 +17,13 @@
 
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { injectStyle, el, viewURL, isolatePointer, isolateKeys, markChanged, chain, ICONS } from "./arbor_common.js";
+import { injectStyle, el, viewURL, isolatePointer, isolateKeys, markChanged, chain, ICONS, t, tn, onLocaleChange } from "./arbor_common.js";
 
 const NODE = "Arbor_Panel";
 const AUTO_COLLAPSE = 24; // start collapsed when the tree has more branches than this
 const LIVE_MS = 350;
 const FOLD_CHARS = 280;   // fold items longer than this...
 const FOLD_LINES = 4;     // ...or with more lines than this
-const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const fmtInt = (n) => n.toLocaleString("en-US");
 
 /* ------------------------------------------------------------ live preview */
@@ -56,7 +55,7 @@ function upstreamPrompt(panel) {
     const n = stack.pop();
     if (seen.has(n.id)) continue;
     seen.add(n.id);
-    if (seen.size > 200) return { blocked: "a large graph" };
+    if (seen.size > 200) return { blocked: t("largeGraph") };
     const ct = n.comfyClass || n.type;
     if (!liveTypes.has(ct) || n.mode === 2 || n.mode === 4) return { blocked: n.title || ct };
     const inputs = {};
@@ -68,7 +67,7 @@ function upstreamPrompt(panel) {
       if (inp.link == null) continue;
       const l = getLink(graph, inp.link);
       const src = l && graph.getNodeById(l.origin_id);
-      if (!src) return { blocked: "a missing link" };
+      if (!src) return { blocked: t("missingLink") };
       inputs[inp.name] = [String(l.origin_id), l.origin_slot];
       stack.push(src);
     }
@@ -182,9 +181,7 @@ class TextEditor {
   paint() {
     const { multiline, numbers } = this.options();
     this.root.classList.toggle("plain", multiline);
-    this.ta.placeholder = multiline
-      ? "Type text — the whole text is one item"
-      : "Type data — one item per line\n\nAn empty line starts a new branch";
+    this.ta.placeholder = t(multiline ? "phText" : "phLines");
     const text = this.ta.value;
     const info = analyse(text, multiline, numbers);
     const frag = document.createDocumentFragment();
@@ -224,12 +221,12 @@ function renderData(body, d, state, opts = {}) {
     }
     const list = el("div", "arb-br-items");
     br.items.forEach((it, j) => list.appendChild(renderRow(it, j, `${br.path}#${j}`, state, opts)));
-    if (br.items.length < br.n) list.appendChild(el("div", "arb-more", `… ${br.n - br.items.length} more`));
-    if (!br.n) list.appendChild(el("div", "arb-more", "empty"));
+    if (br.items.length < br.n) list.appendChild(el("div", "arb-more")).textContent = t("moreItems", { n: br.n - br.items.length });
+    if (!br.n) list.appendChild(el("div", "arb-more")).textContent = t("emptyBranch");
     wrap.appendChild(list);
     body.appendChild(wrap);
   }
-  if (d.stats.truncated) body.appendChild(el("div", "arb-more", "Display truncated — copy to get everything"));
+  if (d.stats.truncated) body.appendChild(el("div", "arb-more")).textContent = t("truncated");
 }
 
 function renderRow(it, j, key, state, opts) {
@@ -253,26 +250,26 @@ function renderRow(it, j, key, state, opts) {
       const open = state.open.has(key);
       body.classList.toggle("fold", long && !open);
       const meta = el("div", "arb-fold");
-      const count = it.len ? `${fmtInt(it.len)} chars, cut at ${fmtInt(text.length)}` : `${fmtInt(text.length)} chars`;
+      const count = it.len ? t("cutChars", { n: fmtInt(it.len), m: fmtInt(text.length) }) : t("chars", { n: fmtInt(text.length) });
       if (long) {
         const btn = meta.appendChild(el("button", "arb-link"));
-        btn.textContent = open ? "less" : "more";
+        btn.textContent = t(open ? "less" : "more");
         btn.addEventListener("click", () => {
           if (state.open.has(key)) state.open.delete(key);
           else state.open.add(key);
           const nowOpen = state.open.has(key);
           body.classList.toggle("fold", !nowOpen);
-          btn.textContent = nowOpen ? "less" : "more";
+          btn.textContent = t(nowOpen ? "less" : "more");
         });
       }
-      meta.appendChild(el("span", "", "")).textContent = (lines > 1 ? `${lines} lines · ` : "") + count;
+      meta.appendChild(el("span", "", "")).textContent = (lines > 1 ? `${t("linesCount", { n: lines })} · ` : "") + count;
       v.appendChild(meta);
     }
   }
   r.appendChild(v);
   if (!it.img) {
     const cp = el("button", "arb-row-copy", ICONS.copy);
-    cp.title = "Copy this item";
+    cp.title = t("copyItem");
     cp.addEventListener("click", (e) => { e.stopPropagation(); copyText(it.v, cp); });
     r.appendChild(cp);
   }
@@ -288,7 +285,8 @@ function openModal(title, buildBody, onClose) {
   hd.appendChild(el("span", "arb-modal-title")).textContent = title;
   const extra = hd.appendChild(el("span", "arb-sub"));
   hd.appendChild(el("span", "arb-sp"));
-  const close = hd.appendChild(el("button", "arb-btn", "Done"));
+  const close = hd.appendChild(el("button", "arb-btn"));
+  close.textContent = t("done");
   const body = box.appendChild(el("div", "arb-modal-body"));
   const done = () => {
     overlay.remove();
@@ -340,12 +338,9 @@ class PanelView {
     const root = (this.root = el("div", "arb arb-pnl"));
     const bar = el("div", "arb-bar");
     this.dot = el("span", "arb-live");
-    this.dot.title = "Live — updates as you edit, no need to run";
     this.stats = el("span", "arb-sub", "");
 
-    this.modeSeg = el("div", "arb-seg",
-      `<button data-m="lines" title="Each line is an item · an empty line starts a new branch">Lines</button>` +
-      `<button data-m="text" title="The whole text is one item">Text</button>`);
+    this.modeSeg = el("div", "arb-seg", `<button data-m="lines"></button><button data-m="text"></button>`);
     this.modeSeg.addEventListener("click", (e) => {
       const m = e.target?.dataset?.m;
       if (m) this.set("multiline", m === "text");
@@ -354,13 +349,10 @@ class PanelView {
     this.typeBtn.addEventListener("click", () => this.set("parse_numbers", !this.w("parse_numbers")?.value));
 
     this.toggleBtn = el("button", "arb-btn", ICONS.collapse);
-    this.toggleBtn.title = "Collapse / expand all branches";
     this.toggleBtn.addEventListener("click", () => this.toggleAll());
     this.bigBtn = el("button", "arb-btn", ICONS.expand4);
-    this.bigBtn.title = "Open large view";
     this.bigBtn.addEventListener("click", () => this.openLarge());
     this.copyBtn = el("button", "arb-btn", ICONS.copy);
-    this.copyBtn.title = "Copy everything as text";
     this.copyBtn.addEventListener("click", () => {
       const text = this.connected ? this.data?.text : this.w("text")?.value;
       if (text != null) copyText(text, this.copyBtn);
@@ -384,6 +376,19 @@ class PanelView {
 
     root.append(bar, this.body, this.editor.root);
     isolatePointer(root);
+  }
+
+  /* static labels in the current UI language */
+  relabel() {
+    this.dot.title = t("live");
+    const [lines, text] = this.modeSeg.children;
+    lines.textContent = t("lines");
+    lines.title = t("linesTip");
+    text.textContent = t("text");
+    text.title = t("textTip");
+    this.toggleBtn.title = t("collapseAll");
+    this.bigBtn.title = t("largeView");
+    this.copyBtn.title = t("copyAll");
   }
 
   set(name, value) {
@@ -469,9 +474,7 @@ class PanelView {
     this.typeBtn.style.display = viewing || multiline ? "none" : "";
     this.typeBtn.textContent = numbers ? "123" : "abc";
     this.typeBtn.classList.toggle("on", numbers);
-    this.typeBtn.title = numbers
-      ? "Typed values on: 7 → INT, 3.5 → FLOAT, true → BOOLEAN. Click to keep every line as text"
-      : "Typed values off: every line stays text. Click to read numbers and true/false";
+    this.typeBtn.title = t(numbers ? "typedOn" : "typedOff");
 
     this.toggleBtn.style.display = viewing && this.data?.kind === "tree" && !this.liveError ? "" : "none";
     this.dot.style.display = viewing && this.live && !this.liveError ? "" : "none";
@@ -483,9 +486,7 @@ class PanelView {
   renderStats() {
     if (!this.connected) {
       const c = this.editor.info || analyse(this.w("text")?.value ?? "", this.opts.multiline, this.opts.numbers);
-      this.stats.textContent = c.items
-        ? `${plural(c.branches, "branch", "branches")} · ${plural(c.items, "item", "items")}`
-        : "";
+      this.stats.textContent = c.items ? `${tn("branch", c.branches)} · ${tn("item", c.items)}` : "";
       return;
     }
     const d = this.data;
@@ -506,13 +507,13 @@ class PanelView {
     }
     if (!d || d.source !== "input") {
       body.appendChild(el("div", "arb-empty")).textContent = this.blockedBy
-        ? `Run to inspect\n${this.blockedBy} can't preview live`
-        : "Run to inspect the input";
+        ? t("blocked", { name: this.blockedBy })
+        : t("runToInspect");
       return;
     }
     this.root.classList.toggle("flat", d.kind !== "tree");
     if (!d.stats.items && !d.branches.length) {
-      body.appendChild(el("div", "arb-empty", "No data"));
+      body.appendChild(el("div", "arb-empty")).textContent = t("noData");
       return;
     }
     renderData(body, d, this.state);
@@ -541,7 +542,7 @@ class PanelView {
           options: () => this.opts,
           onChange: () => {
             const c = big.info;
-            extra.textContent = `${plural(c.branches, "branch", "branches")} · ${plural(c.items, "item", "items")}`;
+            extra.textContent = `${tn("branch", c.branches)} · ${tn("item", c.items)}`;
           },
         });
         big.root.classList.add("big");
@@ -563,13 +564,14 @@ class PanelView {
 function statsText(d) {
   const s = d.stats;
   return d.kind === "tree"
-    ? `${plural(s.branches, "branch", "branches")} · ${plural(s.items, "item", "items")} · depth ${s.depth}`
-    : d.kind === "list" ? `List · ${plural(s.items, "item", "items")}` : s.items ? "Value" : "Empty";
+    ? `${tn("branch", s.branches)} · ${tn("item", s.items)} · ${t("depth", { n: s.depth })}`
+    : d.kind === "list" ? t("listOf", { items: tn("item", s.items) }) : t(s.items ? "value" : "emptyValue");
 }
 
 app.registerExtension({
   name: "Arbor.Panel",
   async setup() {
+    onLocaleChange(() => views.forEach((v) => { v.relabel(); v.update(); }));
     await loadLiveTypes();
     setInterval(liveTick, LIVE_MS);
   },
@@ -581,6 +583,7 @@ app.registerExtension({
       const view = new PanelView(this);
       this.__arborPanel = view;
       views.add(view);
+      view.relabel();
       this.addDOMWidget("arbor_panel", "arbor-panel", view.root, {
         serialize: false,
         hideOnZoom: false,

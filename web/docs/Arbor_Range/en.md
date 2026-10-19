@@ -1,0 +1,27 @@
+# Range
+
+Evenly divide [start, end] into steps parts — steps + 1 numbers including both ends (Grasshopper's Range).
+
+## Inputs
+
+- **start** · *FLOAT*  
+  First number.
+- **end** · *FLOAT*  
+  Last number (included).
+- **steps** · *INT*  
+  Number of equal parts; you get steps + 1 numbers.
+- **as_int** · *BOOLEAN*  
+  Round to whole numbers (duplicates are possible for small ranges).
+
+## Outputs
+
+- **tree** · *TREE*  
+  The numbers in branch {0}.
+
+## Examples
+| start | end | steps | result |
+|---|---|---|---|
+| 0 | 1 | 4 | 0, 0.25, 0.5, 0.75, 1 |
+| 3 | 9 | 3 | 3, 5, 7, 9 |
+
+Use **Range** when you know both ends (e.g. cfg 3 → 9), **Series** when you know the step.

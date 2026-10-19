@@ -417,6 +417,30 @@ def test_xy_lists():
     print("xy lists: OK")
 
 
+def test_docs_and_locales():
+    import json
+    import re
+    sys.path.insert(0, os.path.join(PKG_DIR, "tools"))
+    import build_locales
+    build_locales.check(pkg.NODES)  # every node / input / output documented in en + zh
+    for lang in ("en", "zh"):
+        with open(os.path.join(PKG_DIR, "locales", lang, "nodeDefs.json"), encoding="utf-8") as f:
+            defs = json.load(f)
+        assert set(defs) == {n.define_schema().node_id for n in pkg.NODES}, f"{lang} nodeDefs out of date — run tools/build_locales.py"
+        for n in pkg.NODES:
+            nid = n.define_schema().node_id
+            page = os.path.join(PKG_DIR, "web", "docs", nid, f"{lang}.md")
+            assert os.path.exists(page), f"missing help page {page}"
+            assert defs[nid]["description"]
+    # every UI string has a Chinese version
+    with open(os.path.join(PKG_DIR, "web", "arbor_common.js"), encoding="utf-8") as f:
+        js = f.read()
+    keys_en = set(re.findall(r'(\w+): "', js[js.index("  en: {"):js.index("  zh: {")]))
+    keys_zh = set(re.findall(r'(\w+): "', js[js.index("  zh: {"):js.index("export function lang")]))
+    assert keys_en - keys_zh == set(), f"untranslated UI strings: {sorted(keys_en - keys_zh)}"
+    print(f"docs / locales: OK ({len(pkg.NODES)} nodes × en, zh; {len(keys_en)} UI strings)")
+
+
 def test_registration():
     ids = [n.define_schema().node_id for n in pkg.NODES]
     assert len(ids) == len(set(ids)), "duplicate node ids"
@@ -438,5 +462,6 @@ if __name__ == "__main__":
     test_v03_booleans_slider_text()
     test_review_fixes()
     test_xy_lists()
+    test_docs_and_locales()
     test_registration()
     print("ALL OK")
