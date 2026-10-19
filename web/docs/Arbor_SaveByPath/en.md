@@ -1,4 +1,4 @@
-# Save by Path
+# Save Images by Path
 
 Save an image tree keeping its structure: one subfolder (or filename part) per branch path, with optional names per file.
 

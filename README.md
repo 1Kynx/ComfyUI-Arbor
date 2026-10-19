@@ -14,14 +14,14 @@ so "6 images" can stay "3 rows × 2 columns" all the way to your comparison shee
 
 ```
 Panel (cfg: 3 5 7) ──x─┐                ┌─ x ──► KSampler.cfg ─┐
-                       ├─ XY Lists ─────┤                       ├─► VAE Decode ─► List → Tree ─► Tree → Grid
+                       ├─ XY Lists ─────┤                       ├─► VAE Decode ─► List → Tree ─► Image Grid
 Panel (prompts) ────y──┘                ├─ y ──► CLIP Text ─────┘          ▲ shape        ▲ row / col labels
                                         └─ shape ──────────────────────────┘
 ```
 
 **XY Lists** turns parameter values into every combination as aligned native lists — ordinary nodes run once
 per combination — plus the grid **shape**. **List → Tree** pours the results back into rows × columns and
-**Tree → Grid** draws the sheet (row labels = the x Panel, column labels = the shape).
+**Image Grid** draws the sheet (row labels = the x Panel, column labels = the shape).
 Open *Templates → ComfyUI-Arbor → arbor_xy_sampler* and pick your checkpoint.
 
 For finer control use the building blocks: `Tree → List` hands any tree to ordinary nodes,
@@ -31,11 +31,14 @@ For finer control use the building blocks: `Tree → List` hands any tree to ord
 
 | Category | Nodes |
 |---|---|
-| **Arbor/Image** | Image Slider · Tree → Grid · Load Folder as Tree · Save by Path · Smart Resize · Batch Pick |
-| **Arbor/Data** | Panel · Number Slider · Construct Tree · Series · Range · Split Text · Prompt Template · Expression · Random |
-| **Arbor/Tree** | XY Lists · Tree → List · List → Tree · Graft · Flatten · Simplify · Flip Matrix · Shift Paths · Renumber · Tree Branch · Merge · Entwine · Tree Statistics |
+| **Arbor/Image** | Image Slider · Image Grid · Load Folder · Save Images by Path · Smart Resize · Batch Pick |
+| **Arbor/Data** | Panel · Number Slider · Series · Range · Split Text · Prompt Template · Expression · Random · Index Switch |
+| **Arbor/Tree** | XY Lists · Tree → List · List → Tree · Construct Tree · Graft · Flatten · Simplify · Flip Matrix · Shift Paths · Renumber · Tree Branch · Merge · Entwine · Tree Statistics |
 | **Arbor/List** | List Item · Sub List · Cull Pattern · Dispatch · Partition · Repeat · Reverse List · Sort List · Cross Reference |
-| **Arbor/Util** | Index Switch |
+
+*Image*: viewing, gridding, loading, saving and resizing images. *Data*: where values come from (typed,
+slid, generated, computed) and which one goes on. *Tree*: building and reshaping trees, and the bridge to
+ComfyUI's native lists. *List*: the same operation on every branch.
 
 **Image Slider** — connect any number of images (inputs grow as you connect) of any size.
 *Flip*: drag the scrubber or press ← → to step through them. *Wipe*: A/B split that follows the pointer.
@@ -69,7 +72,7 @@ grid-ready tree (rows = `{a}`, columns = the last variable); *zip* pairs items o
 Names: `x`, `y` (matched longest-list), `i` item index, `b` branch index, `n` branch length.
 A safe evaluator: no attribute access or imports.
 
-**Load Folder as Tree / Save by Path** — subfolders become branches on the way in; branch paths become
+**Load Folder / Save Images by Path** — subfolders become branches on the way in; branch paths become
 subfolders (or filename parts) on the way out, with optional names per file.
 
 **Smart Resize** — longest / shortest side, megapixels, fit, fill & crop or scale; snaps to multiples of

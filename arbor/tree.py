@@ -143,6 +143,8 @@ def split_batch(value) -> list:
 def graft(tree: DataTree) -> DataTree:
     out = {}
     for p, items in tree.items():
+        if not items:  # an empty branch stays (empty), like Grasshopper, so branches keep lining up
+            out[p] = []
         for j, v in enumerate(items):
             out[p + (j,)] = [v]
     return DataTree(out)

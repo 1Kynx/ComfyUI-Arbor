@@ -25,7 +25,7 @@ class ConstructTree(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
         return _schema(
-            "Arbor_ConstructTree", "Construct Tree", CAT_DATA,
+            "Arbor_ConstructTree", "Construct Tree", CAT_TREE,
             "Wrap any value, native list or batch into a data tree branch.",
             [IO.AnyType.Input("data", tooltip="Any value or native list"),
              IO.String.Input("path", default="{0}", tooltip="Branch path, e.g. {0} or {0;2}"),

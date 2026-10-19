@@ -398,6 +398,12 @@ def test_v03_booleans_slider_text():
 
 def test_review_fixes():
     from arbor_pkg.arbor import nodes_data
+    # Graft keeps an empty branch (empty) so later branches still line up
+    assert T.graft(T.DataTree({(0,): [1, 2], (1,): []})).branches == {(0, 0): [1], (0, 1): [2], (1,): []}
+    # categories: four groups, Index Switch lives in Data, Construct Tree in Tree
+    cats = {n.define_schema().node_id: n.define_schema().category for n in pkg.NODES}
+    assert set(cats.values()) == {"Arbor/Image", "Arbor/Data", "Arbor/Tree", "Arbor/List"}, set(cats.values())
+    assert cats["Arbor_IndexSwitch"] == "Arbor/Data" and cats["Arbor_ConstructTree"] == "Arbor/Tree"
     t = T.DataTree({(0,): [1, 2]})
     # the trailing empty Autogrow slot arrives as [None] in a real run
     m = res(run(nodes_tree.MergeTrees, trees={"tree0": [t], "tree1": [5], "tree2": [None]}))[0]

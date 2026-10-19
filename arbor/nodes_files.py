@@ -1,4 +1,4 @@
-"""Folder in, folder out: Load Folder as Tree, Save by Path."""
+"""Folder in, folder out: Load Folder, Save Images by Path."""
 
 from __future__ import annotations
 
@@ -78,10 +78,10 @@ class LoadFolder(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
         return IO.Schema(
-            node_id="Arbor_LoadFolder", display_name="Load Folder as Tree", category=CAT_IMAGE,
+            node_id="Arbor_LoadFolder", display_name="Load Folder", category=CAT_IMAGE,
             description="Load every image in a folder. With subfolders on, each folder becomes a "
                         "branch — the folder structure turns straight into a data tree.",
-            search_aliases=["load images", "folder", "directory", "batch load", "load batch"],
+            search_aliases=["load folder as tree", "load images", "folder", "directory", "batch load", "load batch"],
             inputs=[
                 IO.String.Input("folder", default="",
                                 tooltip="Absolute path, or relative to ComfyUI's input folder"),
@@ -141,10 +141,10 @@ class SaveByPath(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
         return IO.Schema(
-            node_id="Arbor_SaveByPath", display_name="Save by Path", category=CAT_IMAGE,
+            node_id="Arbor_SaveByPath", display_name="Save Images by Path", category=CAT_IMAGE,
             description="Save an image tree keeping its structure: one subfolder (or filename part) "
                         "per branch path. Optional names give each file a readable name.",
-            search_aliases=["save images", "save tree", "export", "save batch"],
+            search_aliases=["save by path", "save images", "save tree", "export", "save batch"],
             is_output_node=True, is_input_list=True,
             hidden=[IO.Hidden.prompt, IO.Hidden.extra_pnginfo],
             inputs=[
@@ -168,7 +168,7 @@ class SaveByPath(IO.ComfyNode):
         out_dir = folder_paths.get_output_directory()
         first = next((v for v in tree.flat() if is_image(v)), None)
         if first is None:
-            raise ValueError("Save by Path: no images in the tree")
+            raise ValueError("Save Images by Path: no images in the tree")
         folder, filename, _, _, _ = folder_paths.get_save_image_path(
             prefix, out_dir, int(first.shape[2]), int(first.shape[1]))
 

@@ -28,7 +28,7 @@ from node_info import INFO  # noqa: E402
 import node_info_tree  # noqa: E402,F401  (registers the tree / list / util nodes)
 
 LANGS = ("en", "zh")
-CATEGORIES_ZH = {"Arbor": "Arbor", "Image": "图像", "Data": "数据", "Tree": "数据树", "List": "列表", "Util": "工具"}
+CATEGORIES_ZH = {"Arbor": "Arbor", "Image": "图像", "Data": "数据", "Tree": "数据树", "List": "列表"}
 HEAD = {
     "en": {"inputs": "Inputs", "outputs": "Outputs", "name": "Name", "type": "Type", "desc": "Description",
            "optional": "optional", "slots": "grows as you connect", "any": "any", "tree": "TREE"},

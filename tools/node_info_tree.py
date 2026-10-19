@@ -17,17 +17,17 @@ node("Arbor_XYLists", en=dict(
             "mode": "cross: every combination · zip: item by item (longest list, the last item repeats)."},
     outputs=["x of every run — connect to any widget input (cfg, steps, seed…). The node it feeds runs once per combination.",
              "y of every run.", "z of every run (empty values when z is not connected).",
-             "Grid layout of the runs — connect to List → Tree's shape. Its items are the column values, so it also works as Tree → Grid's col_labels.",
+             "Grid layout of the runs — connect to List → Tree's shape. Its items are the column values, so it also works as Image Grid's col_labels.",
              "Number of runs."],
     doc="""## XY plot in five nodes
 ```
 Panel (cfg) ─x─┐               ┌─ x ─► KSampler.cfg ─┐
-               ├─ XY Lists ────┤─ y ─► CLIP Text ────┴─► VAE Decode ─► List → Tree ─► Tree → Grid
+               ├─ XY Lists ────┤─ y ─► CLIP Text ────┴─► VAE Decode ─► List → Tree ─► Image Grid
 Panel (text)─y─┘               └─ shape ──────────────────────────────┘
 ```
 1. Type the x values and the y values in two **Panels** and connect their *tree* outputs.
 2. Connect XY Lists' *x* / *y* to the inputs you want to vary — ordinary nodes run once per combination.
-3. Collect the images with **List → Tree** (*shape* from this node), then **Tree → Grid** (row labels = the x Panel, column labels = *shape*).
+3. Collect the images with **List → Tree** (*shape* from this node), then **Image Grid** (row labels = the x Panel, column labels = *shape*).
 
 Example template: *Templates → ComfyUI-Arbor → arbor_xy_sampler*.
 
@@ -43,17 +43,17 @@ Example template: *Templates → ComfyUI-Arbor → arbor_xy_sampler*.
             "mode": ("模式", "cross 交叉：所有组合 · zip 配对：逐项对应（最长列表，不够时重复最后一项）。")},
     outputs=[("x", "每次运行的 x——接到任意参数输入（cfg、步数、种子……），被接的节点会对每种组合各运行一次。"),
              ("y", "每次运行的 y。"), ("z", "每次运行的 z（未接 z 时为空值）。"),
-             ("形状", "运行结果的网格布局——接「列表 → 数据树」的形状。它的项就是列的取值，也可以直接当「数据树 → 网格」的列标签。"),
+             ("形状", "运行结果的网格布局——接「列表 → 数据树」的形状。它的项就是列的取值，也可以直接当「图像网格」的列标签。"),
              ("数量", "运行次数。")],
     doc="""## 五个节点做 XY 对比图
 ```
 面板(cfg) ─x─┐               ┌─ x ─► KSampler.cfg ─┐
-             ├─ XY 组合列表 ──┤─ y ─► CLIP 文本 ────┴─► VAE 解码 ─► 列表 → 数据树 ─► 数据树 → 网格
+             ├─ XY 组合列表 ──┤─ y ─► CLIP 文本 ────┴─► VAE 解码 ─► 列表 → 数据树 ─► 图像网格
 面板(提示词)─y┘               └─ 形状 ─────────────────────────────┘
 ```
 1. 在两个 **面板** 里分别输入 x 和 y 的取值，接它们的 *数据树* 输出。
 2. 把 *x* / *y* 接到想要变化的参数上——普通节点会对每种组合各运行一次。
-3. 用 **列表 → 数据树**（*形状* 接本节点）收集图片，再接 **数据树 → 网格**（行标签 = x 的面板，列标签 = *形状*）。
+3. 用 **列表 → 数据树**（*形状* 接本节点）收集图片，再接 **图像网格**（行标签 = x 的面板，列标签 = *形状*）。
 
 示例模板：*模板 → ComfyUI-Arbor → arbor_xy_sampler*。
 
@@ -156,11 +156,11 @@ simple("Arbor_FlipMatrix",
        """## Example
 `{0}: a, b · {1}: c, d` → `{0}: a, c · {1}: b, d`
 
-Put it before **Tree → Grid** to swap the axes of a sheet.
+Put it before **Image Grid** to swap the axes of a sheet.
 """, """## 示例
 `{0}: a, b · {1}: c, d` → `{0}: a, c · {1}: b, d`
 
-放在 **数据树 → 网格** 前面即可交换对比图的行列。
+放在 **图像网格** 前面即可交换对比图的行列。
 """)
 
 simple("Arbor_ShiftPaths",
@@ -371,7 +371,7 @@ simple("Arbor_Reverse",
 
 simple("Arbor_Sort",
        "Sort every branch — numbers first (by value), then text (alphabetically).",
-       "排序", "对每个分支排序——数字在前（按数值），文本在后（按字母）。",
+       "列表排序", "对每个分支排序——数字在前（按数值），文本在后（按字母）。",
        "## Example\n`3, b, 1, a` → `1, 3, a, b`\n", "## 示例\n`3, b, 1, a` → `1, 3, a, b`\n",
        {"descending": "Largest first."}, {"descending": ("降序", "从大到小。")})
 
@@ -387,7 +387,7 @@ A `3, 5`, B `x, y, z`, group on:
 
 ## Tips
 - For an XY plot, **XY Lists** does this and the flattening in one node.
-- Both outputs work directly as **Tree → Grid** labels.
+- Both outputs work directly as **Image Grid** labels.
 """), zh=dict(
     name="交叉组合",
     desc="按分支生成 A × B 的所有组合（对应 Grasshopper 的 Cross Reference）。开启分组时：行 = A，列 = B。",
@@ -401,7 +401,7 @@ A `3, 5`，B `x, y, z`，开启分组：
 
 ## 提示
 - 做 XY 对比图时，**XY 组合列表** 一个节点就能完成组合和展开。
-- 两个输出都可以直接当 **数据树 → 网格** 的标签。
+- 两个输出都可以直接当 **图像网格** 的标签。
 """))
 
 # =============================================================== Util
@@ -416,7 +416,7 @@ node("Arbor_IndexSwitch", en=dict(
 - Drive *index* with a **Number Slider** (*int* output) or a Boolean for an if / else.
 - ComfyUI's own *If/Else Switch* takes exactly two inputs; this one takes up to 32.
 """), zh=dict(
-    name="序号切换",
+    name="数据序号切换",
     desc="按序号传出第 N 个输入（按已连接的输入计数，循环）。未选中的输入不会被计算。",
     inputs={"index": ("序号", "0 = 第一个已连接的输入；负数从末尾数；会循环。也可接 BOOLEAN：False = 0，True = 1。"),
             "inputs": ("输入", "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。")},

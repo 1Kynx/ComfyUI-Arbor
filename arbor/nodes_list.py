@@ -128,7 +128,7 @@ class CrossReference(IO.ComfyNode):
         return IO.Schema(
             node_id="Arbor_CrossReference", display_name="Cross Reference", category=CAT_LIST,
             description="Every combination of A × B. With group on, each A value gets its own "
-                        "branch: rows = A, columns = B — ready for Tree → Grid.",
+                        "branch: rows = A, columns = B — ready for Image Grid.",
             search_aliases=["cartesian", "combinations", "xy", "product", "permutation"],
             is_input_list=True,
             inputs=[tree_in("A"), tree_in("B"),

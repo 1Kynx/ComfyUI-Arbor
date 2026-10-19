@@ -1,4 +1,4 @@
-# Tree → Grid
+# Image Grid
 
 Lay an image tree out as an XY comparison sheet: each branch is a row, each item a column.
 
@@ -35,4 +35,4 @@ Lay an image tree out as an XY comparison sheet: each branch is a row, each item
 
 ## Tips
 - Long labels wrap to three lines and are cut with "…".
-- Save the sheet with Save Image, or every cell separately with **Save by Path**.
+- Save the sheet with Save Image, or every cell separately with **Save Images by Path**.

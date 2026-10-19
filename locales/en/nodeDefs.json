@@ -166,7 +166,7 @@
     }
   },
   "Arbor_TreeToGrid": {
-    "display_name": "Tree → Grid",
+    "display_name": "Image Grid",
     "description": "Lay an image tree out as an XY comparison sheet: each branch is a row, each item a column.",
     "inputs": {
       "images": {
@@ -214,7 +214,7 @@
     }
   },
   "Arbor_LoadFolder": {
-    "display_name": "Load Folder as Tree",
+    "display_name": "Load Folder",
     "description": "Load every image in a folder; with subfolders on, each folder becomes a branch — the folder structure turns straight into a data tree.",
     "inputs": {
       "folder": {
@@ -245,7 +245,7 @@
       },
       "1": {
         "name": "names",
-        "tooltip": "File names without extension, same layout — handy as labels or for Save by Path."
+        "tooltip": "File names without extension, same layout — handy as labels or for Save Images by Path."
       },
       "2": {
         "name": "folders",
@@ -258,7 +258,7 @@
     }
   },
   "Arbor_SaveByPath": {
-    "display_name": "Save by Path",
+    "display_name": "Save Images by Path",
     "description": "Save an image tree keeping its structure: one subfolder (or filename part) per branch path, with optional names per file.",
     "inputs": {
       "images": {
@@ -593,7 +593,7 @@
       },
       "3": {
         "name": "shape",
-        "tooltip": "Grid layout of the runs — connect to List → Tree's shape. Its items are the column values, so it also works as Tree → Grid's col_labels."
+        "tooltip": "Grid layout of the runs — connect to List → Tree's shape. Its items are the column values, so it also works as Image Grid's col_labels."
       },
       "4": {
         "name": "count",

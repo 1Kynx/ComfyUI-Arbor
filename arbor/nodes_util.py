@@ -1,8 +1,6 @@
 """Flow utilities."""
 
-from .common import IO
-
-CAT_UTIL = "Arbor/Util"
+from .common import IO, CAT_DATA
 
 
 class IndexSwitch(IO.ComfyNode):
@@ -14,7 +12,7 @@ class IndexSwitch(IO.ComfyNode):
             IO.AnyType.Input("input", lazy=True, tooltip="Only evaluated when selected"),
             prefix="input", min=1, max=32)
         return IO.Schema(
-            node_id="Arbor_IndexSwitch", display_name="Index Switch", category=CAT_UTIL,
+            node_id="Arbor_IndexSwitch", display_name="Index Switch", category=CAT_DATA,
             description="Pass through input N (counting connected inputs, wrapping around). "
                         "Unselected branches are not executed at all.",
             search_aliases=["switch", "select", "stream filter", "choose", "multiplexer", "any switch"],

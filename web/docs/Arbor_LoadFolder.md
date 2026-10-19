@@ -1,4 +1,4 @@
-# Load Folder as Tree
+# Load Folder
 
 Load every image in a folder; with subfolders on, each folder becomes a branch — the folder structure turns straight into a data tree.
 
@@ -20,7 +20,7 @@ Load every image in a folder; with subfolders on, each folder becomes a branch �
 - **images** · *TREE*  
   Image tree, one branch per folder.
 - **names** · *TREE*  
-  File names without extension, same layout — handy as labels or for Save by Path.
+  File names without extension, same layout — handy as labels or for Save Images by Path.
 - **folders** · *TREE*  
   Folder names, one per branch — use as row labels.
 - **count** · *INT*  

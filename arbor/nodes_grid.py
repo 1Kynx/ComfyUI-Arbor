@@ -1,4 +1,4 @@
-"""Tree → Grid: lay an image tree out as an XY comparison sheet."""
+"""Image Grid: lay an image tree out as an XY comparison sheet."""
 
 from __future__ import annotations
 
@@ -109,10 +109,10 @@ def build_grid(tree, row_labels=None, col_labels=None, fit="fit", cell_size=0, g
     rows = [(p, _frames(items)) for p, items in to_tree(tree).items()]
     rows = [r for r in rows if r[1]]
     if not rows:
-        raise ValueError("Tree → Grid: no images in the tree")
+        raise ValueError("Image Grid: no images in the tree")
     imgs = [im for _, r in rows for im in r if im is not None]
     if not imgs:
-        raise ValueError("Tree → Grid: no images in the tree")
+        raise ValueError("Image Grid: no images in the tree")
 
     cols = max(len(r) for _, r in rows)
     cw = max(im.width for im in imgs)
@@ -179,10 +179,10 @@ class TreeToGrid(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
         return IO.Schema(
-            node_id="Arbor_TreeToGrid", display_name="Tree → Grid", category=CAT_IMAGE,
+            node_id="Arbor_TreeToGrid", display_name="Image Grid", category=CAT_IMAGE,
             description="XY sheet from an image tree: each branch is a row, each item a column. "
                         "Use Flip Matrix to swap axes.",
-            search_aliases=["xy plot", "grid", "contact sheet", "image grid", "comparison"],
+            search_aliases=["tree to grid", "xy plot", "xyz plot", "grid", "contact sheet", "comparison"],
             is_input_list=True,
             inputs=[
                 tree_in("images", tooltip="Image tree (or a plain image list = one row)"),

@@ -165,9 +165,9 @@ node("Arbor_TreeToGrid", en=dict(
 
 ## Tips
 - Long labels wrap to three lines and are cut with "…".
-- Save the sheet with Save Image, or every cell separately with **Save by Path**.
+- Save the sheet with Save Image, or every cell separately with **Save Images by Path**.
 """), zh=dict(
-    name="数据树 → 网格",
+    name="图像网格",
     desc="把图像数据树排成 XY 对比图：每个分支一行，每项一列。",
     inputs={"images": ("图像", "图像数据树，每个分支一行。普通图像列表 = 一行；批次会增加列。"),
             "row_labels": ("行标签", "每行一个标签：列表，或每行一个分支的数据树（XY 组合列表的 x 输入、交叉组合的 A 可直接接）。"),
@@ -186,7 +186,7 @@ node("Arbor_TreeToGrid", en=dict(
 
 ## 提示
 - 过长的标签最多折成三行，超出部分用「…」省略。
-- 整张图用「保存图像」保存；想把每格单独存下来，用 **按路径保存**。
+- 整张图用「保存图像」保存；想把每格单独存下来，用 **按路径保存图像**。
 """))
 
 node("Arbor_LoadFolder", en=dict(
@@ -196,7 +196,7 @@ node("Arbor_LoadFolder", en=dict(
             "subfolders": "On: each subfolder (and the folder itself, if it has images) becomes a branch. Off: only this folder.",
             "sort": "name = natural order (img2 before img10); modified = oldest first.",
             "limit": "Maximum number of images in total; 0 = all. Every image is held in memory, so limit large folders."},
-    outputs=["Image tree, one branch per folder.", "File names without extension, same layout — handy as labels or for Save by Path.",
+    outputs=["Image tree, one branch per folder.", "File names without extension, same layout — handy as labels or for Save Images by Path.",
              "Folder names, one per branch — use as row labels.", "Total number of images."],
     doc="""## Example
 ```
@@ -210,14 +210,14 @@ photos/            →  images {0}: 2 images   folders: photos
 - The node re-runs automatically when files are added, removed or changed.
 - Images keep their own sizes; resize with **Smart Resize** if the next step needs one size.
 """), zh=dict(
-    name="按文件夹加载为树",
+    name="加载文件夹",
     desc="加载文件夹里的所有图片；开启子文件夹后，每个文件夹就是一个分支——目录结构直接变成数据树。",
     inputs={"folder": ("文件夹", "绝对路径，或相对 ComfyUI input 文件夹的路径。"),
             "pattern": ("文件匹配", "用空格分隔的文件名模式，例如 *.png *.jpg。"),
             "subfolders": ("子文件夹", "开启：每个子文件夹（以及本文件夹，如果里面有图）各成一个分支。关闭：只读本文件夹。"),
             "sort": ("排序", "name = 自然排序（img2 排在 img10 前）；modified = 按修改时间从旧到新。"),
             "limit": ("数量上限", "最多加载的图片总数；0 = 全部。所有图片都会载入内存，大文件夹请设上限。")},
-    outputs=[("图像", "图像数据树，每个文件夹一个分支。"), ("文件名", "不带扩展名的文件名，结构相同——可作标签或给「按路径保存」用。"),
+    outputs=[("图像", "图像数据树，每个文件夹一个分支。"), ("文件名", "不带扩展名的文件名，结构相同——可作标签或给「按路径保存图像」用。"),
              ("文件夹", "文件夹名，每个分支一个——可作行标签。"), ("数量", "图片总数。")],
     doc="""## 示例
 ```
@@ -251,12 +251,12 @@ With *names* connected the files are called after the names instead (`cat.png`, 
 - Existing files are never overwritten: a `_2`, `_3`, … suffix is added.
 - The workflow is embedded in every PNG, like Save Image.
 """), zh=dict(
-    name="按路径保存",
+    name="按路径保存图像",
     desc="按数据树结构保存图片：每个分支路径一个子文件夹（或文件名的一部分），可选为每个文件命名。",
     inputs={"images": ("图像", "要保存的图像数据树，批次会逐帧保存。"),
             "filename_prefix": ("文件名前缀", "output 文件夹内的目录 / 前缀，和「保存图像」一样支持 %date% 等变量。"),
             "layout": ("布局", "subfolders：前缀_0-1/000.png · flat：前缀_0-1_000.png"),
-            "names": ("文件名", "可选，与图像逐项对应的文件名（例如「按文件夹加载」的文件名或提示词模板的输出）。")},
+            "names": ("文件名", "可选，与图像逐项对应的文件名（例如「加载文件夹」的文件名或提示词模板的输出）。")},
     outputs=[("路径", "已保存文件的路径，结构与输入相同。")],
     doc="""## 示例
 数据树 `{0}: 2 张, {1}: 3 张`，前缀 `arbor/run`，布局 *subfolders*：

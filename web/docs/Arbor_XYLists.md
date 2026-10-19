@@ -22,19 +22,19 @@ One step from parameter values to a batch run: every combination of x, y (and z)
 - **z** · *any ×N*  
   z of every run (empty values when z is not connected).
 - **shape** · *TREE*  
-  Grid layout of the runs — connect to List → Tree's shape. Its items are the column values, so it also works as Tree → Grid's col_labels.
+  Grid layout of the runs — connect to List → Tree's shape. Its items are the column values, so it also works as Image Grid's col_labels.
 - **count** · *INT*  
   Number of runs.
 
 ## XY plot in five nodes
 ```
 Panel (cfg) ─x─┐               ┌─ x ─► KSampler.cfg ─┐
-               ├─ XY Lists ────┤─ y ─► CLIP Text ────┴─► VAE Decode ─► List → Tree ─► Tree → Grid
+               ├─ XY Lists ────┤─ y ─► CLIP Text ────┴─► VAE Decode ─► List → Tree ─► Image Grid
 Panel (text)─y─┘               └─ shape ──────────────────────────────┘
 ```
 1. Type the x values and the y values in two **Panels** and connect their *tree* outputs.
 2. Connect XY Lists' *x* / *y* to the inputs you want to vary — ordinary nodes run once per combination.
-3. Collect the images with **List → Tree** (*shape* from this node), then **Tree → Grid** (row labels = the x Panel, column labels = *shape*).
+3. Collect the images with **List → Tree** (*shape* from this node), then **Image Grid** (row labels = the x Panel, column labels = *shape*).
 
 Example template: *Templates → ComfyUI-Arbor → arbor_xy_sampler*.
 

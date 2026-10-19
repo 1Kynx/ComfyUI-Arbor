@@ -15,4 +15,4 @@ Swap rows and columns: item j of every branch goes to {j} (Grasshopper's Flip Ma
 ## Example
 `{0}: a, b · {1}: c, d` → `{0}: a, c · {1}: b, d`
 
-Put it before **Tree → Grid** to swap the axes of a sheet.
+Put it before **Image Grid** to swap the axes of a sheet.
