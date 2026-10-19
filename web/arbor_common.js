@@ -165,6 +165,7 @@ const CSS = `
 .arb-ed-idx{right:calc(100% + 7px);color:var(--arb-sub);text-align:right;}
 .arb-ed-idx.t-int,.arb-ed-idx.t-float{color:#7fb4f0;}
 .arb-ed-idx.t-bool{color:#c49bf0;}
+.arb-ed-idx.t-name{color:var(--arb-accent);}
 .arb-ed.big{flex:1 1 auto;--g:56px;}
 .arb-ed.big .arb-ed-back,.arb-ed.big .arb-ed-ta{font-size:13px;padding-top:10px;}
 .arb-ed.big .arb-ed-path,.arb-ed.big .arb-ed-idx{line-height:20.8px;font-size:10.5px;}

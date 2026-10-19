@@ -8,6 +8,7 @@ from .tree import DataTree
 
 _INT = re.compile(r"[+-]?\d+")
 _FLOAT = re.compile(r"[+-]?(\d+\.\d*|\.\d+|\d+)([eE][+-]?\d+)?")
+_HEADING = re.compile(r"\s*#\s+(.*\S)\s*")
 
 
 def parse_value(s: str):
@@ -26,18 +27,27 @@ def parse_value(s: str):
 def parse_text(text: str, numbers: bool = True, multiline: bool = False) -> DataTree:
     """Panel text → tree, Grasshopper style.
 
-    Each line is an item; an empty line starts a new branch. With
-    ``multiline`` the whole text is a single item instead.
+    Each line is an item; an empty line starts a new branch, and a ``# title``
+    line names the branch it is in. With ``multiline`` the whole text is a
+    single item instead.
     """
     text = (text or "").replace("\r\n", "\n")
     if multiline:
         return DataTree({(0,): [text]})
-    out = {}
+    out, names = {}, {}
     for block in re.split(r"\n[ \t]*\n", text):
         lines = [l for l in block.split("\n") if l.strip() != ""]
-        if lines:
-            out[(len(out),)] = [parse_value(l) if numbers else l for l in lines]
-    return DataTree(out or {(0,): []})
+        if not lines:
+            continue
+        path, items = (len(out),), []
+        for line in lines:
+            heading = _HEADING.fullmatch(line)
+            if heading:
+                names.setdefault(path, heading.group(1))
+            else:
+                items.append(parse_value(line) if numbers else line)
+        out[path] = items
+    return DataTree(out or {(0,): []}, names)
 
 
 class Panel(IO.ComfyNode):
@@ -47,7 +57,7 @@ class Panel(IO.ComfyNode):
             "Arbor_Panel", "Panel", CAT_DATA,
             "Inspect anything, or type data in. Connected: shows the input (trees with branches and "
             "paths, images as thumbnails) and passes it on. Unconnected: each line you type is an "
-            "item, an empty line starts a new branch.",
+            "item, an empty line starts a new branch and a '# title' line names it.",
             [IO.AnyType.Input("data", optional=True),
              IO.String.Input("text", multiline=True, default="", tooltip="Typed data, used when nothing is connected"),
              IO.Boolean.Input("parse_numbers", default=True,

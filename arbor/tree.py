@@ -348,7 +348,7 @@ def dispatch(tree: DataTree, pattern) -> tuple[DataTree, DataTree]:
         pat = _branch_pattern(pattern, k)
         a[path] = [v for j, v in enumerate(items) if pat[j % len(pat)]]
         b[path] = [v for j, v in enumerate(items) if not pat[j % len(pat)]]
-    return DataTree(a), DataTree(b)
+    return DataTree(a, tree.names), DataTree(b, tree.names)
 
 
 def partition(tree: DataTree, size: int) -> DataTree:

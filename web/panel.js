@@ -97,6 +97,8 @@ function lineType(line, numbers) {
   return "str";
 }
 
+const HEADING_RE = /^\s*#\s+\S/;
+
 /* per-line gutter info + counts (mirror of nodes_panel.parse_text) */
 function analyse(text, multiline, numbers) {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
@@ -104,7 +106,7 @@ function analyse(text, multiline, numbers) {
     return { lines: lines.map(() => null), branches: text ? 1 : 0, items: text ? 1 : 0 };
   }
   const out = [];
-  let branch = -1, idx = 0, open = false, items = 0;
+  let branch = -1, idx = 0, open = false, first = false, items = 0;
   for (const line of lines) {
     if (/^[ \t]*$/.test(line)) { // separator, exactly like the server's \n[ \t]*\n split
       open = false;
@@ -115,8 +117,14 @@ function analyse(text, multiline, numbers) {
       out.push(null);
       continue;
     }
-    if (!open) { branch++; idx = 0; open = true; }
-    out.push({ path: idx === 0 ? `{${branch}}` : "", i: idx, t: lineType(line, numbers) });
+    if (!open) { branch++; idx = 0; open = true; first = true; }
+    const path = first ? `{${branch}}` : "";
+    first = false;
+    if (HEADING_RE.test(line)) { // "# title" names the branch; it is not an item
+      out.push({ path, i: "#", t: "name" });
+      continue;
+    }
+    out.push({ path, i: idx, t: lineType(line, numbers) });
     idx++;
     items++;
   }

@@ -11,7 +11,7 @@ Lay images out as an XY comparison sheet: each branch is a row, each item a colu
 - **row_labels** · *any, optional*  
   One label per row — a list, or a tree with one branch per row. Not needed when the tree or shape names its rows (XY Lists, Prompt Template, Cross Reference).
 - **col_labels** · *any, optional*  
-  One label per column — overrides the labels taken from shape.
+  One label per column — overrides the labels taken from shape (which labels the columns when every row holds the same values, as in XY Lists).
 - **fit** · *COMBO (fit · original · stretch)*  
   How images of different sizes fill a cell: fit (scale to fit), original (no scaling), stretch.
 - **cell_size** · *INT*  

@@ -5,7 +5,7 @@ Load every image in a folder; with subfolders on, each folder becomes a branch �
 ## Inputs
 
 - **folder** · *STRING*  
-  Absolute path, or a path relative to ComfyUI's input folder.
+  An absolute path; output/… for ComfyUI's output folder; any other relative path is inside the input folder.
 - **pattern** · *STRING*  
   File name patterns separated by spaces, e.g. *.png *.jpg.
 - **subfolders** · *BOOLEAN*  
@@ -18,11 +18,11 @@ Load every image in a folder; with subfolders on, each folder becomes a branch �
 ## Outputs
 
 - **images** · *TREE*  
-  Image tree, one branch per folder.
+  Image tree, one branch per folder, named after it — Image Grid labels its rows with the names, the Panel and Image Slider show them.
 - **names** · *TREE*  
   File names without extension, same layout — handy as labels or for Save Images by Path.
 - **folders** · *STRING ×N*  
-  Folder names, one per branch — use as row labels.
+  Folder names as plain data, one per branch.
 - **count** · *INT*  
   Total number of images.
 
@@ -33,6 +33,9 @@ photos/            →  images {0}: 2 images   folders: photos
   day/             →  images {1}: 3 images   folders: day
   night/           →  images {2}: 1 image    folders: night
 ```
+
+## Round trip
+Folders saved by **Save Images by Path** from named branches (`0 · Arrival`, `1 · The village`) load back with their names (*Arrival*, *The village*) and in their order. Template: *arbor_folder_review*.
 
 ## Tips
 - The node re-runs automatically when files are added, removed or changed.

@@ -6,25 +6,37 @@ import numpy as np
 import torch
 
 from . import tree as T
-from .common import IO, CAT_IMAGE, schema, connected, tree_in, to_tree, unwrap
+from .common import IO, TREE, CAT_IMAGE, schema, connected, tree_in, to_tree, unwrap
 from .grid import build_grid, col_labels_for, grid_size, row_labels_for
-from .preview import is_image, save_temp, to_pil
+from .preview import is_image, label_of, save_temp, to_pil
 
 MAX_SLIDES = 64
 
 
 # ======================================================================= Image Slider
 
-def _frames(value) -> list[torch.Tensor]:
-    """Every frame from a socket value: a batch, a list of batches, or a tree."""
-    return [v[i] for v in to_tree(value).flat() if is_image(v) for i in range(v.shape[0])]
+def _slides(slot: str, value) -> list[tuple[torch.Tensor, str]]:
+    """(frame, label) for every frame of a socket value: a batch, a list of batches, or a tree.
+    Frames of a named branch are labelled with its name, the rest with the slot name;
+    a label shared by several frames is numbered."""
+    tree = to_tree(value)
+    pairs = [(v[i], label_of(tree.names[p]) if p in tree.names else slot)
+             for p, items in tree.items() for v in items if is_image(v) for i in range(v.shape[0])]
+    total = {lab: sum(1 for _, l in pairs if l == lab) for _, lab in pairs}
+    seen: dict[str, int] = {}
+    out = []
+    for frame, lab in pairs:
+        seen[lab] = seen.get(lab, 0) + 1
+        out.append((frame, lab if total[lab] == 1 else f"{lab} · {seen[lab]}/{total[lab]}"))
+    return out
 
 
 class ImageSlider(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
         images = IO.Autogrow.TemplatePrefix(
-            IO.Image.Input("image", tooltip="Image or batch; every frame becomes a slide"),
+            IO.MultiType.Input(IO.Image.Input("image", tooltip="Image, batch or image tree; every frame "
+                                                               "becomes a slide"), types=[TREE]),
             prefix="image", min=1, max=16)
         return schema(
             "Arbor_ImageSlider", "Image Slider", CAT_IMAGE,
@@ -38,10 +50,8 @@ class ImageSlider(IO.ComfyNode):
     def execute(cls, images: IO.Autogrow.Type = None) -> IO.NodeOutput:
         slides = []
         for name, value in (images or {}).items():
-            frames = _frames(value)
-            for k, frame in enumerate(frames[:MAX_SLIDES - len(slides)]):
+            for frame, label in _slides(name, value)[:MAX_SLIDES - len(slides)]:
                 ref = save_temp(to_pil(frame), "slider", fmt="png")
-                label = name if len(frames) == 1 else f"{name} · {k + 1}/{len(frames)}"
                 slides.append({**ref, "label": label, "w": int(frame.shape[1]), "h": int(frame.shape[0])})
         return IO.NodeOutput(ui={"arbor_slider": [{"slides": slides}]})
 
@@ -79,9 +89,11 @@ class ImageGrid(IO.ComfyNode):
                 shape=None, row_labels=None, col_labels=None) -> IO.NodeOutput:
         tree = to_tree(images)
         if connected(shape):
-            tree = T.rebuild(tree.flat(), to_tree(shape))
-            if not connected(col_labels):
-                col_labels = shape  # its items are the column values
+            layout = to_tree(shape)
+            tree = T.rebuild(tree.flat(), layout)
+            rows = [[label_of(v) for v in items] for items in layout.branches.values()]
+            if not connected(col_labels) and all(r == rows[0] for r in rows):
+                col_labels = shape  # a true matrix (XY Lists): every row holds the column values
         rows, cols = grid_size(tree)
         if not connected(row_labels) and tree.names:
             row_labels = [tree.names.get(p, "") for p in tree.paths()]  # e.g. XY Lists' x values

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -39,23 +40,45 @@ def _font(size: int):
     return _font_cache[size]
 
 
+# CJK ideographs, kana, hangul and full-width forms wrap per character, other text between words
+_CJK = "".join(f"{chr(a)}-{chr(b)}" for a, b in ((0x2E80, 0x9FFF), (0xAC00, 0xD7AF), (0xF900, 0xFAFF),
+                                                 (0xFF00, 0xFFEF)))
+_TOKENS = re.compile(rf"[{_CJK}]|[^\s{_CJK}]+|\s+")
+
+
 def _wrap(draw: ImageDraw.ImageDraw, text: str, font, width: int, max_lines: int) -> list[str]:
-    """Greedy wrap by characters (works for CJK and latin alike), "…" when cut."""
-    text = text.replace("\n", " ")
+    """Greedy wrap between words (every CJK character counts as a word); a word wider than
+    the line is broken by characters. "…" marks text that did not fit."""
+    def fits(t):
+        return draw.textlength(t, font=font) <= width
+
+    tokens = _TOKENS.findall(text.replace("\n", " "))
     lines, cur = [], ""
-    for ch in text:
-        if draw.textlength(cur + ch, font=font) <= width or not cur:
-            cur += ch
-        else:
+    while tokens and len(lines) < max_lines:
+        tok = tokens.pop(0)
+        if fits(cur + tok):
+            cur += tok
+        elif tok.isspace():  # break at the space
             lines.append(cur)
-            cur = ch
-            if len(lines) == max_lines:
-                break
-    if len(lines) < max_lines and cur:
-        lines.append(cur)
-    if len(lines) == max_lines and "".join(lines) != text:
+            cur = ""
+        elif cur.strip():  # the word moves to the next line
+            lines.append(cur.rstrip())
+            cur = ""
+            tokens.insert(0, tok)
+        else:  # a word wider than the line
+            k = next((i for i in range(len(tok) - 1, 0, -1) if fits(tok[:i])), 1)
+            lines.append(tok[:k])
+            tokens.insert(0, tok[k:])
+            cur = ""
+    cut = any(not t.isspace() for t in tokens)
+    if cur.strip():
+        if len(lines) < max_lines:
+            lines.append(cur.rstrip())
+        else:
+            cut = True
+    if cut and lines:
         last = lines[-1]
-        while last and draw.textlength(last + "…", font=font) > width:
+        while last and not fits(last + "…"):
             last = last[:-1]
         lines[-1] = last + "…"
     return lines

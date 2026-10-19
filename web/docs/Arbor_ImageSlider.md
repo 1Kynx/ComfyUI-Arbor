@@ -4,8 +4,8 @@ Compare any number of images of any size: drag the slider to flip through them, 
 
 ## Inputs
 
-- **images** · *IMAGE × N, optional, grows as you connect*  
-  Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides).
+- **images** · *IMAGE / TREE × N, optional, grows as you connect*  
+  Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name.
 
 ## How to use
 - Connect one or more images. A batch counts as several slides.

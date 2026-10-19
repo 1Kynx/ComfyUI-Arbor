@@ -1,6 +1,6 @@
 # Panel
 
-Inspect anything, or type data in. Connected: shows the input and passes it through. Unconnected: each line you type is an item, an empty line starts a new branch.
+Inspect anything, or type data in. Connected: shows the input and passes it through. Unconnected: each line you type is an item, an empty line starts a new branch and a `# title` line names it.
 
 ## Inputs
 
@@ -27,7 +27,7 @@ Inspect anything, or type data in. Connected: shows the input and passes it thro
 - ⤢ opens a large view.
 
 ## Typing (input unconnected)
-- **Lines**: one item per line, an empty line starts a new branch. The gutter shows each line's branch path and index, coloured by type (blue = number, purple = boolean).
+- **Lines**: one item per line, an empty line starts a new branch. A line `# title` names its branch instead of being an item — the name shows up as the row label in **Image Grid**, as the folder name in **Save Images by Path**, and in every Panel downstream. The gutter shows each line's branch path and index, coloured by type (blue = number, purple = boolean).
 - **Text**: the whole text is one item — for long prompts.
 - **123 / abc**: read numbers and true / false, or keep everything as text.
 - ⤢ opens a large editor. Ctrl+Enter still queues the workflow.
@@ -42,3 +42,13 @@ a cat
 a dog
 ```
 → tree `{0}: [3, 5, 7]`, `{1}: ["a cat", "a dog"]`.
+
+```
+# Arrival
+night train
+paper map
+
+# The village
+misty roofs
+```
+→ `{0} Arrival: [night train, paper map]`, `{1} The village: [misty roofs]` — a storyboard (template *arbor_qwen_storyboard*).

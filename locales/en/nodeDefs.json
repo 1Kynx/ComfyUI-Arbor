@@ -5,71 +5,71 @@
     "inputs": {
       "images": {
         "name": "images",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image0": {
         "name": "image0",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image1": {
         "name": "image1",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image2": {
         "name": "image2",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image3": {
         "name": "image3",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image4": {
         "name": "image4",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image5": {
         "name": "image5",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image6": {
         "name": "image6",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image7": {
         "name": "image7",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image8": {
         "name": "image8",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image9": {
         "name": "image9",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image10": {
         "name": "image10",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image11": {
         "name": "image11",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image12": {
         "name": "image12",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image13": {
         "name": "image13",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image14": {
         "name": "image14",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image15": {
         "name": "image15",
-        "tooltip": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."
+        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       }
     }
   },
@@ -91,7 +91,7 @@
       },
       "col_labels": {
         "name": "col_labels",
-        "tooltip": "One label per column — overrides the labels taken from shape."
+        "tooltip": "One label per column — overrides the labels taken from shape (which labels the columns when every row holds the same values, as in XY Lists)."
       },
       "fit": {
         "name": "fit",
@@ -223,7 +223,7 @@
     "inputs": {
       "folder": {
         "name": "folder",
-        "tooltip": "Absolute path, or a path relative to ComfyUI's input folder."
+        "tooltip": "An absolute path; output/… for ComfyUI's output folder; any other relative path is inside the input folder."
       },
       "pattern": {
         "name": "pattern",
@@ -245,7 +245,7 @@
     "outputs": {
       "0": {
         "name": "images",
-        "tooltip": "Image tree, one branch per folder."
+        "tooltip": "Image tree, one branch per folder, named after it — Image Grid labels its rows with the names, the Panel and Image Slider show them."
       },
       "1": {
         "name": "names",
@@ -253,7 +253,7 @@
       },
       "2": {
         "name": "folders",
-        "tooltip": "Folder names, one per branch — use as row labels."
+        "tooltip": "Folder names as plain data, one per branch."
       },
       "3": {
         "name": "count",
@@ -263,7 +263,7 @@
   },
   "Arbor_SaveImagesByPath": {
     "display_name": "Save Images by Path",
-    "description": "Save an image tree keeping its structure: one subfolder (or filename part) per branch path, with optional names per file.",
+    "description": "Save an image tree keeping its structure: one subfolder (or filename part) per branch, named after the branch when it has a name, with optional names per file.",
     "inputs": {
       "images": {
         "name": "images",
@@ -275,7 +275,7 @@
       },
       "layout": {
         "name": "layout",
-        "tooltip": "subfolders: prefix_0-1/000.png · flat: prefix_0-1_000.png"
+        "tooltip": "subfolders: prefix/0-1/000.png (a named branch: prefix/0-1 · name/000.png) · flat: prefix_0-1_000.png"
       },
       "names": {
         "name": "names",
@@ -291,7 +291,7 @@
   },
   "Arbor_Panel": {
     "display_name": "Panel",
-    "description": "Inspect anything, or type data in. Connected: shows the input and passes it through. Unconnected: each line you type is an item, an empty line starts a new branch.",
+    "description": "Inspect anything, or type data in. Connected: shows the input and passes it through. Unconnected: each line you type is an item, an empty line starts a new branch and a `# title` line names it.",
     "inputs": {
       "data": {
         "name": "data",

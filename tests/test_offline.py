@@ -151,6 +151,9 @@ def test_data_nodes():
     xs = T.DataTree({(0,): [1, 2, 3], (1,): [10]})
     data, r = res(run(nodes_data.Expression, expression="x * 2 + i", x=[xs]))
     assert r.branches == {(0,): [2, 5, 8], (1,): [20]} and data == [2, 5, 8, 20]
+    scenes = T.DataTree({(0,): ["train"], (1,): ["dawn"]}, {(1,): "Village"})
+    styled = res(run(nodes_data.Expression, expression='x + ", " + y', x=[scenes], y=["anime"]))[1]
+    assert styled.branches[(1,)] == ["dawn, anime"] and styled.names == {(1,): "Village"}, "names survive"
     r = res(run(nodes_data.Expression, expression="x + y", x=[xs], y=[T.DataTree({(0,): [100]})]))[1]
     assert r.branches == {(0,): [101, 102, 103], (1,): [110]}, "longest-list matching"
     r = res(run(nodes_data.Expression, expression="upper(x) if len(x) > 2 else x", x=["ab", "cat"]))[1]
@@ -249,6 +252,10 @@ def test_panel():
     assert typed.ui["arbor_panel"][0]["source"] == "text"
     raw = res(run(nodes_panel.Panel, text="7\n8", parse_numbers=False, multiline=False))[1]
     assert raw.branches == {(0,): ["7", "8"]}
+    story = res(run(nodes_panel.Panel, text="# Arrival\ntrain\nmap\n\n#Not a title\n# The village\n  # dawn  \nstairs",
+                    parse_numbers=False, multiline=False))[1]
+    assert story.branches == {(0,): ["train", "map"], (1,): ["#Not a title", "stairs"]}, story.branches
+    assert story.names == {(0,): "Arrival", (1,): "The village"}, "'# title' names its branch, the first one wins"
     tt = res(run(nodes_panel.Panel, text="true\nFalse\nTRUE\ntrue-ish", parse_numbers=True, multiline=False))[1]
     assert tt.branches == {(0,): [True, False, True, "true-ish"]}, tt.branches
     one = res(run(nodes_panel.Panel, text="line 1\n\nline 2", parse_numbers=True, multiline=True))
@@ -401,6 +408,20 @@ def test_image_grid():
     assert torch.equal(g3, g1), "shape lays out and labels rows and columns, nothing else to connect"
     g4 = res(run(nodes_image.ImageGrid, images=[imgs], col_labels=[cb], **grid_kw()))[0]
     assert torch.equal(g4, g1), "Cross Reference rows carry their names too"
+    # a shape whose rows differ (a storyboard) gets row names but no column labels
+    story = T.DataTree({(0,): ["train", "map"], (1,): ["dawn", "stairs"]}, {(0,): "Arrival", (1,): "Village"})
+    frames = [torch.rand(1, 8, 8, 3) for _ in range(4)]
+    g5 = res(run(nodes_image.ImageGrid, images=frames, shape=[story], **grid_kw()))[0]
+    g6 = res(run(nodes_image.ImageGrid, images=frames, shape=[story], row_labels=["Arrival", "Village"],
+                 **grid_kw()))[0]
+    assert torch.equal(g5, g6), "no column labels from rows that differ"
+    # labels wrap between words; CJK wraps per character
+    from PIL import Image, ImageDraw
+    draw, font = ImageDraw.Draw(Image.new("RGB", (8, 8))), grid._font(26)
+    lines = grid._wrap(draw, "a cozy reading nook by a rainy window", font, 420, 3)
+    assert lines[-1] == "window" and all(not l.endswith(" ") for l in lines), lines
+    assert grid._wrap(draw, "one two three four five six", font, 160, 2)[-1].endswith("…")
+    assert len(grid._wrap(draw, "一只猫在雨中的窗台上睡觉", font, 200, 2)[0]) > 1
     raises(ValueError, run, nodes_image.ImageGrid, images=flat[:5], shape=[shape], **grid_kw())
     print("image grid: OK")
 
@@ -413,6 +434,12 @@ def test_image_nodes():
     slides = ui["arbor_slider"][0]["slides"]
     assert [s["label"] for s in slides] == ["image0 · 1/2", "image0 · 2/2", "image1"]
     assert slides[2]["w"] == 64
+    scenes = T.DataTree({(0,): [img[:1]], (1,): [img], (2,): [img[:1]]}, {(0,): "Arrival", (1,): "Village"})
+    tree_ui = run(nodes_image.ImageSlider, images={"image0": [scenes]}).ui
+    assert [s["label"] for s in tree_ui["arbor_slider"][0]["slides"]] == [
+        "Arrival", "Village · 1/2", "Village · 2/2", "image0"], "an image tree works too, named branches label it"
+    slot = nodes_image.ImageSlider.define_schema().inputs[0].template.input
+    assert "IMAGE" in slot.get_io_type() and "ARBOR_TREE" in slot.get_io_type()
 
     img = torch.rand(2, 300, 500, 3)
     out = res(nodes_image.SmartResize.execute(img, {"mode": "longest side", "size": 1000}, "64", "bilinear", True))
@@ -445,6 +472,7 @@ def test_files():
         imgs, names, folders, count = res(nodes_files.LoadFolder.execute(
             folder=src, pattern="*.png", subfolders=True, sort="name", limit=0))
         assert count == 7 and folders == ["src", "a", "b2", "b10"], folders  # plain data, one per branch
+        assert list(imgs.names.values()) == folders and names.names == imgs.names, "branches named after folders"
         assert names.branches[(1,)] == ["img0", "img1"] and imgs.branches[(2,)][2].shape == (1, 8, 18, 3)
         assert nodes_files.LoadFolder.fingerprint_inputs(src, "*.png", True, "name", 0)
         assert res(nodes_files.LoadFolder.execute(folder=src, pattern="*.png", subfolders=True,
@@ -458,12 +486,22 @@ def test_files():
             saved = run(nodes_files.SaveImagesByPath, images=[imgs], filename_prefix="xy/run",
                         layout="subfolders", names=[names])
             paths = res(saved)[0]
+            rel = lambda p: os.path.relpath(p, out).replace("\\", "/")
             assert os.path.basename(paths.branches[(1,)][1]) == "img1.png"
-            assert os.path.basename(os.path.dirname(paths.branches[(2,)][0])) == "run_2"
-            assert saved.ui["images"][0]["subfolder"].replace("\\", "/") == "xy/run_0"
+            assert rel(os.path.dirname(paths.branches[(2,)][0])) == "xy/run/2 · b2", "the prefix holds the tree"
+            assert saved.ui["images"][0]["subfolder"].replace("\\", "/") == "xy/run/0 · src"
+            # ... and Load Folder reads it back, names and all ('output/…' is the output folder)
+            back, _, back_folders, back_count = res(nodes_files.LoadFolder.execute(
+                folder="output/xy/run", pattern="*.png", subfolders=True, sort="name", limit=0))
+            assert back_count == 7 and back_folders == folders and back.names == imgs.names
+            plain = res(run(nodes_files.SaveImagesByPath, images=[T.DataTree({(0, 1): [imgs.branches[(1,)][0]]})],
+                            filename_prefix="xy/plain", layout="subfolders"))[0]
+            assert rel(plain.branches[(0, 1)][0]) == "xy/plain/0-1/000.png", "unnamed branches: just the path"
             again = res(run(nodes_files.SaveImagesByPath, images=[imgs], filename_prefix="xy/run",
                             layout="flat"))[0]
-            assert os.path.basename(again.branches[(0,)][0]) == "run_0_000.png"
+            assert os.path.basename(again.branches[(0,)][0]) == "run_0 · src_000.png"
+            assert nodes_files.folder_label("2 · Night market") == "Night market"
+            assert nodes_files.folder_label("2024 photos") == "2024 photos", "only the saved tag is dropped"
         finally:
             folder_paths.set_output_directory(old)
     print("load / save: OK")

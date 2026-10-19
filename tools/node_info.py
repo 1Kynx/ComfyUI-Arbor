@@ -25,7 +25,7 @@ def node(node_id, en, zh):
 
 node("Arbor_ImageSlider", en=dict(
     desc="Compare any number of images of any size: drag the slider to flip through them, or switch to Wipe for a before / after split.",
-    inputs={"images": "Images to compare. Every input grows a new slot; batches are split into one slide per frame (max 64 slides)."},
+    inputs={"images": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."},
     outputs=[],
     doc="""## How to use
 - Connect one or more images. A batch counts as several slides.
@@ -40,7 +40,7 @@ node("Arbor_ImageSlider", en=dict(
 """), zh=dict(
     name="图像滑块对比",
     desc="对比任意数量、任意尺寸的图片：拖动滑条逐张切换，或切到「对比」模式左右分屏比较。",
-    inputs={"images": ("图像", "要对比的图片。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。")},
+    inputs={"images": ("图像", "要对比的图片——单张、批次或图像数据树。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。有名字的分支（加载的文件夹、分镜的场景）用名字标注。")},
     outputs=[],
     doc="""## 用法
 - 接入一张或多张图片，一个批次会算作多页。
@@ -151,7 +151,7 @@ node("Arbor_ImageGrid", en=dict(
     inputs={"images": "An image tree — or the plain images of a batch run, together with shape.",
             "shape": "XY Lists' shape: pours plain images into rows × columns and labels them (rows by x, columns by y).",
             "row_labels": "One label per row — a list, or a tree with one branch per row. Not needed when the tree or shape names its rows (XY Lists, Prompt Template, Cross Reference).",
-            "col_labels": "One label per column — overrides the labels taken from shape.",
+            "col_labels": "One label per column — overrides the labels taken from shape (which labels the columns when every row holds the same values, as in XY Lists).",
             "fit": "How images of different sizes fill a cell: fit (scale to fit), original (no scaling), stretch.",
             "cell_size": "Longest side of a cell in pixels; 0 = the largest image's size.",
             "gap": "Space between cells and around the sheet, in pixels.",
@@ -172,7 +172,7 @@ node("Arbor_ImageGrid", en=dict(
     inputs={"images": ("图像", "图像数据树——或批量运行得到的普通图片（配合形状使用）。"),
             "shape": ("形状", "XY 组合列表的形状：把普通图片排成行 × 列并标注（行是 x，列是 y）。"),
             "row_labels": ("行标签", "每行一个标签——列表，或每行一个分支的数据树。数据树或形状自带行名时（XY 组合列表、提示词模板、交叉组合）不用接。"),
-            "col_labels": ("列标签", "每列一个标签——会覆盖从形状得到的列标签。"),
+            "col_labels": ("列标签", "每列一个标签——会覆盖从形状得到的列标签（形状每行取值都相同时才用来标注列，例如 XY 组合列表）。"),
             "fit": ("适配", "不同尺寸的图片如何填充格子：fit 缩放适配、original 原尺寸、stretch 拉伸。"),
             "cell_size": ("格子尺寸", "格子长边像素；0 = 最大图片的尺寸。"),
             "gap": ("间距", "格子之间以及四周的留白像素。"),
@@ -191,13 +191,14 @@ node("Arbor_ImageGrid", en=dict(
 
 node("Arbor_LoadFolder", en=dict(
     desc="Load every image in a folder; with subfolders on, each folder becomes a branch — the folder structure turns straight into a data tree.",
-    inputs={"folder": "Absolute path, or a path relative to ComfyUI's input folder.",
+    inputs={"folder": "An absolute path; output/… for ComfyUI's output folder; any other relative path is inside the input folder.",
             "pattern": "File name patterns separated by spaces, e.g. *.png *.jpg.",
             "subfolders": "On: each subfolder (and the folder itself, if it has images) becomes a branch. Off: only this folder.",
             "sort": "name = natural order (img2 before img10); modified = oldest first.",
             "limit": "Maximum number of images in total; 0 = all. Every image is held in memory, so limit large folders."},
-    outputs=["Image tree, one branch per folder.", "File names without extension, same layout — handy as labels or for Save Images by Path.",
-             "Folder names, one per branch — use as row labels.", "Total number of images."],
+    outputs=["Image tree, one branch per folder, named after it — Image Grid labels its rows with the names, the Panel and Image Slider show them.",
+             "File names without extension, same layout — handy as labels or for Save Images by Path.",
+             "Folder names as plain data, one per branch.", "Total number of images."],
     doc="""## Example
 ```
 photos/            →  images {0}: 2 images   folders: photos
@@ -206,19 +207,23 @@ photos/            →  images {0}: 2 images   folders: photos
   night/           →  images {2}: 1 image    folders: night
 ```
 
+## Round trip
+Folders saved by **Save Images by Path** from named branches (`0 · Arrival`, `1 · The village`) load back with their names (*Arrival*, *The village*) and in their order. Template: *arbor_folder_review*.
+
 ## Tips
 - The node re-runs automatically when files are added, removed or changed.
 - Images keep their own sizes; resize with **Smart Resize** if the next step needs one size.
 """), zh=dict(
     name="加载文件夹",
     desc="加载文件夹里的所有图片；开启子文件夹后，每个文件夹就是一个分支——目录结构直接变成数据树。",
-    inputs={"folder": ("文件夹", "绝对路径，或相对 ComfyUI input 文件夹的路径。"),
+    inputs={"folder": ("文件夹", "绝对路径；output/… 表示 ComfyUI 的 output 文件夹；其它相对路径都在 input 文件夹里。"),
             "pattern": ("文件匹配", "用空格分隔的文件名模式，例如 *.png *.jpg。"),
             "subfolders": ("子文件夹", "开启：每个子文件夹（以及本文件夹，如果里面有图）各成一个分支。关闭：只读本文件夹。"),
             "sort": ("排序", "name = 自然排序（img2 排在 img10 前）；modified = 按修改时间从旧到新。"),
             "limit": ("数量上限", "最多加载的图片总数；0 = 全部。所有图片都会载入内存，大文件夹请设上限。")},
-    outputs=[("图像", "图像数据树，每个文件夹一个分支。"), ("文件名", "不带扩展名的文件名，结构相同——可作标签或给「按路径保存图像」用。"),
-             ("文件夹", "文件夹名，每个分支一个——可作行标签。"), ("数量", "图片总数。")],
+    outputs=[("图像", "图像数据树，每个文件夹一个分支，并以文件夹命名——图像网格用名字标注行，面板和图像滑块也会显示。"),
+             ("文件名", "不带扩展名的文件名，结构相同——可作标签或给「按路径保存图像」用。"),
+             ("文件夹", "文件夹名（普通数据），每个分支一个。"), ("数量", "图片总数。")],
     doc="""## 示例
 ```
 photos/            →  图像 {0}：2 张   文件夹：photos
@@ -227,24 +232,29 @@ photos/            →  图像 {0}：2 张   文件夹：photos
   night/           →  图像 {2}：1 张   文件夹：night
 ```
 
+## 往返
+**按路径保存图像** 按有名字的分支保存的文件夹（`0 · Arrival`、`1 · The village`）读回来时会恢复名字（*Arrival*、*The village*）和顺序。模板：*arbor_folder_review*。
+
 ## 提示
 - 文件有增删改时，节点会自动重新读取。
 - 图片保持各自的尺寸；后续需要统一尺寸时用 **智能缩放**。
 """))
 
 node("Arbor_SaveImagesByPath", en=dict(
-    desc="Save an image tree keeping its structure: one subfolder (or filename part) per branch path, with optional names per file.",
+    desc="Save an image tree keeping its structure: one subfolder (or filename part) per branch, named after the branch when it has a name, with optional names per file.",
     inputs={"images": "Image tree to save. Batches are saved frame by frame.",
             "filename_prefix": "Folder / prefix inside ComfyUI's output folder. Supports %date%-style variables like Save Image.",
-            "layout": "subfolders: prefix_0-1/000.png · flat: prefix_0-1_000.png",
+            "layout": "subfolders: prefix/0-1/000.png (a named branch: prefix/0-1 · name/000.png) · flat: prefix_0-1_000.png",
             "names": "Optional file names, matched to the images item by item (e.g. Load Folder's names or a Prompt Template)."},
     outputs=["Saved file paths, in the same tree layout."],
     doc="""## Example
 Tree `{0}: 2 images, {1}: 3 images`, prefix `arbor/run`, layout *subfolders*:
 ```
-output/arbor/run_0/000.png  001.png
-output/arbor/run_1/000.png  001.png  002.png
+output/arbor/run/0/000.png  001.png
+output/arbor/run/1/000.png  001.png  002.png
 ```
+Named branches (storyboard scenes from a Panel's `# title` lines, Load Folder folders) keep their names: `output/arbor/run/0 · Arrival/000.png`. **Load Folder** with `output/arbor/run` reads the tree back, names included.
+
 With *names* connected the files are called after the names instead (`cat.png`, `dog.png`, …).
 
 ## Tips
@@ -252,18 +262,19 @@ With *names* connected the files are called after the names instead (`cat.png`, 
 - The workflow is embedded in every PNG, like Save Image.
 """), zh=dict(
     name="按路径保存图像",
-    desc="按数据树结构保存图片：每个分支路径一个子文件夹（或文件名的一部分），可选为每个文件命名。",
+    desc="按数据树结构保存图片：每个分支一个子文件夹（或文件名的一部分），有名字的分支用名字命名，可选为每个文件命名。",
     inputs={"images": ("图像", "要保存的图像数据树，批次会逐帧保存。"),
             "filename_prefix": ("文件名前缀", "output 文件夹内的目录 / 前缀，和「保存图像」一样支持 %date% 等变量。"),
-            "layout": ("布局", "subfolders：前缀_0-1/000.png · flat：前缀_0-1_000.png"),
+            "layout": ("布局", "subfolders：前缀/0-1/000.png（有名字的分支：前缀/0-1 · 名字/000.png）· flat：前缀_0-1_000.png"),
             "names": ("文件名", "可选，与图像逐项对应的文件名（例如「加载文件夹」的文件名或提示词模板的输出）。")},
     outputs=[("路径", "已保存文件的路径，结构与输入相同。")],
     doc="""## 示例
 数据树 `{0}: 2 张, {1}: 3 张`，前缀 `arbor/run`，布局 *subfolders*：
 ```
-output/arbor/run_0/000.png  001.png
-output/arbor/run_1/000.png  001.png  002.png
+output/arbor/run/0/000.png  001.png
+output/arbor/run/1/000.png  001.png  002.png
 ```
+有名字的分支（面板里 `# 标题` 行定义的分镜场景、加载的文件夹）保留名字：`output/arbor/run/0 · Arrival/000.png`。**加载文件夹** 读取 `output/arbor/run` 就能把数据树连同名字读回来。
 接入 *文件名* 后，文件按名字命名（`cat.png`、`dog.png`……）。
 
 ## 提示
@@ -274,7 +285,7 @@ output/arbor/run_1/000.png  001.png  002.png
 # =============================================================== Data
 
 node("Arbor_Panel", en=dict(
-    desc="Inspect anything, or type data in. Connected: shows the input and passes it through. Unconnected: each line you type is an item, an empty line starts a new branch.",
+    desc="Inspect anything, or type data in. Connected: shows the input and passes it through. Unconnected: each line you type is an item, an empty line starts a new branch and a `# title` line names it.",
     inputs={"data": "Anything — a data tree, a native list, an image, a number… Leave it unconnected to type data instead.",
             "text": "The typed data (used when nothing is connected). Edited in the panel itself.",
             "parse_numbers": "Typed values: lines like 7 / 3.5 / true become INT / FLOAT / BOOLEAN. The 123 / abc button in the panel.",
@@ -288,7 +299,7 @@ node("Arbor_Panel", en=dict(
 - ⤢ opens a large view.
 
 ## Typing (input unconnected)
-- **Lines**: one item per line, an empty line starts a new branch. The gutter shows each line's branch path and index, coloured by type (blue = number, purple = boolean).
+- **Lines**: one item per line, an empty line starts a new branch. A line `# title` names its branch instead of being an item — the name shows up as the row label in **Image Grid**, as the folder name in **Save Images by Path**, and in every Panel downstream. The gutter shows each line's branch path and index, coloured by type (blue = number, purple = boolean).
 - **Text**: the whole text is one item — for long prompts.
 - **123 / abc**: read numbers and true / false, or keep everything as text.
 - ⤢ opens a large editor. Ctrl+Enter still queues the workflow.
@@ -303,9 +314,19 @@ a cat
 a dog
 ```
 → tree `{0}: [3, 5, 7]`, `{1}: ["a cat", "a dog"]`.
+
+```
+# Arrival
+night train
+paper map
+
+# The village
+misty roofs
+```
+→ `{0} Arrival: [night train, paper map]`, `{1} The village: [misty roofs]` — a storyboard (template *arbor_qwen_storyboard*).
 """), zh=dict(
     name="面板",
-    desc="查看任何数据，或直接输入数据。接入时：显示输入并原样传出。未接入时：每行是一项，空一行开始新分支。（对应 Grasshopper 的 Panel）",
+    desc="查看任何数据，或直接输入数据。接入时：显示输入并原样传出。未接入时：每行是一项，空一行开始新分支，`# 标题` 行给分支命名。（对应 Grasshopper 的 Panel）",
     inputs={"data": ("数据", "任何数据——数据树、原生列表、图片、数字…… 不接则改为手动输入。"),
             "text": ("文本", "手动输入的数据（未接入输入时使用），直接在面板里编辑。"),
             "parse_numbers": ("识别数值", "像 7 / 3.5 / true 这样的行变成 INT / FLOAT / BOOLEAN，对应面板里的 123 / abc 按钮。"),
@@ -319,7 +340,7 @@ a dog
 - ⤢ 打开大窗口查看。
 
 ## 输入（未接入时）
-- **逐行**：每行一项，空一行开始新分支。左侧标出每行的分支路径和序号，按类型着色（蓝色 = 数字，紫色 = 布尔值）。
+- **逐行**：每行一项，空一行开始新分支。`# 标题` 这样的行不是数据项，而是给所在分支命名——名字会成为 **图像网格** 的行标签、**按路径保存图像** 的文件夹名，下游面板也会显示。左侧标出每行的分支路径和序号，按类型着色（蓝色 = 数字，紫色 = 布尔值）。
 - **整段**：整段文字作为一项——适合长提示词。
 - **123 / abc**：识别数字和 true / false，或全部保留为文本。
 - ⤢ 打开大编辑窗口。Ctrl+Enter 仍可运行工作流。
@@ -334,6 +355,16 @@ a cat
 a dog
 ```
 → 数据树 `{0}: [3, 5, 7]`，`{1}: ["a cat", "a dog"]`。
+
+```
+# 到站
+夜行列车
+纸质地图
+
+# 村庄
+晨雾中的屋顶
+```
+→ `{0} 到站: [夜行列车, 纸质地图]`、`{1} 村庄: [晨雾中的屋顶]`——一份分镜脚本（模板 *arbor_qwen_storyboard*）。
 """))
 
 node("Arbor_NumberSlider", en=dict(

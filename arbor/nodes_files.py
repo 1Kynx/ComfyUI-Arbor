@@ -27,9 +27,14 @@ def _natural_key(s: str):
 
 
 def resolve_folder(folder: str) -> str:
+    """Absolute path; 'output/…' is in ComfyUI's output folder, any other relative path in input."""
     folder = os.path.expanduser(str(folder or "").strip().strip('"'))
     if not os.path.isabs(folder):
-        folder = os.path.join(folder_paths.get_input_directory(), folder)
+        head, _, rest = folder.replace("\\", "/").partition("/")
+        if head.lower() == "output":
+            folder = os.path.join(folder_paths.get_output_directory(), rest)
+        else:
+            folder = os.path.join(folder_paths.get_input_directory(), rest if head.lower() == "input" else folder)
     folder = os.path.normpath(folder)
     if not os.path.isdir(folder):
         raise FileNotFoundError(f"Load Folder: '{folder}' is not a folder")
@@ -64,6 +69,15 @@ def scan_folder(folder: str, pattern: str, subfolders: bool, sort: str, limit: i
             left -= len(out[k])
         ordered = out
     return ordered
+
+
+_PATH_TAG = re.compile(r"^\d+(-\d+)* · (?=\S)")
+
+
+def folder_label(rel: str) -> str:
+    """'2 · Night market' -> 'Night market': a folder name without the path tag that
+    Save Images by Path puts in front of a named branch (per level of a nested path)."""
+    return "/".join(_PATH_TAG.sub("", part) for part in rel.replace("\\", "/").split("/"))
 
 
 def load_image(path: str) -> torch.Tensor:
@@ -112,12 +126,13 @@ class LoadFolder(IO.ComfyNode):
         if not groups:
             raise FileNotFoundError(f"Load Folder: no files matching '{pattern}' in {root}")
         images, names = {}, {}
-        for b, (rel, files) in enumerate(groups.items()):
+        for b, files in enumerate(groups.values()):
             images[(b,)] = [load_image(p) for p in files]
             names[(b,)] = [os.path.splitext(os.path.basename(p))[0] for p in files]
-        folders = [rel or os.path.basename(root) for rel in groups]
+        folders = [folder_label(rel or os.path.basename(root)) for rel in groups]
+        branch_names = {(b,): f for b, f in enumerate(folders)}  # rows of an Image Grid, Panel titles
         count = sum(len(v) for v in images.values())
-        return IO.NodeOutput(T.DataTree(images), T.DataTree(names), folders, count)
+        return IO.NodeOutput(T.DataTree(images, branch_names), T.DataTree(names, branch_names), folders, count)
 
 
 _BAD = re.compile(r'[\\/:*?"<>|\x00-\x1f]+')
@@ -184,13 +199,15 @@ class SaveImagesByPath(IO.ComfyNode):
         saved, previews = {}, []
         for b, (path, items) in enumerate(tree.items()):
             tag = "-".join(map(str, path))
+            if path in tree.names:  # a named branch (a scene, a folder…) keeps its name on disk
+                tag = f"{tag} · {_safe(label_of(tree.names[path]), 60)}"
             frames = [v[f] for v in items if is_image(v) for f in range(v.shape[0])]
             row = []
             for j, frame in enumerate(frames):
                 label = T.match_item(name_tree, b, j) if name_tree else None
                 stem = _safe(label_of(label)) if label is not None else f"{j:03d}"
                 target = _unique(os.path.join(folder, f"{filename}_{tag}_{stem}.png") if flat
-                                 else os.path.join(folder, f"{filename}_{tag}", f"{stem}.png"))
+                                 else os.path.join(folder, filename, tag, f"{stem}.png"))
                 os.makedirs(os.path.dirname(target), exist_ok=True)
                 to_pil(frame).save(target, pnginfo=meta, compress_level=4)
                 row.append(target)

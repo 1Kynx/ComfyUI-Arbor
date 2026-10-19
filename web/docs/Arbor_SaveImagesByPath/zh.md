@@ -1,6 +1,6 @@
 # 按路径保存图像
 
-按数据树结构保存图片：每个分支路径一个子文件夹（或文件名的一部分），可选为每个文件命名。
+按数据树结构保存图片：每个分支一个子文件夹（或文件名的一部分），有名字的分支用名字命名，可选为每个文件命名。
 
 ## 输入
 
@@ -9,7 +9,7 @@
 - **文件名前缀** `filename_prefix` · *STRING*  
   output 文件夹内的目录 / 前缀，和「保存图像」一样支持 %date% 等变量。
 - **布局** `layout` · *COMBO (subfolders · flat)*  
-  subfolders：前缀_0-1/000.png · flat：前缀_0-1_000.png
+  subfolders：前缀/0-1/000.png（有名字的分支：前缀/0-1 · 名字/000.png）· flat：前缀_0-1_000.png
 - **文件名** `names` · *任意，可选*  
   可选，与图像逐项对应的文件名（例如「加载文件夹」的文件名或提示词模板的输出）。
 
@@ -21,9 +21,10 @@
 ## 示例
 数据树 `{0}: 2 张, {1}: 3 张`，前缀 `arbor/run`，布局 *subfolders*：
 ```
-output/arbor/run_0/000.png  001.png
-output/arbor/run_1/000.png  001.png  002.png
+output/arbor/run/0/000.png  001.png
+output/arbor/run/1/000.png  001.png  002.png
 ```
+有名字的分支（面板里 `# 标题` 行定义的分镜场景、加载的文件夹）保留名字：`output/arbor/run/0 · Arrival/000.png`。**加载文件夹** 读取 `output/arbor/run` 就能把数据树连同名字读回来。
 接入 *文件名* 后，文件按名字命名（`cat.png`、`dog.png`……）。
 
 ## 提示

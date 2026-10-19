@@ -246,7 +246,7 @@ class Expression(IO.ComfyNode):
             out[path] = [E.evaluate(code, {"x": v, "y": T.match_item(ty, b, j) if ty is not None else None,
                                            "i": j, "b": b, "n": len(items)})
                          for j, v in enumerate(items)]
-        return both(T.DataTree(out))
+        return both(T.DataTree(out, tx.names))
 
 
 # ======================================================================= Random

@@ -62,6 +62,7 @@ When everything upstream is a lightweight data node (Arbor data/tree/list nodes,
 string and math nodes) the view updates **live** as you edit — no run needed (green dot).
 Anything heavier upstream (samplers, loaders, …) never runs on its own; the Panel then shows the last run.
 *Unconnected*: type data in. **Lines** mode: each line is an item, an empty line starts a new branch,
+a `# title` line names its branch (the name becomes a grid row label and a folder name downstream),
 and a gutter shows every line's branch path and index (coloured by type). **Text** mode: the whole text
 is one item. **123 / abc** toggles reading values (`7` → INT, `3.5` → FLOAT, `true` → BOOLEAN).
 Long lines wrap; ⤢ opens a large editor; Ctrl+Enter still queues. Outputs `data` (every item, flattened) and `tree`.
@@ -107,10 +108,27 @@ python_embeded\python.exe tools\build_locales.py <path-to-ComfyUI>
 writes `locales/<lang>/nodeDefs.json` and `web/docs/<node>/<lang>.md`; the offline tests fail when a node,
 input or output is undocumented.
 
+## Example workflows
+
+*Templates → ComfyUI-Arbor*. Each one has a note explaining what the nodes are doing.
+
+| Workflow | Shows |
+|---|---|
+| `arbor_qwen_prompt_matrix` | **Prompt Template** crosses 3 subjects × 3 styles into 9 prompts; the sampler runs once per prompt; **Image Grid** lays the results out with the template's tree — rows named after the subjects, columns after the styles. |
+| `arbor_qwen_lora_sweep` | **XY Lists** drives LoRA strength (from **Number Sequence**) against subjects (expanded by **Prompt Template** in zip mode); the seed is a **Number Slider**; the sheet labels itself from XY Lists' shape. |
+| `arbor_qwen_storyboard` | A nested structure through a batch run: a **Panel** storyboard (`# scene title` lines, one shot per line) → **Expression** adds the style → **XY Lists** flattens it for the sampler → **Image Grid** with one row per scene, **Construct Tree** + **Save Images by Path** write one folder per scene. |
+| `arbor_folder_review` | No model: **Load Folder** reads the storyboard folders back as a named tree; contact sheet, **List Item** picks, **Reshape Tree** (flip matrix) compares shot by shot, **Image Slider** flips through. |
+| `arbor_xy_demo` | No model: the XY idea with plain coloured images. |
+| `arbor_xy_sampler` | A classic XY plot for any SD-style checkpoint. |
+
+The `arbor_qwen_*` workflows use Qwen Image 2.1 Turbo (8 steps, cfg 1): `qwen_image_2.1_turbo_int8_convrot.safetensors`
+(diffusion_models), `qwen3vl_8b_int8_convrot.safetensors` (text_encoders), `texture_fix_vae_for_qwen_image_2.1_bf16.safetensors`
+(vae), and for the sweep the LoRA `Qwen-2.1\mj_aesthetic_qwen21_turbo_v2_632_r32.safetensors` — swap in any LoRA you have.
+On a 16 GB card a 9-image sheet takes about a minute.
+
 ## Install
 
 Clone into `ComfyUI/custom_nodes/` and restart. No extra dependencies.
-Example workflows ship in `example_workflows/` (Templates → ComfyUI-Arbor): `arbor_xy_sampler` (a real XY plot — pick your checkpoint) and `arbor_xy_demo` (no model needed).
 
 ## Tests
 
