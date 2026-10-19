@@ -1,6 +1,6 @@
 # Range
 
-Evenly divide [start, end] into steps parts — steps + 1 numbers including both ends (Grasshopper's Range).
+Deprecated — use Number Sequence (mode: range). Evenly divide [start, end] into steps parts — steps + 1 numbers.
 
 ## Inputs
 

@@ -19,4 +19,4 @@ Branch count, item count, depth and the list of paths.
   One line per branch: path and item count.
 
 ## Tips
-- For a quick look a **Panel** shows the same, live; use this node when you need the numbers downstream (e.g. as a count for Series).
+- For a quick look a **Panel** shows the same, live; use this node when you need the numbers downstream (e.g. as the count of a Number Sequence).

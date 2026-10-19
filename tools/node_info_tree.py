@@ -25,7 +25,7 @@ Panel (cfg) ─x─┐               ┌─ x ─► KSampler.cfg ─┐
                ├─ XY Lists ────┤─ y ─► CLIP Text ────┴─► VAE Decode ─► List → Tree ─► Image Grid
 Panel (text)─y─┘               └─ shape ──────────────────────────────┘
 ```
-1. Type the x values and the y values in two **Panels** (or use **Series** / **Range**) and connect them.
+1. Type the x values and the y values in two **Panels** (or use **Number Sequence**) and connect them.
 2. Connect XY Lists' *x* / *y* to the inputs you want to vary — ordinary nodes run once per combination.
 3. Collect the images with **List → Tree** (*shape* from this node), then **Image Grid** (row labels = the x Panel, column labels = *shape*).
 
@@ -51,7 +51,7 @@ Example template: *Templates → ComfyUI-Arbor → arbor_xy_sampler*.
              ├─ XY 组合列表 ──┤─ y ─► CLIP 文本 ────┴─► VAE 解码 ─► 列表 → 数据树 ─► 图像网格
 面板(提示词)─y┘               └─ 形状 ─────────────────────────────┘
 ```
-1. 在两个 **面板** 里分别输入 x 和 y 的取值（或用 **等差数列** / **区间**），接到 x、y 上。
+1. 在两个 **面板** 里分别输入 x 和 y 的取值（或用 **数列**），接到 x、y 上。
 2. 把 *x* / *y* 接到想要变化的参数上——普通节点会对每种组合各运行一次。
 3. 用 **列表 → 数据树**（*形状* 接本节点）收集图片，再接 **图像网格**（行标签 = x 的面板，列标签 = *形状*）。
 
@@ -239,14 +239,14 @@ node("Arbor_TreeInfo", en=dict(
     inputs={"tree": TREE_EN},
     outputs=["Number of branches.", "Total number of items.", "Longest path length.", "One line per branch: path and item count."],
     doc="""## Tips
-- For a quick look a **Panel** shows the same, live; use this node when you need the numbers downstream (e.g. as a count for Series).
+- For a quick look a **Panel** shows the same, live; use this node when you need the numbers downstream (e.g. as the count of a Number Sequence).
 """), zh=dict(
     name="数据树统计",
     desc="分支数、项数、深度和路径列表。",
     inputs={"tree": TREE_ZH},
     outputs=[("分支数", "分支的数量。"), ("项数", "所有项的总数。"), ("深度", "最长路径的层数。"), ("路径", "每个分支一行：路径和项数。")],
     doc="""## 提示
-- 只是想看一眼的话，**面板** 能实时显示同样的信息；需要把这些数字接到下游（例如作为等差数列的数量）时用本节点。
+- 只是想看一眼的话，**面板** 能实时显示同样的信息；需要把这些数字接到下游（例如作为数列的数量）时用本节点。
 """))
 
 # =============================================================== List
@@ -291,7 +291,7 @@ PATTERN_ZH = ("模式", "输入重复模式（'T F'、'true,false'、'1 0 1'、'
               "（例如表达式 'x > 2'），按分支匹配。")
 
 node("Arbor_CullPattern", en=dict(
-    desc="Keep the items where the pattern is true (Grasshopper's Cull Pattern).",
+    desc="Deprecated — use Dispatch: its A output is exactly this. Keeps the items where the pattern is true.",
     inputs={"tree": TREE_EN, "pattern": PATTERN_EN},
     outputs=["The kept items."],
     doc="""## Examples
@@ -303,7 +303,7 @@ node("Arbor_CullPattern", en=dict(
 | a native Boolean = False | (nothing) |
 """), zh=dict(
     name="按模式剔除",
-    desc="保留模式为真的项（对应 Grasshopper 的 Cull Pattern）。",
+    desc="已弃用——请改用「分流」：它的 A 输出就是这个结果。保留模式为真的项。",
     inputs={"tree": TREE_ZH, "pattern": PATTERN_ZH},
     outputs=[("数据树", "保留下来的项。")],
     doc="""## 示例
@@ -316,18 +316,32 @@ node("Arbor_CullPattern", en=dict(
 """))
 
 node("Arbor_Dispatch", en=dict(
-    desc="Split items into A (pattern true) and B (pattern false) (Grasshopper's Dispatch).",
+    desc="Split items by a true / false pattern: A keeps the true ones, B the false ones — use A alone to cull a list (Grasshopper's Dispatch and Cull Pattern).",
     inputs={"tree": TREE_EN, "pattern": PATTERN_EN},
-    outputs=["Items where the pattern is true.", "Items where the pattern is false."],
-    doc="""## Example
-pattern `T F`: `a, b, c, d` → A `a, c` · B `b, d`
+    outputs=["Items where the pattern is true — the kept items when culling.", "Items where the pattern is false."],
+    doc="""## Examples
+| pattern | `a, b, c, d` → A | B |
+|---|---|---|
+| `T F` | a, c | b, d |
+| `F F T` | c | a, b, d |
+| Expression `i % 2 == 1` | b, d | a, c |
+| a native Boolean = False | (nothing) | everything |
+
+To cull a list, use A and leave B unconnected.
 """), zh=dict(
     name="分流",
-    desc="按模式把项分成 A（为真）和 B（为假）（对应 Grasshopper 的 Dispatch）。",
+    desc="按真 / 假模式拆分：A 是为真的项，B 是为假的项——只用 A 就是剔除（对应 Grasshopper 的 Dispatch 和 Cull Pattern）。",
     inputs={"tree": TREE_ZH, "pattern": PATTERN_ZH},
-    outputs=[("A", "模式为真的项。"), ("B", "模式为假的项。")],
+    outputs=[("A", "模式为真的项——剔除时保留下来的就是它。"), ("B", "模式为假的项。")],
     doc="""## 示例
-模式 `T F`：`a, b, c, d` → A `a, c` · B `b, d`
+| 模式 | `a, b, c, d` → A | B |
+|---|---|---|
+| `T F` | a, c | b, d |
+| `F F T` | c | a, b, d |
+| 表达式 `i % 2 == 1` | b, d | a, c |
+| 原生 Boolean = False | （空） | 全部 |
+
+要剔除列表中的项，接 A、不接 B 即可。
 """))
 
 node("Arbor_Partition", en=dict(

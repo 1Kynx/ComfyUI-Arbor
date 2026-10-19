@@ -59,12 +59,22 @@ def _is_link(v) -> bool:
 
 
 def _nest(flat: dict) -> dict:
-    """{'trees.tree0': x} -> {'trees': {'tree0': x}} (Autogrow inputs)."""
+    """Dotted keys -> nested dicts, the way ComfyUI hands dynamic inputs to a node.
+
+    Autogrow:     {'trees.tree0': x}              -> {'trees': {'tree0': x}}
+    DynamicCombo: {'mode': 'range', 'mode.end': 1} -> {'mode': {'mode': 'range', 'end': 1}}
+    """
     out = {}
     for k, v in flat.items():
         if "." in k:
             head, tail = k.split(".", 1)
-            out.setdefault(head, {})[tail] = v
+            cur = out.get(head)
+            if not isinstance(cur, dict):
+                cur = {} if head not in out else {head: cur}
+                out[head] = cur
+            cur[tail] = v
+        elif isinstance(out.get(k), dict):
+            out[k][k] = v
         else:
             out[k] = v
     return out

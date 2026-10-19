@@ -1,6 +1,6 @@
 # Series
 
-Arithmetic sequence: start, start + step, … — count numbers (Grasshopper's Series).
+Deprecated — use Number Sequence (mode: series). Arithmetic sequence: start, start + step, … — count numbers.
 
 ## Inputs
 

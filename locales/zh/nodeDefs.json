@@ -421,7 +421,7 @@
       },
       "1": {
         "name": "数据树",
-        "tooltip": "计算结果，结构与 x 相同。比较运算得到布尔值——可直接接「按模式剔除 / 分流」。"
+        "tooltip": "计算结果，结构与 x 相同。比较运算得到布尔值——可直接接「分流」。"
       }
     }
   },
@@ -485,9 +485,49 @@
       }
     }
   },
+  "Arbor_Sequence": {
+    "display_name": "数列",
+    "description": "生成一串数字，按步长（series）或按两端（range）定义。取代原来的「等差数列」和「区间」。",
+    "inputs": {
+      "mode": {
+        "name": "模式",
+        "tooltip": "series：起始值、起始值 + 步长…… · range：从起点到终点平均分。只显示当前模式需要的参数。"
+      },
+      "mode_start": {
+        "name": "起始值",
+        "tooltip": "第一个数。"
+      },
+      "mode_step": {
+        "name": "步长",
+        "tooltip": "series：相邻两数之差（负数为递减）。"
+      },
+      "mode_count": {
+        "name": "数量",
+        "tooltip": "series：数的个数。"
+      },
+      "mode_end": {
+        "name": "终点",
+        "tooltip": "range：最后一个数（包含）。"
+      },
+      "mode_steps": {
+        "name": "段数",
+        "tooltip": "range：等分的段数，得到 段数 + 1 个数。"
+      },
+      "as_int": {
+        "name": "输出整数",
+        "tooltip": "取整——用于种子、步数、尺寸。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "数据",
+        "tooltip": "这些数（普通数据）——可直接接 cfg、步数、种子等参数（每个数运行一次），也可接任何 Arbor 输入。"
+      }
+    }
+  },
   "Arbor_Series": {
     "display_name": "等差数列",
-    "description": "等差数列：起始值、起始值 + 步长……共 count 个数（对应 Grasshopper 的 Series）。",
+    "description": "已弃用——请改用「数列」（模式 series）。等差数列：起始值、起始值 + 步长……共 count 个数。",
     "inputs": {
       "start": {
         "name": "起始值",
@@ -515,7 +555,7 @@
   },
   "Arbor_Range": {
     "display_name": "区间",
-    "description": "把 [起点, 终点] 平均分成 steps 段——共 steps + 1 个数，包含两端（对应 Grasshopper 的 Range）。",
+    "description": "已弃用——请改用「数列」（模式 range）。把 [起点, 终点] 平均分成 steps 段——共 steps + 1 个数。",
     "inputs": {
       "start": {
         "name": "起点",
@@ -1027,7 +1067,7 @@
   },
   "Arbor_CullPattern": {
     "display_name": "按模式剔除",
-    "description": "保留模式为真的项（对应 Grasshopper 的 Cull Pattern）。",
+    "description": "已弃用——请改用「分流」：它的 A 输出就是这个结果。保留模式为真的项。",
     "inputs": {
       "tree": {
         "name": "数据树",
@@ -1047,7 +1087,7 @@
   },
   "Arbor_Dispatch": {
     "display_name": "分流",
-    "description": "按模式把项分成 A（为真）和 B（为假）（对应 Grasshopper 的 Dispatch）。",
+    "description": "按真 / 假模式拆分：A 是为真的项，B 是为假的项——只用 A 就是剔除（对应 Grasshopper 的 Dispatch 和 Cull Pattern）。",
     "inputs": {
       "tree": {
         "name": "数据树",
@@ -1061,7 +1101,7 @@
     "outputs": {
       "0": {
         "name": "A",
-        "tooltip": "模式为真的项。"
+        "tooltip": "模式为真的项——剔除时保留下来的就是它。"
       },
       "1": {
         "name": "B",

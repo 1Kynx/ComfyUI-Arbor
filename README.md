@@ -32,9 +32,12 @@ For finer control use the building blocks: `Tree → List` hands any tree to ord
 | Category | Nodes |
 |---|---|
 | **Arbor/Image** | Image Slider · Image Grid · Load Folder · Save Images by Path · Smart Resize · Batch Pick |
-| **Arbor/Data** | Panel · Number Slider · Series · Range · Split Text · Prompt Template · Expression · Random · Index Switch |
+| **Arbor/Data** | Panel · Number Slider · Number Sequence · Split Text · Prompt Template · Expression · Random · Index Switch |
 | **Arbor/Tree** | XY Lists · Tree → List · List → Tree · Construct Tree · Graft · Flatten · Simplify · Flip Matrix · Shift Paths · Renumber · Tree Branch · Merge · Entwine · Tree Statistics |
-| **Arbor/List** | List Item · Sub List · Cull Pattern · Dispatch · Partition · Repeat · Reverse List · Sort List · Cross Reference |
+| **Arbor/List** | List Item · Sub List · Dispatch · Partition · Repeat · Reverse List · Sort List · Cross Reference |
+
+Older nodes kept only so saved workflows still open (hidden from the library, marked [DEPR]):
+*Series* and *Range* → **Number Sequence**; *Cull Pattern* → **Dispatch** (its A output).
 
 *Image*: viewing, gridding, loading, saving and resizing images. *Data*: where values come from (typed,
 slid, generated, computed) and which one goes on. *Tree*: building and reshaping trees, and the bridge to
@@ -61,7 +64,7 @@ Long lines wrap; ⤢ opens a large editor; Ctrl+Enter still queues. Outputs `dat
 the bar to edit them; step 1 gives whole numbers, 0 is continuous. A single output connects to INT and FLOAT inputs alike; live Panels
 follow while you drag.
 
-**True / false** — pattern inputs (Cull Pattern, Dispatch) take typed text (`T F`), a native BOOLEAN,
+**True / false** — Dispatch's pattern input takes typed text (`T F`), a native BOOLEAN,
 a list of BOOLEANs, or a boolean tree such as Expression `x > 2` (matched branch by branch).
 Index Switch takes a BOOLEAN as its index (False = 0, True = 1).
 

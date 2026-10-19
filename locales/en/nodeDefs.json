@@ -421,7 +421,7 @@
       },
       "1": {
         "name": "tree",
-        "tooltip": "Results in x's tree layout. Comparisons give booleans — ready for Cull Pattern / Dispatch."
+        "tooltip": "Results in x's tree layout. Comparisons give booleans — ready for Dispatch."
       }
     }
   },
@@ -485,9 +485,49 @@
       }
     }
   },
+  "Arbor_Sequence": {
+    "display_name": "Number Sequence",
+    "description": "A list of numbers, defined by a step (series) or by both ends (range). Replaces Series and Range.",
+    "inputs": {
+      "mode": {
+        "name": "mode",
+        "tooltip": "series: start, start + step, … · range: start → end split evenly. Only that mode's fields are shown."
+      },
+      "mode_start": {
+        "name": "start",
+        "tooltip": "First number."
+      },
+      "mode_step": {
+        "name": "step",
+        "tooltip": "series: difference between neighbours (negative counts down)."
+      },
+      "mode_count": {
+        "name": "count",
+        "tooltip": "series: how many numbers."
+      },
+      "mode_end": {
+        "name": "end",
+        "tooltip": "range: last number (included)."
+      },
+      "mode_steps": {
+        "name": "steps",
+        "tooltip": "range: number of equal parts — you get steps + 1 numbers."
+      },
+      "as_int": {
+        "name": "as_int",
+        "tooltip": "Round to whole numbers — for seeds, steps, sizes."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "data",
+        "tooltip": "The numbers as plain data — connect straight to cfg, steps, seed… (the node runs once per number) or to any Arbor input."
+      }
+    }
+  },
   "Arbor_Series": {
     "display_name": "Series",
-    "description": "Arithmetic sequence: start, start + step, … — count numbers (Grasshopper's Series).",
+    "description": "Deprecated — use Number Sequence (mode: series). Arithmetic sequence: start, start + step, … — count numbers.",
     "inputs": {
       "start": {
         "name": "start",
@@ -515,7 +555,7 @@
   },
   "Arbor_Range": {
     "display_name": "Range",
-    "description": "Evenly divide [start, end] into steps parts — steps + 1 numbers including both ends (Grasshopper's Range).",
+    "description": "Deprecated — use Number Sequence (mode: range). Evenly divide [start, end] into steps parts — steps + 1 numbers.",
     "inputs": {
       "start": {
         "name": "start",
@@ -1027,7 +1067,7 @@
   },
   "Arbor_CullPattern": {
     "display_name": "Cull Pattern",
-    "description": "Keep the items where the pattern is true (Grasshopper's Cull Pattern).",
+    "description": "Deprecated — use Dispatch: its A output is exactly this. Keeps the items where the pattern is true.",
     "inputs": {
       "tree": {
         "name": "tree",
@@ -1047,7 +1087,7 @@
   },
   "Arbor_Dispatch": {
     "display_name": "Dispatch",
-    "description": "Split items into A (pattern true) and B (pattern false) (Grasshopper's Dispatch).",
+    "description": "Split items by a true / false pattern: A keeps the true ones, B the false ones — use A alone to cull a list (Grasshopper's Dispatch and Cull Pattern).",
     "inputs": {
       "tree": {
         "name": "tree",
@@ -1061,7 +1101,7 @@
     "outputs": {
       "0": {
         "name": "A",
-        "tooltip": "Items where the pattern is true."
+        "tooltip": "Items where the pattern is true — the kept items when culling."
       },
       "1": {
         "name": "B",

@@ -32,7 +32,7 @@ Panel (cfg) ─x─┐               ┌─ x ─► KSampler.cfg ─┐
                ├─ XY Lists ────┤─ y ─► CLIP Text ────┴─► VAE Decode ─► List → Tree ─► Image Grid
 Panel (text)─y─┘               └─ shape ──────────────────────────────┘
 ```
-1. Type the x values and the y values in two **Panels** (or use **Series** / **Range**) and connect them.
+1. Type the x values and the y values in two **Panels** (or use **Number Sequence**) and connect them.
 2. Connect XY Lists' *x* / *y* to the inputs you want to vary — ordinary nodes run once per combination.
 3. Collect the images with **List → Tree** (*shape* from this node), then **Image Grid** (row labels = the x Panel, column labels = *shape*).
 

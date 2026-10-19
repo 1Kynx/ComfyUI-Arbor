@@ -1,6 +1,6 @@
 # 区间
 
-把 [起点, 终点] 平均分成 steps 段——共 steps + 1 个数，包含两端（对应 Grasshopper 的 Range）。
+已弃用——请改用「数列」（模式 range）。把 [起点, 终点] 平均分成 steps 段——共 steps + 1 个数。
 
 ## 输入
 

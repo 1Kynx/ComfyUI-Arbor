@@ -12,11 +12,54 @@ from . import tree as T
 from .common import IO, TREE, NUMBER, CAT_TREE, CAT_DATA, connected, data_out, tree_in, tree_out, to_tree, unwrap
 
 
-def _schema(node_id, display_name, category, description, inputs, outputs, aliases=()):
+def _schema(node_id, display_name, category, description, inputs, outputs, aliases=(), deprecated=False):
     return IO.Schema(
         node_id=node_id, display_name=display_name, category=category,
-        description=description, search_aliases=list(aliases),
+        description=description, search_aliases=list(aliases), is_deprecated=deprecated,
         is_input_list=True, inputs=inputs, outputs=outputs)
+
+
+def sequence_values(mode: str, a: float, b: float, n: int, as_int: bool) -> list:
+    """series: a, a+b, … (n numbers) · range: a → b split into n parts (n + 1 numbers)."""
+    if mode == "range":
+        n = max(1, int(n))
+        vals = [a + (b - a) * i / n for i in range(n + 1)]
+    else:
+        vals = [a + b * i for i in range(max(1, int(n)))]
+    return [int(round(v)) for v in vals] if as_int else [round(v, 10) for v in vals]
+
+
+class NumberSequence(IO.ComfyNode):
+    """Series and Range in one node: pick how the numbers are defined."""
+
+    @classmethod
+    def define_schema(cls):
+        num = lambda id, d: IO.Float.Input(id, default=d, step=0.1, min=-1e9, max=1e9)
+        return IO.Schema(
+            node_id="Arbor_Sequence", display_name="Number Sequence", category=CAT_DATA,
+            description="A list of numbers. series: start, start + step, … (count numbers). "
+                        "range: start → end split evenly (steps + 1 numbers, both ends included).",
+            search_aliases=["series", "range", "sequence", "linspace", "arithmetic", "number list", "domain"],
+            inputs=[
+                IO.DynamicCombo.Input("mode", options=[
+                    IO.DynamicCombo.Option("series", [num("start", 0.0), num("step", 1.0),
+                                                      IO.Int.Input("count", default=5, min=1, max=10000)]),
+                    IO.DynamicCombo.Option("range", [num("start", 0.0), num("end", 1.0),
+                                                     IO.Int.Input("steps", default=4, min=1, max=10000)]),
+                ]),
+                IO.Boolean.Input("as_int", default=False, tooltip="Output whole numbers (for seeds, steps, sizes)"),
+            ],
+            outputs=[data_out(NUMBER, "The numbers as plain data — connect straight to cfg, steps, seed…, "
+                                      "or to any Arbor input")])
+
+    @classmethod
+    def execute(cls, mode, as_int) -> IO.NodeOutput:
+        m = mode["mode"]
+        if m == "range":
+            vals = sequence_values("range", mode["start"], mode["end"], mode["steps"], as_int)
+        else:
+            vals = sequence_values("series", mode["start"], mode["step"], mode["count"], as_int)
+        return IO.NodeOutput(vals)
 
 
 # ======================================================================= build
@@ -46,13 +89,13 @@ class NumberSeries(IO.ComfyNode):
     def define_schema(cls):
         return _schema(
             "Arbor_Series", "Series", CAT_DATA,
-            "Arithmetic sequence: start, start+step, ... (count numbers).",
+            "Deprecated — use Number Sequence (mode: series). Arithmetic sequence: start, start+step, … (count numbers).",
             [IO.Float.Input("start", default=0.0, step=0.1, min=-1e9, max=1e9),
              IO.Float.Input("step", default=1.0, step=0.1, min=-1e9, max=1e9),
              IO.Int.Input("count", default=5, min=1, max=10000),
              IO.Boolean.Input("as_int", default=False, tooltip="Output integers (for seeds, steps, ...)")],
             [data_out(NUMBER, "The numbers as plain data — connect straight to cfg, steps, seed…, "
-                              "or to any Arbor input")], ["sequence", "arithmetic", "number list"])
+                              "or to any Arbor input")], ["sequence", "arithmetic", "number list"], deprecated=True)
 
     @classmethod
     def execute(cls, start, step, count, as_int) -> IO.NodeOutput:
@@ -67,13 +110,13 @@ class NumberRange(IO.ComfyNode):
     def define_schema(cls):
         return _schema(
             "Arbor_Range", "Range", CAT_DATA,
-            "Evenly divide [start, end] into steps parts (steps + 1 numbers, both ends included).",
+            "Deprecated — use Number Sequence (mode: range). Evenly divide [start, end] into steps parts (steps + 1 numbers).",
             [IO.Float.Input("start", default=0.0, step=0.1, min=-1e9, max=1e9),
              IO.Float.Input("end", default=1.0, step=0.1, min=-1e9, max=1e9),
              IO.Int.Input("steps", default=4, min=1, max=10000),
              IO.Boolean.Input("as_int", default=False)],
             [data_out(NUMBER, "The numbers as plain data — connect straight to cfg, denoise…, "
-                              "or to any Arbor input")], ["linspace", "domain", "interpolate"])
+                              "or to any Arbor input")], ["linspace", "domain", "interpolate"], deprecated=True)
 
     @classmethod
     def execute(cls, start, end, steps, as_int) -> IO.NodeOutput:
@@ -332,7 +375,7 @@ class TreeInfo(IO.ComfyNode):
         return IO.NodeOutput(t.branch_count, t.item_count, t.depth, paths)
 
 
-NODES = [ConstructTree, NumberSeries, NumberRange, SplitText,
+NODES = [ConstructTree, NumberSequence, NumberSeries, NumberRange, SplitText,
          XYLists, TreeToList, ListToTree,
          Graft, Flatten, Simplify, FlipMatrix, ShiftPaths, Renumber,
          TreeBranch, MergeTrees, Entwine, TreeInfo]

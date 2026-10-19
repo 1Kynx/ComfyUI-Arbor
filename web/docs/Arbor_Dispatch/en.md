@@ -1,6 +1,6 @@
 # Dispatch
 
-Split items into A (pattern true) and B (pattern false) (Grasshopper's Dispatch).
+Split items by a true / false pattern: A keeps the true ones, B the false ones — use A alone to cull a list (Grasshopper's Dispatch and Cull Pattern).
 
 ## Inputs
 
@@ -12,9 +12,16 @@ Split items into A (pattern true) and B (pattern false) (Grasshopper's Dispatch)
 ## Outputs
 
 - **A** · *TREE*  
-  Items where the pattern is true.
+  Items where the pattern is true — the kept items when culling.
 - **B** · *TREE*  
   Items where the pattern is false.
 
-## Example
-pattern `T F`: `a, b, c, d` → A `a, c` · B `b, d`
+## Examples
+| pattern | `a, b, c, d` → A | B |
+|---|---|---|
+| `T F` | a, c | b, d |
+| `F F T` | c | a, b, d |
+| Expression `i % 2 == 1` | b, d | a, c |
+| a native Boolean = False | (nothing) | everything |
+
+To cull a list, use A and leave B unconnected.

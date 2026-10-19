@@ -490,6 +490,30 @@ def test_docs_and_locales():
     print(f"docs / locales: OK ({len(pkg.NODES)} nodes × en, zh; {len(keys_en)} UI strings)")
 
 
+def test_merged_nodes():
+    from arbor_pkg.arbor import live
+    seq = nodes_tree.NumberSequence
+    assert res(seq.execute({"mode": "series", "start": 3.0, "step": 2.0, "count": 4}, False))[0] == [3.0, 5.0, 7.0, 9.0]
+    assert res(seq.execute({"mode": "range", "start": 0.0, "end": 1.0, "steps": 4}, False))[0] == [0, 0.25, 0.5, 0.75, 1.0]
+    ints = res(seq.execute({"mode": "range", "start": 3.0, "end": 9.0, "steps": 3}, True))[0]
+    assert ints == [3, 5, 7, 9] and all(isinstance(v, int) for v in ints)
+    # the old nodes still run (saved workflows) but are hidden from the library
+    flags = {n.define_schema().node_id: n.define_schema().is_deprecated for n in pkg.NODES}
+    assert flags["Arbor_Series"] and flags["Arbor_Range"] and flags["Arbor_CullPattern"]
+    assert not flags["Arbor_Sequence"] and not flags["Arbor_Dispatch"]
+    assert sum(not d for d in flags.values()) == 36, "nodes visible in the library"
+    # live preview assembles the mode switch the way ComfyUI does
+    mapping = {n.define_schema().node_id: n for n in pkg.NODES}
+    live._mappings = lambda: mapping
+    prompt = {"1": {"class_type": "Arbor_Sequence",
+                    "inputs": {"mode": "range", "mode.start": 0.0, "mode.end": 10.0, "mode.steps": 2, "as_int": True}},
+              "2": {"class_type": "Arbor_Panel", "inputs": {"data": ["1", 0], "text": "", "parse_numbers": True,
+                                                             "multiline": False}}}
+    p = live.evaluate(prompt, "2")
+    assert [i["v"] for i in p["branches"][0]["items"]] == ["0", "5", "10"], p["branches"]
+    print("merged nodes: OK")
+
+
 def test_registration():
     ids = [n.define_schema().node_id for n in pkg.NODES]
     assert len(ids) == len(set(ids)), "duplicate node ids"
@@ -511,6 +535,7 @@ if __name__ == "__main__":
     test_v03_booleans_slider_text()
     test_review_fixes()
     test_xy_lists()
+    test_merged_nodes()
     test_docs_and_locales()
     test_registration()
     print("ALL OK")

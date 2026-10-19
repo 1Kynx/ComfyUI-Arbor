@@ -1,6 +1,6 @@
 # Cull Pattern
 
-Keep the items where the pattern is true (Grasshopper's Cull Pattern).
+Deprecated — use Dispatch: its A output is exactly this. Keeps the items where the pattern is true.
 
 ## Inputs
 

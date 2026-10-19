@@ -4,9 +4,9 @@ from . import tree as T
 from .common import IO, TREE, CAT_LIST, tree_in, tree_out, to_tree, unwrap
 
 
-def _schema(node_id, name, desc, inputs, outputs, aliases=()):
+def _schema(node_id, name, desc, inputs, outputs, aliases=(), deprecated=False):
     return IO.Schema(node_id=node_id, display_name=name, category=CAT_LIST, description=desc,
-                     search_aliases=list(aliases), is_input_list=True,
+                     search_aliases=list(aliases), is_input_list=True, is_deprecated=deprecated,
                      inputs=[tree_in(), *inputs], outputs=outputs)
 
 
@@ -51,8 +51,9 @@ class CullPattern(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
         return _schema("Arbor_CullPattern", "Cull Pattern",
+                       "Deprecated — use Dispatch: its A output is exactly this. "
                        "Keep items where the repeating pattern is true.",
-                       [_pattern_input()], [tree_out()], ["filter", "mask list", "every other"])
+                       [_pattern_input()], [tree_out()], ["filter", "mask list", "every other"], deprecated=True)
 
     @classmethod
     def execute(cls, tree, pattern) -> IO.NodeOutput:
@@ -63,8 +64,12 @@ class Dispatch(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
         return _schema("Arbor_Dispatch", "Dispatch",
-                       "Split items into A (pattern true) and B (pattern false).",
-                       [_pattern_input()], [tree_out("A"), tree_out("B")], ["split list", "route"])
+                       "Split items by a true / false pattern: A keeps the true ones, B the false ones. "
+                       "Use A alone to cull (filter) a list.",
+                       [_pattern_input()],
+                       [tree_out("A", tooltip="Items where the pattern is true — the kept items when culling"),
+                        tree_out("B", tooltip="Items where the pattern is false")],
+                       ["cull pattern", "cull", "filter", "split list", "route", "mask list", "every other"])
 
     @classmethod
     def execute(cls, tree, pattern) -> IO.NodeOutput:

@@ -434,7 +434,7 @@ node("Arbor_Expression", en=dict(
             "x": "Main input — the result has the same tree layout. Leave empty for a single constant result.",
             "y": "Optional second value, matched to x branch by branch, item by item (the last item repeats)."},
     outputs=["Every result as plain data.",
-             "Results in x's tree layout. Comparisons give booleans — ready for Cull Pattern / Dispatch."],
+             "Results in x's tree layout. Comparisons give booleans — ready for Dispatch."],
     doc="""## Names
 | name | meaning |
 |---|---|
@@ -463,7 +463,7 @@ Attribute access, imports, lambdas and comprehensions are rejected, and results 
             "x": ("x", "主输入——结果与它的数据树结构相同。不接则只计算一个常量结果。"),
             "y": ("y", "可选的第二个值，按分支、按项与 x 对应（不够时重复最后一项）。")},
     outputs=[("数据", "所有计算结果（普通数据）。"),
-             ("数据树", "计算结果，结构与 x 相同。比较运算得到布尔值——可直接接「按模式剔除 / 分流」。")],
+             ("数据树", "计算结果，结构与 x 相同。比较运算得到布尔值——可直接接「分流」。")],
     doc="""## 可用名称
 | 名称 | 含义 |
 |---|---|
@@ -531,8 +531,57 @@ node("Arbor_ConstructTree", en=dict(
 - 多个结果用 **合并**（相同路径合并）或 **编织**（每个输入各成一个分支）组合起来。
 """))
 
+node("Arbor_Sequence", en=dict(
+    desc="A list of numbers, defined by a step (series) or by both ends (range). Replaces Series and Range.",
+    inputs={"mode": "series: start, start + step, … · range: start → end split evenly. Only that mode's fields are shown.",
+            "mode.start": "First number.",
+            "mode.step": "series: difference between neighbours (negative counts down).",
+            "mode.count": "series: how many numbers.",
+            "mode.end": "range: last number (included).",
+            "mode.steps": "range: number of equal parts — you get steps + 1 numbers.",
+            "as_int": "Round to whole numbers — for seeds, steps, sizes."},
+    outputs=["The numbers as plain data — connect straight to cfg, steps, seed… (the node runs once per number) or to any Arbor input."],
+    doc="""## Examples
+| mode | values | result |
+|---|---|---|
+| series | start 3 · step 2 · count 4 | 3, 5, 7, 9 |
+| series | start 1000 · step 1 · count 4 · as_int | four consecutive seeds |
+| range | start 0 · end 1 · steps 4 | 0, 0.25, 0.5, 0.75, 1 |
+| range | start 3 · end 9 · steps 3 | 3, 5, 7, 9 |
+
+Use **series** when you know the step, **range** when you know both ends (e.g. cfg 3 → 9).
+
+## Tips
+- Connect the output straight to a widget (cfg, steps, width…): the node it feeds runs once per number.
+- For a parameter sweep against a second value, connect it to **XY Lists**.
+"""), zh=dict(
+    name="数列",
+    desc="生成一串数字，按步长（series）或按两端（range）定义。取代原来的「等差数列」和「区间」。",
+    inputs={"mode": ("模式", "series：起始值、起始值 + 步长…… · range：从起点到终点平均分。只显示当前模式需要的参数。"),
+            "mode.start": ("起始值", "第一个数。"),
+            "mode.step": ("步长", "series：相邻两数之差（负数为递减）。"),
+            "mode.count": ("数量", "series：数的个数。"),
+            "mode.end": ("终点", "range：最后一个数（包含）。"),
+            "mode.steps": ("段数", "range：等分的段数，得到 段数 + 1 个数。"),
+            "as_int": ("输出整数", "取整——用于种子、步数、尺寸。")},
+    outputs=[("数据", "这些数（普通数据）——可直接接 cfg、步数、种子等参数（每个数运行一次），也可接任何 Arbor 输入。")],
+    doc="""## 示例
+| 模式 | 参数 | 结果 |
+|---|---|---|
+| series | 起始 3 · 步长 2 · 数量 4 | 3, 5, 7, 9 |
+| series | 起始 1000 · 步长 1 · 数量 4 · 输出整数 | 四个连续的种子 |
+| range | 起点 0 · 终点 1 · 段数 4 | 0, 0.25, 0.5, 0.75, 1 |
+| range | 起点 3 · 终点 9 · 段数 3 | 3, 5, 7, 9 |
+
+知道步长用 **series**，知道两端（例如 cfg 3 → 9）用 **range**。
+
+## 提示
+- 输出可直接接参数（cfg、步数、宽度……），被接的节点会对每个数各运行一次。
+- 要和另一个参数交叉对比，接 **XY 组合列表**。
+"""))
+
 node("Arbor_Series", en=dict(
-    desc="Arithmetic sequence: start, start + step, … — count numbers (Grasshopper's Series).",
+    desc="Deprecated — use Number Sequence (mode: series). Arithmetic sequence: start, start + step, … — count numbers.",
     inputs={"start": "First number.", "step": "Difference between neighbours (negative counts down).",
             "count": "How many numbers.", "as_int": "Output whole numbers — for seeds, steps, sizes."},
     outputs=["The numbers as plain data — connect straight to cfg, steps, seed… (the node runs once per number) or to any Arbor input."],
@@ -544,7 +593,7 @@ node("Arbor_Series", en=dict(
 | 1000 | 1 | 4 (as_int) | four consecutive seeds |
 """), zh=dict(
     name="等差数列",
-    desc="等差数列：起始值、起始值 + 步长……共 count 个数（对应 Grasshopper 的 Series）。",
+    desc="已弃用——请改用「数列」（模式 series）。等差数列：起始值、起始值 + 步长……共 count 个数。",
     inputs={"start": ("起始值", "第一个数。"), "step": ("步长", "相邻两数之差（负数为递减）。"),
             "count": ("数量", "数的个数。"), "as_int": ("输出整数", "输出整数——用于种子、步数、尺寸。")},
     outputs=[("数据", "这些数（普通数据）——可直接接 cfg、步数、种子等参数（每个数运行一次），也可接任何 Arbor 输入。")],
@@ -557,7 +606,7 @@ node("Arbor_Series", en=dict(
 """))
 
 node("Arbor_Range", en=dict(
-    desc="Evenly divide [start, end] into steps parts — steps + 1 numbers including both ends (Grasshopper's Range).",
+    desc="Deprecated — use Number Sequence (mode: range). Evenly divide [start, end] into steps parts — steps + 1 numbers.",
     inputs={"start": "First number.", "end": "Last number (included).", "steps": "Number of equal parts; you get steps + 1 numbers.",
             "as_int": "Round to whole numbers (duplicates are possible for small ranges)."},
     outputs=["The numbers as plain data — connect straight to cfg, steps, seed… (the node runs once per number) or to any Arbor input."],
@@ -570,7 +619,7 @@ node("Arbor_Range", en=dict(
 Use **Range** when you know both ends (e.g. cfg 3 → 9), **Series** when you know the step.
 """), zh=dict(
     name="区间",
-    desc="把 [起点, 终点] 平均分成 steps 段——共 steps + 1 个数，包含两端（对应 Grasshopper 的 Range）。",
+    desc="已弃用——请改用「数列」（模式 range）。把 [起点, 终点] 平均分成 steps 段——共 steps + 1 个数。",
     inputs={"start": ("起点", "第一个数。"), "end": ("终点", "最后一个数（包含）。"), "steps": ("段数", "等分的段数，得到 steps + 1 个数。"),
             "as_int": ("输出整数", "取整（范围很小时可能出现重复）。")},
     outputs=[("数据", "这些数（普通数据）——可直接接 cfg、步数、种子等参数（每个数运行一次），也可接任何 Arbor 输入。")],
