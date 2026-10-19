@@ -88,7 +88,7 @@ in the **Info** tab of ComfyUI's right-side panel.
 All of it is generated from `tools/node_info.py` + `tools/node_info_tree.py`:
 
 ```
-python_embeded\python.exe toolsuild_locales.py <path-to-ComfyUI>
+python_embeded\python.exe tools\build_locales.py <path-to-ComfyUI>
 ```
 
 writes `locales/<lang>/nodeDefs.json` and `web/docs/<node>/<lang>.md`; the offline tests fail when a node,
