@@ -35,8 +35,12 @@ Split Text ───┘   (rows = A)        └─ Tree → List ─► CLIP Tex
 **Panel** — works both ways, like Grasshopper's panel.
 *Connected*: a viewer. Trees show collapsible branches with paths and counts, images show thumbnails,
 the copy button exports the whole structure as text, and the data passes through unchanged.
-*Unconnected*: type data in. Each line is an item, an empty line starts a new branch; `1.0` turns
-number parsing on/off, `¶` makes the whole text one item. Outputs `data` (native list) and `tree`.
+When everything upstream is a lightweight data node (Arbor data/tree/list nodes, core primitives,
+string and math nodes) the view updates **live** as you edit — no run needed (green dot).
+Anything heavier upstream (samplers, loaders, …) never runs on its own; the Panel then shows the last run.
+*Unconnected*: type data in. **Lines** mode: each line is an item, an empty line starts a new branch;
+**Text** mode: the whole text is one item. **123 / abc** toggles reading numbers (`7` → INT, `3.5` → FLOAT).
+Outputs `data` (native list) and `tree`.
 
 Every tree input also accepts plain values or native lists (they become branch `{0}`).
 

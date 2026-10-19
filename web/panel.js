@@ -2,19 +2,82 @@
  *
  * Connected: a viewer. Trees render as collapsible branches ({0;1} N=3)
  * with indexed items; plain values and lists render flat; images show a
- * thumbnail (click to open).
- * Unconnected: an editor. Each line is an item, an empty line starts a new
- * branch. The text lives in the node's own (hidden) `text` widget so it is
- * saved with the workflow; two toolbar toggles drive the hidden
- * `parse_numbers` and `multiline` widgets.
+ * thumbnail (click to open). When everything upstream is a cheap data node
+ * (see arbor/live.py) the view updates live as you edit — no queueing;
+ * otherwise it shows the result of the last run.
+ * Unconnected: an editor. In Lines mode each line is an item and an empty
+ * line starts a new branch; in Text mode the whole text is one item. The
+ * text and both options live in the node's own hidden widgets, so they are
+ * saved with the workflow.
  */
 
 import { app } from "../../scripts/app.js";
+import { api } from "../../scripts/api.js";
 import { injectStyle, el, viewURL, isolatePointer, chain, ICONS } from "./arbor_common.js";
 
 const NODE = "Arbor_Panel";
-const AUTO_COLLAPSE = 24; // collapse every branch when the tree has more than this
+const AUTO_COLLAPSE = 24; // start collapsed when the tree has more branches than this
+const LIVE_MS = 350;
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+/* ------------------------------------------------------------ live preview */
+
+let liveTypes = null;
+const views = new Set();
+
+async function loadLiveTypes() {
+  try {
+    const r = await api.fetchApi("/arbor/live_types");
+    liveTypes = r.ok ? new Set(await r.json()) : new Set();
+  } catch {
+    liveTypes = new Set();
+  }
+}
+
+function getLink(graph, id) {
+  return graph.links?.get?.(id) ?? graph.links?.[id] ?? graph.getLink?.(id);
+}
+
+/* API-style prompt of the panel and everything upstream of it, or the name
+ * of the first node that may not run live. */
+function upstreamPrompt(panel) {
+  const graph = panel.graph;
+  const prompt = {};
+  const seen = new Set();
+  const stack = [panel];
+  while (stack.length) {
+    const n = stack.pop();
+    if (seen.has(n.id)) continue;
+    seen.add(n.id);
+    if (seen.size > 200) return { blocked: "a large graph" };
+    const ct = n.comfyClass || n.type;
+    if (!liveTypes.has(ct) || n.mode === 2 || n.mode === 4) return { blocked: n.title || ct };
+    const inputs = {};
+    for (const w of n.widgets || []) {
+      if (w.name?.startsWith("arbor_") || w.options?.serialize === false) continue;
+      inputs[w.name] = w.value;
+    }
+    for (const inp of n.inputs || []) {
+      if (inp.link == null) continue;
+      const l = getLink(graph, inp.link);
+      const src = l && graph.getNodeById(l.origin_id);
+      if (!src) return { blocked: "a missing link" };
+      inputs[inp.name] = [String(l.origin_id), l.origin_slot];
+      stack.push(src);
+    }
+    prompt[String(n.id)] = { class_type: ct, inputs };
+  }
+  return { prompt };
+}
+
+function liveTick() {
+  if (!liveTypes || document.hidden) return;
+  for (const v of views) {
+    try { v.liveTick(); } catch (e) { console.warn("[Arbor] live preview", e); }
+  }
+}
+
+/* ------------------------------------------------------------ editor helpers */
 
 /* mirror of nodes_panel.parse_text, for the live item count */
 function countText(text, multiline) {
@@ -34,11 +97,18 @@ function hideWidget(w) {
   w.options.hidden = true;
 }
 
+/* ------------------------------------------------------------ view */
+
 class PanelView {
   constructor(node) {
     this.node = node;
     this.data = null;
     this.closed = new Set();
+    this.live = false;       // current data came from the live preview
+    this.blockedBy = null;   // upstream node that prevents live preview
+    this.liveError = null;
+    this.liveSig = null;
+    this.inflight = false;
     this.build();
   }
 
@@ -53,20 +123,28 @@ class PanelView {
   build() {
     const root = (this.root = el("div", "arb arb-pnl"));
     const bar = el("div", "arb-bar");
+    this.dot = el("span", "arb-live");
+    this.dot.title = "Live — updates as you edit, no need to run";
     this.stats = el("span", "arb-sub", "");
-    this.numBtn = el("button", "arb-btn arb-txt", "1.0");
-    this.numBtn.title = "Parse numbers: lines like 7 or 3.5 become INT / FLOAT";
-    this.numBtn.addEventListener("click", () => this.flip("parse_numbers"));
-    this.mlBtn = el("button", "arb-btn arb-txt", "¶");
-    this.mlBtn.title = "Multiline: the whole text is one item";
-    this.mlBtn.addEventListener("click", () => this.flip("multiline"));
+
+    this.modeSeg = el("div", "arb-seg",
+      `<button data-m="lines" title="Each line is an item · an empty line starts a new branch">Lines</button>` +
+      `<button data-m="text" title="The whole text is one item">Text</button>`);
+    this.modeSeg.addEventListener("click", (e) => {
+      const m = e.target?.dataset?.m;
+      if (m) this.set("multiline", m === "text");
+    });
+    this.typeBtn = el("button", "arb-btn arb-type");
+    this.typeBtn.addEventListener("click", () => this.set("parse_numbers", !this.w("parse_numbers")?.value));
+
     this.toggleBtn = el("button", "arb-btn", ICONS.collapse);
     this.toggleBtn.title = "Collapse / expand all branches";
     this.toggleBtn.addEventListener("click", () => this.toggleAll());
     this.copyBtn = el("button", "arb-btn", ICONS.copy);
     this.copyBtn.title = "Copy as text";
     this.copyBtn.addEventListener("click", () => this.copy());
-    bar.append(this.stats, el("span", "arb-sp"), this.numBtn, this.mlBtn, this.toggleBtn, this.copyBtn);
+    bar.append(this.dot, this.stats, el("span", "arb-sp"), this.modeSeg, this.typeBtn,
+      this.toggleBtn, this.copyBtn);
 
     this.body = el("div", "arb-pnl-body");
     // wheel scrolls the list instead of zooming the canvas while it can scroll
@@ -77,7 +155,6 @@ class PanelView {
 
     this.editor = el("textarea", "arb-pnl-edit");
     this.editor.spellcheck = false;
-    this.editor.placeholder = "Type data — one item per line\n\nAn empty line starts a new branch";
     this.editor.addEventListener("input", () => {
       const w = this.w("text");
       if (w) w.value = this.editor.value;
@@ -97,10 +174,10 @@ class PanelView {
     isolatePointer(root);
   }
 
-  flip(name) {
+  set(name, value) {
     const w = this.w(name);
-    if (!w) return;
-    w.value = !w.value;
+    if (!w || w.value === value) return;
+    w.value = value;
     this.node.graph?.setDirtyCanvas?.(true, false);
     this.update();
   }
@@ -113,24 +190,84 @@ class PanelView {
     this.update();
   }
 
-  setData(data) {
+  setData(data, live = false) {
+    const first = !this.data;
     this.data = data;
-    this.closed.clear();
-    if (data.kind === "tree" && data.branches.length > AUTO_COLLAPSE) {
+    this.live = live;
+    this.liveError = null;
+    if (first && data.kind === "tree" && data.branches.length > AUTO_COLLAPSE) {
       data.branches.forEach((b) => this.closed.add(b.path));
     }
     this.update();
   }
 
+  liveTick() {
+    if (!this.connected || !this.node.graph) {
+      this.liveSig = null;
+      return;
+    }
+    const r = upstreamPrompt(this.node);
+    if (r.blocked) {
+      if (this.blockedBy !== r.blocked || this.live) {
+        this.blockedBy = r.blocked;
+        this.liveSig = null;
+        this.live = false;
+        if (this.data?.live) this.data = null; // a stale live result would mislead
+        this.update();
+      }
+      return;
+    }
+    const sig = JSON.stringify(r.prompt);
+    if (sig === this.liveSig || this.inflight) return;
+    this.liveSig = sig;
+    this.blockedBy = null;
+    this.inflight = true;
+    api.fetchApi("/arbor/live", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: r.prompt, target: String(this.node.id) }),
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        if (sig !== this.liveSig) return;
+        if (res.ok) {
+          this.setData(res.payload, true);
+        } else if (res.unsupported) {
+          this.blockedBy = res.unsupported;
+          this.live = false;
+          this.update();
+        } else {
+          this.liveError = res.error;
+          this.live = true;
+          this.update();
+        }
+      })
+      .catch(() => { this.liveSig = null; })
+      .finally(() => { this.inflight = false; });
+  }
+
   update() {
     const viewing = this.connected;
+    const multiline = !!this.w("multiline")?.value;
+    const numbers = !!this.w("parse_numbers")?.value;
     this.root.classList.toggle("editing", !viewing);
     this.editor.style.display = viewing ? "none" : "";
     this.body.style.display = viewing ? "" : "none";
-    this.numBtn.style.display = this.mlBtn.style.display = viewing ? "none" : "";
-    this.numBtn.classList.toggle("on", !!this.w("parse_numbers")?.value);
-    this.mlBtn.classList.toggle("on", !!this.w("multiline")?.value);
-    this.toggleBtn.style.display = viewing && this.data?.kind === "tree" ? "" : "none";
+
+    this.modeSeg.style.display = viewing ? "none" : "";
+    for (const b of this.modeSeg.children) b.classList.toggle("on", (b.dataset.m === "text") === multiline);
+    this.typeBtn.style.display = viewing || multiline ? "none" : "";
+    this.typeBtn.textContent = numbers ? "123" : "abc";
+    this.typeBtn.classList.toggle("on", numbers);
+    this.typeBtn.title = numbers
+      ? "Numbers on: 7 → INT, 3.5 → FLOAT. Click to keep every line as text"
+      : "Numbers off: every line stays text. Click to read numbers";
+    this.editor.placeholder = multiline
+      ? "Type text — the whole text is one item"
+      : "Type data — one item per line\n\nAn empty line starts a new branch";
+
+    this.toggleBtn.style.display = viewing && this.data?.kind === "tree" && !this.liveError ? "" : "none";
+    this.dot.style.display = viewing && this.live && !this.liveError ? "" : "none";
     if (viewing) this.render();
     this.renderStats();
   }
@@ -140,11 +277,11 @@ class PanelView {
       const c = countText(this.editor.value, !!this.w("multiline")?.value);
       this.stats.textContent = c.items
         ? `${plural(c.branches, "branch", "branches")} · ${plural(c.items, "item", "items")}`
-        : "Text input";
+        : "";
       return;
     }
     const d = this.data;
-    if (!d || d.source !== "input") {
+    if (!d || d.source !== "input" || this.liveError) {
       this.stats.textContent = "";
       return;
     }
@@ -158,8 +295,17 @@ class PanelView {
     const d = this.data;
     const body = this.body;
     body.replaceChildren();
+    if (this.liveError) {
+      const e = el("div", "arb-err");
+      e.textContent = this.liveError;
+      body.appendChild(e);
+      return;
+    }
     if (!d || d.source !== "input") {
-      body.appendChild(el("div", "arb-empty", "Run to inspect the input"));
+      const msg = this.blockedBy
+        ? `Run to inspect\n${this.blockedBy} can't preview live`
+        : "Run to inspect the input";
+      body.appendChild(el("div", "arb-empty")).textContent = msg;
       return;
     }
     this.root.classList.toggle("flat", d.kind !== "tree");
@@ -234,6 +380,10 @@ class PanelView {
 
 app.registerExtension({
   name: "Arbor.Panel",
+  async setup() {
+    await loadLiveTypes();
+    setInterval(liveTick, LIVE_MS);
+  },
   async beforeRegisterNodeDef(nodeType, nodeData) {
     if (nodeData?.name !== NODE) return;
     injectStyle();
@@ -241,6 +391,7 @@ app.registerExtension({
     chain(nodeType.prototype, "onNodeCreated", function () {
       const view = new PanelView(this);
       this.__arborPanel = view;
+      views.add(view);
       this.addDOMWidget("arbor_panel", "arbor-panel", view.root, {
         serialize: false,
         hideOnZoom: false,
@@ -251,17 +402,26 @@ app.registerExtension({
       this.setSize?.([Math.max(w, 300), Math.max(h, 260)]);
     });
 
+    chain(nodeType.prototype, "onRemoved", function () {
+      views.delete(this.__arborPanel);
+    });
+
     chain(nodeType.prototype, "onConfigure", function () {
       this.__arborPanel?.sync();
     });
 
     chain(nodeType.prototype, "onConnectionsChange", function () {
-      this.__arborPanel?.update();
+      const v = this.__arborPanel;
+      if (!v) return;
+      v.liveSig = null;
+      v.update();
     });
 
     chain(nodeType.prototype, "onExecuted", function (output) {
       const data = output?.arbor_panel?.[0];
-      if (data) this.__arborPanel?.setData(data);
+      const v = this.__arborPanel;
+      // a run of a live-capable graph matches the live view, so it stays "live"
+      if (data && data.source === "input") v?.setData(data, v.liveSig != null && !v.blockedBy);
     });
   },
 });

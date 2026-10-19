@@ -34,7 +34,7 @@ const CSS = `
 .arb-btn.on{color:var(--arb-fg);background:var(--arb-accent-soft);border-color:var(--arb-accent);}
 .arb-btn svg{width:13px;height:13px;}
 .arb-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  color:var(--arb-sub);font-size:11px;text-align:center;padding:12px;pointer-events:none;}
+  color:var(--arb-sub);font-size:11px;text-align:center;padding:12px;pointer-events:none;white-space:pre-line;line-height:1.6;}
 .arb-menu{position:fixed;z-index:10000;min-width:160px;max-height:260px;overflow:auto;padding:4px;
   border-radius:8px;border:1px solid var(--border-color,#36363d);
   background:var(--comfy-menu-bg,#232327);color:var(--input-text,#e4e4e7);
@@ -87,7 +87,7 @@ const CSS = `
 .arb-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 /* ------------------------------------------------------------- panel */
-.arb-pnl-body{position:relative;flex:1 1 auto;min-height:60px;overflow:auto;border-radius:8px;
+.arb-pnl-body{position:relative;flex:1 1 auto;min-height:60px;overflow:auto;contain:size;border-radius:8px;
   background:var(--arb-bg);border:1px solid var(--arb-line);padding:4px 0;
   font:11.5px/1.5 "JetBrains Mono","Cascadia Code",Consolas,monospace;
   scrollbar-width:thin;scrollbar-color:var(--arb-line) transparent;}
@@ -119,7 +119,10 @@ const CSS = `
   scrollbar-width:thin;scrollbar-color:var(--arb-line) transparent;}
 .arb-pnl-edit:focus{border-color:color-mix(in srgb,var(--arb-accent) 70%,var(--arb-line));}
 .arb-pnl-edit::placeholder{color:var(--arb-sub);opacity:.7;}
-.arb-btn.arb-txt{font:600 10.5px/1 "JetBrains Mono",Consolas,monospace;min-width:26px;}
+.arb-btn.arb-type{font:600 10px/1 "JetBrains Mono",Consolas,monospace;min-width:34px;letter-spacing:.02em;}
+.arb-live{width:6px;height:6px;border-radius:50%;background:var(--arb-accent);flex:0 0 auto;
+  box-shadow:0 0 0 3px var(--arb-accent-soft);}
+.arb-err{padding:6px 9px;color:#e08a7a;white-space:pre-wrap;word-break:break-word;}
 .arb-more{padding:4px 8px;color:var(--arb-sub);font-style:italic;}
 `;
 

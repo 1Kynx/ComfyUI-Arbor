@@ -184,6 +184,38 @@ def test_panel_slider_grid():
     print("panel / slider / grid: OK")
 
 
+def test_live_preview():
+    from arbor_pkg.arbor import live
+    mapping = {n.define_schema().node_id: n for n in pkg.NODES}
+    live._mappings = lambda: mapping
+    assert "Arbor_ImageSlider" not in live.safe_types() and "Arbor_Panel" in live.safe_types()
+    prompt = {
+        "1": {"class_type": "Arbor_Panel", "inputs": {"text": "a\nb\n\n3", "parse_numbers": True,
+                                                       "multiline": False}},
+        "2": {"class_type": "Arbor_Series", "inputs": {"start": 1.0, "step": 1.0, "count": 2, "as_int": True,
+                                                        "control_after_generate": "fixed"}},
+        "3": {"class_type": "Arbor_Merge", "inputs": {"trees.tree0": ["1", 1], "trees.tree1": ["2", 0]}},
+        "4": {"class_type": "Arbor_Panel", "inputs": {"data": ["3", 0], "text": "", "parse_numbers": True,
+                                                       "multiline": False}},
+        "5": {"class_type": "Arbor_Panel", "inputs": {"data": ["1", 0], "text": "", "parse_numbers": True,
+                                                       "multiline": False}},
+    }
+    p = live.evaluate(prompt, "4")
+    assert p["live"] and p["kind"] == "tree"
+    assert [(b["path"], [i["v"] for i in b["items"]]) for b in p["branches"]] == [
+        ("{0}", ["a", "b", "1", "2"]), ("{1}", ["3"])], p["branches"]
+    flat = live.evaluate(prompt, "5")
+    assert flat["kind"] == "list" and flat["stats"]["items"] == 3
+    prompt["6"] = {"class_type": "KSampler", "inputs": {}}
+    prompt["7"] = {"class_type": "Arbor_Panel", "inputs": {"data": ["6", 0]}}
+    try:
+        live.evaluate(prompt, "7")
+        raise AssertionError("KSampler must not run live")
+    except live.Unsupported as e:
+        assert e.class_type == "KSampler"
+    print("live preview: OK")
+
+
 def test_registration():
     ids = [n.define_schema().node_id for n in pkg.NODES]
     assert len(ids) == len(set(ids)), "duplicate node ids"
@@ -200,5 +232,6 @@ if __name__ == "__main__":
     test_cross_and_rebuild()
     test_nodes()
     test_panel_slider_grid()
+    test_live_preview()
     test_registration()
     print("ALL OK")
