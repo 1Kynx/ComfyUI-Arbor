@@ -22,7 +22,7 @@ From values to a batch run: every combination of x, y (and z) as aligned plain d
 - **z** · *any ×N*  
   z of every run (empty values when z is not connected).
 - **shape** · *TREE*  
-  Layout of the runs: connect to Image Grid (rows × columns) or Construct Tree (back into a tree). Its items are the column values, so Image Grid labels its columns from it. With only x, it is x's own tree.
+  Layout of the runs: connect to Image Grid (rows × columns) or Construct Tree (back into a tree). Each row is named after its x value and its items are the column values, so Image Grid labels itself. With only x, it is x's own tree.
 - **count** · *INT*  
   Number of runs.
 
@@ -34,7 +34,7 @@ Panel (text)─y─┘               └─ shape ──────────
 ```
 1. Type the x values and the y values in two **Panels** (or use **Number Sequence**) and connect them.
 2. Connect *x* / *y* to the inputs you want to vary — ordinary nodes run once per combination.
-3. Connect the decoded images and *shape* to **Image Grid**. It lays them out as rows × columns and labels the columns; connect the x Panel to its *row_labels*.
+3. Connect the decoded images and *shape* to **Image Grid**. It lays them out as rows × columns and labels both: the rows are named after x, the columns are the y values.
 
 Example template: *Templates → ComfyUI-Arbor → arbor_xy_sampler*.
 

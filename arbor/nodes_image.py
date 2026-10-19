@@ -1,7 +1,6 @@
 """Image nodes: compare, grid, resize, pick. (Loading and saving live in nodes_files.py.)"""
 
 import math
-import re
 
 import numpy as np
 import torch
@@ -55,12 +54,12 @@ class ImageGrid(IO.ComfyNode):
         return schema(
             "Arbor_ImageGrid", "Image Grid", CAT_IMAGE,
             "XY sheet: each branch is a row, each item a column. Connect XY Lists' shape to lay out "
-            "the images of a batch run directly; use Flip Matrix to swap the axes.",
+            "and label the images of a batch run directly; use Reshape Tree (flip matrix) to swap the axes.",
             [tree_in("images", tooltip="Image tree, or the plain images of a batch run (with shape)"),
              tree_in("shape", optional=True,
                      tooltip="Layout to pour plain images into (XY Lists' shape); also labels the columns"),
              tree_in("row_labels", optional=True,
-                     tooltip="One label per row — a list, or a tree with one branch per row"),
+                     tooltip="One label per row — overrides the row names the tree or shape carries"),
              tree_in("col_labels", optional=True,
                      tooltip="One label per column — overrides the labels taken from shape"),
              IO.Combo.Input("fit", options=["fit", "original", "stretch"], default="fit",
@@ -84,6 +83,8 @@ class ImageGrid(IO.ComfyNode):
             if not connected(col_labels):
                 col_labels = shape  # its items are the column values
         rows, cols = grid_size(tree)
+        if not connected(row_labels) and tree.names:
+            row_labels = [tree.names.get(p, "") for p in tree.paths()]  # e.g. XY Lists' x values
         sheet = build_grid(tree, row_labels_for(row_labels if connected(row_labels) else None, rows),
                            col_labels_for(col_labels if connected(col_labels) else None, cols),
                            unwrap(fit), unwrap(cell_size), unwrap(gap), unwrap(font_size), unwrap(theme),
@@ -174,26 +175,15 @@ class SmartResize(IO.ComfyNode):
 # ======================================================================= Batch Pick
 
 def parse_indices(text: str, n: int) -> list[int]:
-    """'0, 2, -1, 3-5, 1:4' -> indices into a batch of n (ranges inclusive, slices python-style)."""
-    out = []
-    for tok in re.split(r"[\s,;]+", str(text).strip()):
-        if not tok:
-            continue
-        if re.fullmatch(r"\d+-\d+", tok):
-            a, b = map(int, tok.split("-"))
-            step = 1 if b >= a else -1
-            out.extend(range(a, b + step, step))
-        elif ":" in tok:
-            out.extend(range(n)[slice(*[int(p) if p else None for p in tok.split(":")])])
-        else:
-            try:
-                out.append(int(tok))
-            except ValueError:
-                raise ValueError(f"Batch Pick: can't read index {tok!r}") from None
-    for i in out:
+    """Batch Pick indices: like List Item's, but out of range is an error."""
+    try:
+        idx = T.parse_indices(text, n)
+    except ValueError as e:
+        raise ValueError(f"Batch Pick: {e}") from None
+    for i in idx:
         if not -n <= i < n:
             raise IndexError(f"Batch Pick: index {i} out of range for a batch of {n}")
-    return [i % n for i in out]
+    return [i % n for i in idx]
 
 
 class BatchPick(IO.ComfyNode):

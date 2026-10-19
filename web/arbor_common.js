@@ -128,6 +128,8 @@ const CSS = `
 .arb-br.closed .arb-br-items{display:none;}
 .arb-path{color:var(--arb-accent);font-weight:600;}
 .arb-n{color:var(--arb-sub);font-size:10.5px;}
+.arb-name{color:var(--arb-fg);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.arb-name:empty{display:none;}
 .arb-row{display:flex;gap:10px;padding:0 8px 0 24px;align-items:flex-start;}
 .arb-row:hover{background:var(--arb-hover);}
 .arb-idx{color:var(--arb-sub);min-width:18px;text-align:right;flex:0 0 auto;user-select:none;}

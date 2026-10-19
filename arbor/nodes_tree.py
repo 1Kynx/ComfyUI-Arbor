@@ -2,6 +2,7 @@
 
 from . import tree as T
 from .common import IO, CAT_TREE, schema, connected, tree_in, tree_out, to_tree, unwrap
+from .preview import label_of
 
 MAX_COMBOS = 10000
 
@@ -27,7 +28,8 @@ class XYLists(IO.ComfyNode):
              IO.AnyType.Output(display_name="y", is_output_list=True, tooltip="y of every run"),
              IO.AnyType.Output(display_name="z", is_output_list=True, tooltip="z of every run"),
              tree_out("shape", tooltip="Layout of the runs — connect to Image Grid or Construct Tree "
-                                       "to put the results back into rows and columns"),
+                                       "to put the results back into rows and columns. Rows are named "
+                                       "after x, items are the column values, so the grid labels itself"),
              IO.Int.Output(display_name="count", tooltip="Number of runs")],
             ["xy plot", "xyz plot", "grid search", "parameter sweep", "combinations", "cartesian",
              "tree to list", "flatten to list", "for each", "batch run"])
@@ -49,7 +51,7 @@ class XYLists(IO.ComfyNode):
             n = len(xs)
             return IO.NodeOutput(xs, [None] * n, [None] * n, tx, n)
 
-        ox, oy, oz, shape = [], [], [], {}
+        ox, oy, oz, shape, names = [], [], [], {}, {}
         if unwrap(mode) == "zip":
             n = max(len(xs), len(ys), len(zs or []))
             pick = lambda vals, i: vals[min(i, len(vals) - 1)] if vals else None
@@ -70,9 +72,11 @@ class XYLists(IO.ComfyNode):
                         oz.append(zv)
                     if zs:
                         shape[(i, j)] = list(zs)
+                        names[(i, j)] = f"{label_of(xv)} · {label_of(yv)}"
                 if not zs:
                     shape[(i,)] = list(ys)
-        return IO.NodeOutput(ox, oy, oz, T.DataTree(shape), len(ox))
+                    names[(i,)] = xv
+        return IO.NodeOutput(ox, oy, oz, T.DataTree(shape, names), len(ox))
 
 
 # ======================================================================= build
@@ -104,41 +108,40 @@ class ConstructTree(IO.ComfyNode):
 
 # ======================================================================= structure
 
-def _reshape(node_id, name, desc, fn, aliases=(), widgets=()):
-    """A tree -> tree node: fn(tree, **widget values)."""
-
-    class _Node(IO.ComfyNode):
-        @classmethod
-        def define_schema(cls):
-            return schema(node_id, name, CAT_TREE, desc, [tree_in(), *[mk() for mk in widgets]],
-                          [tree_out()], aliases)
-
-        @classmethod
-        def execute(cls, tree, **kw) -> IO.NodeOutput:
-            return IO.NodeOutput(fn(to_tree(tree), **{k: unwrap(v) for k, v in kw.items()}))
-
-    _Node.__name__ = _Node.__qualname__ = node_id.removeprefix("Arbor_")
-    return _Node
+RESHAPE = {
+    "graft": lambda t: T.graft(t),
+    "flatten": lambda t, path: T.flatten(t, T.parse_path(path)),
+    "simplify": lambda t: T.simplify(t),
+    "flip matrix": lambda t: T.flip_matrix(t),
+    "shift paths": lambda t, offset: T.shift_paths(t, offset),
+    "renumber": lambda t: T.renumber(t),
+}
 
 
-Graft = _reshape("Arbor_Graft", "Graft", "Every item gets its own branch: {p} → {p;i}.",
-                 T.graft, ["graft tree"])
-Flatten = _reshape("Arbor_Flatten", "Flatten", "Put every item into one branch.",
-                   lambda t, path: T.flatten(t, T.parse_path(path)), ["flatten tree"],
-                   [lambda: IO.String.Input("path", default="{0}")])
-Simplify = _reshape("Arbor_Simplify", "Simplify", "Remove path indices that every branch shares.",
-                    T.simplify, ["simplify tree"])
-FlipMatrix = _reshape("Arbor_FlipMatrix", "Flip Matrix",
-                      "Swap rows and columns: item j of every branch goes to {j}.",
-                      T.flip_matrix, ["transpose", "swap xy"])
-ShiftPaths = _reshape("Arbor_ShiftPaths", "Shift Paths",
-                      "Drop path indices: +1 removes the first, -1 the last. "
-                      "Colliding branches are joined (undoes Graft).",
-                      T.shift_paths, ["trim tree", "group"],
-                      [lambda: IO.Int.Input("offset", default=-1, min=-16, max=16)])
-Renumber = _reshape("Arbor_Renumber", "Renumber",
-                    "Re-index branches as {0},{1},{2},… keeping their order.",
-                    T.renumber, ["clean tree", "reindex"])
+class ReshapeTree(IO.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        options = {
+            "flatten": [IO.String.Input("path", default="{0}", tooltip="Path of the single branch")],
+            "shift paths": [IO.Int.Input("offset", default=-1, min=-16, max=16,
+                                         tooltip="-1 drops the last path index (undoes graft), +1 the first")],
+        }
+        return schema(
+            "Arbor_ReshapeTree", "Reshape Tree", CAT_TREE,
+            "Change how items are grouped into branches. graft: every item its own branch · flatten: "
+            "all items in one branch · simplify: drop shared path indices · flip matrix: swap rows and "
+            "columns · shift paths: drop path indices, joining branches · renumber: {0}, {1}, {2}, …",
+            [tree_in(),
+             IO.DynamicCombo.Input("mode", options=[IO.DynamicCombo.Option(k, options.get(k, []))
+                                                    for k in RESHAPE])],
+            [tree_out()],
+            ["graft", "flatten", "simplify", "flip matrix", "transpose", "swap xy", "shift paths", "trim tree",
+             "renumber", "reindex", "path mapper"])
+
+    @classmethod
+    def execute(cls, tree, mode) -> IO.NodeOutput:
+        opts = {k: unwrap(v) for k, v in mode.items()}
+        return IO.NodeOutput(RESHAPE[opts.pop("mode")](to_tree(tree), **opts))
 
 
 class TreeBranch(IO.ComfyNode):
@@ -159,33 +162,22 @@ class TreeBranch(IO.ComfyNode):
         return IO.NodeOutput(T.get_branch(t, T.parse_path(p)) if p else T.get_branch(t, index=unwrap(index)))
 
 
-def _trees_input():
-    return IO.Autogrow.Input("trees", template=IO.Autogrow.TemplatePrefix(tree_in("tree"), prefix="tree",
-                                                                           min=2, max=16))
-
-
 class Merge(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
-        return schema("Arbor_Merge", "Merge", CAT_TREE,
-                      "Combine trees; items on the same path are appended in input order.",
-                      [_trees_input()], [tree_out()], ["combine", "join", "append"])
+        trees = IO.Autogrow.TemplatePrefix(tree_in("tree"), prefix="tree", min=2, max=16)
+        return schema(
+            "Arbor_Merge", "Merge", CAT_TREE,
+            "Combine trees. merge: items on the same path are appended in input order · entwine: "
+            "input i is placed under {i;…}, side by side.",
+            [IO.Autogrow.Input("trees", template=trees),
+             IO.Combo.Input("mode", options=["merge", "entwine"], default="merge")],
+            [tree_out()], ["combine", "join", "append", "entwine", "weave", "stack"])
 
     @classmethod
-    def execute(cls, trees: IO.Autogrow.Type) -> IO.NodeOutput:
-        return IO.NodeOutput(T.merge([to_tree(v) for v in trees.values() if connected(v)]))
-
-
-class Entwine(IO.ComfyNode):
-    @classmethod
-    def define_schema(cls):
-        return schema("Arbor_Entwine", "Entwine", CAT_TREE,
-                      "Stack trees side by side: input i is placed under {i;…}.",
-                      [_trees_input()], [tree_out()], ["weave", "stack"])
-
-    @classmethod
-    def execute(cls, trees: IO.Autogrow.Type) -> IO.NodeOutput:
-        return IO.NodeOutput(T.entwine([to_tree(v) for v in trees.values() if connected(v)]))
+    def execute(cls, trees: IO.Autogrow.Type, mode) -> IO.NodeOutput:
+        given = [to_tree(v) for v in trees.values() if connected(v)]
+        return IO.NodeOutput(T.entwine(given) if unwrap(mode) == "entwine" else T.merge(given))
 
 
 class TreeStatistics(IO.ComfyNode):
@@ -206,5 +198,4 @@ class TreeStatistics(IO.ComfyNode):
         return IO.NodeOutput(t.branch_count, t.item_count, t.depth, paths)
 
 
-NODES = [XYLists, ConstructTree, Graft, Flatten, Simplify, FlipMatrix, ShiftPaths, Renumber,
-         TreeBranch, Merge, Entwine, TreeStatistics]
+NODES = [XYLists, ConstructTree, ReshapeTree, TreeBranch, Merge, TreeStatistics]

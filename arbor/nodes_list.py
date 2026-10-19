@@ -11,30 +11,20 @@ def _list_node(node_id, name, desc, inputs, outputs, aliases=()):
 class ListItem(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
-        return _list_node("Arbor_ListItem", "List Item", "Pick item i from every branch.",
-                          [IO.Int.Input("index", default=0, min=-100000, max=100000),
-                           IO.Boolean.Input("wrap", default=True, tooltip="Wrap index around the list length")],
-                          [tree_out()], ["get item", "index", "pick"])
+        index = IO.MultiType.Input(
+            IO.String.Input("index", default="0",
+                            tooltip="Which items: 0 · -1 (last) · 0, 2 · 1:4 (slice) · 2-5 (inclusive) · ::2 "
+                                    "— or connect a number"),
+            types=[IO.Int])
+        return _list_node("Arbor_ListItem", "List Item",
+                          "Pick items from every branch by index, list, range or slice.",
+                          [index, IO.Boolean.Input("wrap", default=True,
+                                                   tooltip="Out-of-range indices wrap around; off gives null")],
+                          [tree_out()], ["get item", "index", "pick", "sub list", "slice", "range of list"])
 
     @classmethod
     def execute(cls, tree, index, wrap) -> IO.NodeOutput:
-        return IO.NodeOutput(T.list_item(to_tree(tree), unwrap(index), unwrap(wrap)))
-
-
-class SubList(IO.ComfyNode):
-    @classmethod
-    def define_schema(cls):
-        return _list_node("Arbor_SubList", "Sub List", "Slice items [start, end) from every branch.",
-                          [IO.Int.Input("start", default=0, min=-100000, max=100000),
-                           IO.Int.Input("end", default=-1, min=-100000, max=100000,
-                                        tooltip="Exclusive; -1 keeps through the last item")],
-                          [tree_out()], ["slice", "range of list"])
-
-    @classmethod
-    def execute(cls, tree, start, end) -> IO.NodeOutput:
-        s, e = unwrap(start), unwrap(end)
-        return IO.NodeOutput(to_tree(tree).map_branches(
-            lambda _, items: items[s:] if e == -1 else items[s:e]))
+        return IO.NodeOutput(T.list_items(to_tree(tree), unwrap(index), unwrap(wrap)))
 
 
 class Dispatch(IO.ComfyNode):
@@ -86,26 +76,17 @@ class Repeat(IO.ComfyNode):
         return IO.NodeOutput(T.repeat(to_tree(tree), unwrap(count), unwrap(mode)))
 
 
-class ReverseList(IO.ComfyNode):
-    @classmethod
-    def define_schema(cls):
-        return _list_node("Arbor_ReverseList", "Reverse List", "Reverse the item order in every branch.",
-                          [], [tree_out()], ["reverse", "flip list", "invert order"])
-
-    @classmethod
-    def execute(cls, tree) -> IO.NodeOutput:
-        return IO.NodeOutput(T.reverse_list(to_tree(tree)))
-
-
 class SortList(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
-        return _list_node("Arbor_SortList", "Sort List", "Sort every branch (numbers before text).",
-                          [IO.Boolean.Input("descending", default=False)], [tree_out()], ["sort", "order"])
+        return _list_node("Arbor_SortList", "Sort List",
+                          "Sort every branch (numbers before text), or reverse its order.",
+                          [IO.Combo.Input("order", options=list(T.SORT_ORDERS), default="ascending")],
+                          [tree_out()], ["sort", "order", "reverse", "flip list", "invert order"])
 
     @classmethod
-    def execute(cls, tree, descending) -> IO.NodeOutput:
-        return IO.NodeOutput(T.sort_list(to_tree(tree), unwrap(descending)))
+    def execute(cls, tree, order) -> IO.NodeOutput:
+        return IO.NodeOutput(T.sort_list(to_tree(tree), unwrap(order)))
 
 
 class CrossReference(IO.ComfyNode):
@@ -114,7 +95,7 @@ class CrossReference(IO.ComfyNode):
         return schema(
             "Arbor_CrossReference", "Cross Reference", CAT_LIST,
             "Every combination of A × B, branch by branch. With group on, each A value gets its own "
-            "branch: rows = A, columns = B — ready for Image Grid.",
+            "branch, named after it: rows = A, columns = B — ready for Image Grid.",
             [tree_in("A"), tree_in("B"),
              IO.Boolean.Input("group", default=True, tooltip="One branch per A item")],
             [tree_out("A"), tree_out("B")],
@@ -125,4 +106,4 @@ class CrossReference(IO.ComfyNode):
         return IO.NodeOutput(*T.cross_reference(to_tree(A), to_tree(B), unwrap(group)))
 
 
-NODES = [ListItem, SubList, Dispatch, Partition, Repeat, ReverseList, SortList, CrossReference]
+NODES = [ListItem, Dispatch, Partition, Repeat, SortList, CrossReference]

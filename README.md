@@ -21,7 +21,8 @@ Panel (prompts) ────y──┘                ├─ y ──► CLIP Te
 
 **XY Lists** turns parameter values into every combination as aligned plain data — ordinary nodes run once
 per combination — plus the **shape** of the runs. **Image Grid** takes the decoded images and that shape and
-draws the sheet as rows × columns (column labels come from the shape; connect the x Panel to its row labels).
+draws the sheet as rows × columns, already labelled: the shape names every row after its x value and holds
+the y values as columns.
 Open *Templates → ComfyUI-Arbor → arbor_xy_sampler* and pick your checkpoint.
 
 ### Trees and plain data
@@ -38,18 +39,23 @@ connected flattens a tree and outputs its shape, and **Construct Tree** (or **Im
 |---|---|
 | **Arbor/Image** | Image Slider · Image Grid · Load Folder · Save Images by Path · Smart Resize · Batch Pick |
 | **Arbor/Data** | Panel · Number Slider · Number Sequence · Split Text · Prompt Template · Expression · Random · Index Switch |
-| **Arbor/Tree** | XY Lists · Construct Tree · Graft · Flatten · Simplify · Flip Matrix · Shift Paths · Renumber · Tree Branch · Merge · Entwine · Tree Statistics |
-| **Arbor/List** | List Item · Sub List · Dispatch · Partition · Repeat · Reverse List · Sort List · Cross Reference |
+| **Arbor/Tree** | XY Lists · Construct Tree · Reshape Tree · Tree Branch · Merge · Tree Statistics |
+| **Arbor/List** | List Item · Dispatch · Partition · Repeat · Sort List · Cross Reference |
 
 *Image*: viewing, gridding, loading, saving and resizing images. *Data*: where values come from (typed,
 slid, generated, computed) and which one goes on. *Tree*: building, reshaping and flattening trees. *List*: the same operation on every branch.
+
+Grasshopper's tree operations are grouped by what they do instead of one node each: **Reshape Tree** is Graft,
+Flatten, Simplify, Flip Matrix, Shift Paths and Renumber (pick the mode); **Merge** also entwines; **List Item**
+takes `0`, `-1`, `0, 2`, `1:4`, `2-5` or `::2`, so it covers Sub List; **Sort List** also reverses.
+Searching for any of the Grasshopper names finds the right node.
 
 **Image Slider** — connect any number of images (inputs grow as you connect) of any size.
 *Flip*: drag the scrubber or press ← → to step through them. *Wipe*: A/B split that follows the pointer.
 *Real* keeps relative sizes, *Fit* fills the stage. Double-click opens the full image.
 
 **Panel** — works both ways, like Grasshopper's panel.
-*Connected*: a viewer. Trees show collapsible branches with paths and counts, images show thumbnails,
+*Connected*: a viewer. Trees show collapsible branches with paths, names and counts, images show thumbnails,
 long text folds to four lines (*more* unfolds it), every item has its own copy button, and ⤢ opens a
 large view. Data passes through unchanged.
 When everything upstream is a lightweight data node (Arbor data/tree/list nodes, core primitives,

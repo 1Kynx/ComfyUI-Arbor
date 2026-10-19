@@ -149,19 +149,19 @@ node("Arbor_BatchPick", en=dict(
 node("Arbor_ImageGrid", en=dict(
     desc="Lay images out as an XY comparison sheet: each branch is a row, each item a column.",
     inputs={"images": "An image tree — or the plain images of a batch run, together with shape.",
-            "shape": "XY Lists' shape: pours plain images into rows × columns and labels the columns with the column values.",
-            "row_labels": "One label per row: a list (e.g. the x Panel), or a tree with one branch per row (Cross Reference A works too).",
+            "shape": "XY Lists' shape: pours plain images into rows × columns and labels them (rows by x, columns by y).",
+            "row_labels": "One label per row — a list, or a tree with one branch per row. Not needed when the tree or shape names its rows (XY Lists, Prompt Template, Cross Reference).",
             "col_labels": "One label per column — overrides the labels taken from shape.",
             "fit": "How images of different sizes fill a cell: fit (scale to fit), original (no scaling), stretch.",
             "cell_size": "Longest side of a cell in pixels; 0 = the largest image's size.",
             "gap": "Space between cells and around the sheet, in pixels.",
             "font_size": "Label font size. Chinese labels render with a CJK font when one is installed.",
             "theme": "Light or dark sheet background.",
-            "path_labels": "Label rows with their branch path when no row labels are connected."},
+            "path_labels": "Label rows with their branch path when there are no row labels or row names."},
     outputs=["The comparison sheet as one image."],
     doc="""## How to use
-- **After a batch run**: connect the decoded images to *images* and **XY Lists'** *shape* to *shape*. Rows and columns come out right, and the columns are labelled. Connect the x values to *row_labels*.
-- **From a tree**: connect any image tree — each branch becomes a row. Use **Flip Matrix** first to swap rows and columns.
+- **After a batch run**: connect the decoded images to *images* and **XY Lists'** *shape* to *shape*. Rows and columns come out right and are labelled — rows with the x values, columns with the y values. Nothing else to connect.
+- **From a tree**: connect any image tree — each branch becomes a row. Use **Reshape Tree** (*flip matrix*) first to swap rows and columns.
 
 ## Tips
 - Long labels wrap to three lines and are cut with "…".
@@ -170,19 +170,19 @@ node("Arbor_ImageGrid", en=dict(
     name="图像网格",
     desc="把图片排成 XY 对比图：每个分支一行，每项一列。",
     inputs={"images": ("图像", "图像数据树——或批量运行得到的普通图片（配合形状使用）。"),
-            "shape": ("形状", "XY 组合列表的形状：把普通图片排成行 × 列，并用列的取值标注列。"),
-            "row_labels": ("行标签", "每行一个标签：列表（例如 x 的面板），或每行一个分支的数据树（交叉组合的 A 也可以）。"),
+            "shape": ("形状", "XY 组合列表的形状：把普通图片排成行 × 列并标注（行是 x，列是 y）。"),
+            "row_labels": ("行标签", "每行一个标签——列表，或每行一个分支的数据树。数据树或形状自带行名时（XY 组合列表、提示词模板、交叉组合）不用接。"),
             "col_labels": ("列标签", "每列一个标签——会覆盖从形状得到的列标签。"),
             "fit": ("适配", "不同尺寸的图片如何填充格子：fit 缩放适配、original 原尺寸、stretch 拉伸。"),
             "cell_size": ("格子尺寸", "格子长边像素；0 = 最大图片的尺寸。"),
             "gap": ("间距", "格子之间以及四周的留白像素。"),
             "font_size": ("字号", "标签字号。系统装有中日韩字体时，中文标签会正常显示。"),
             "theme": ("主题", "浅色或深色背景。"),
-            "path_labels": ("路径作行标签", "没有接行标签时，用分支路径作为行标签。")},
+            "path_labels": ("路径作行标签", "既没有行标签也没有行名时，用分支路径作为行标签。")},
     outputs=[("图像", "合成后的对比图（一张）。")],
     doc="""## 用法
-- **批量运行之后**：解码后的图片接 *图像*，**XY 组合列表** 的 *形状* 接 *形状*，行列自动排好并标注列；x 的取值接 *行标签*。
-- **来自数据树**：直接接任意图像数据树，每个分支一行。想交换行列，先接 **翻转矩阵**。
+- **批量运行之后**：解码后的图片接 *图像*，**XY 组合列表** 的 *形状* 接 *形状*，行列自动排好并标注——行是 x 的取值，列是 y 的取值，不用再接别的。
+- **来自数据树**：直接接任意图像数据树，每个分支一行。想交换行列，先接 **重组数据树**（*翻转矩阵*）。
 
 ## 提示
 - 过长的标签最多折成三行，超出部分用「…」省略。
@@ -282,7 +282,7 @@ node("Arbor_Panel", en=dict(
     outputs=["The data as a native list: downstream nodes run once per item (a single item runs once).",
              "The data as a tree — for Arbor nodes, keeps the branches."],
     doc="""## Viewing (input connected)
-- Trees show as collapsible branches with their path and count (`{0;1} N=3`); images as thumbnails.
+- Trees show as collapsible branches with their path, name and count (`{1} 7 N=3` — XY Lists names each row after its x value); images as thumbnails.
 - Long text folds to four lines — *more* unfolds it. Hover an item to copy it; the toolbar copies everything.
 - **Live**: when everything upstream is a lightweight data node (Arbor data / tree / list nodes, primitives, string and math nodes) the view updates as you edit — no run needed (green dot). Anything heavier upstream (samplers, loaders) never runs on its own; the panel then shows the last run.
 - ⤢ opens a large view.
@@ -313,7 +313,7 @@ a dog
     outputs=[("数据", "原生列表：下游节点会对每一项各运行一次（只有一项时运行一次）。"),
              ("数据树", "数据树形式——给 Arbor 节点用，保留分支结构。")],
     doc="""## 查看（接入输入时）
-- 数据树显示为可折叠的分支，带路径和数量（`{0;1} N=3`）；图片显示缩略图。
+- 数据树显示为可折叠的分支，带路径、名称和数量（`{1} 7 N=3`——XY 组合列表会用 x 的取值给每行命名）；图片显示缩略图。
 - 长文本默认折叠成四行，点「展开」查看全部。鼠标悬停某项可单独复制；工具栏按钮复制全部。
 - **实时**：上游全是轻量数据节点（Arbor 的数据 / 数据树 / 列表节点、Primitive、字符串和数学节点）时，编辑就会实时刷新，无需运行（绿点）。上游有采样器、加载器等重节点时不会自动运行，显示上一次运行的结果。
 - ⤢ 打开大窗口查看。

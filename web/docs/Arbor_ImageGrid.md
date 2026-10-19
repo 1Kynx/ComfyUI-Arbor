@@ -7,9 +7,9 @@ Lay images out as an XY comparison sheet: each branch is a row, each item a colu
 - **images** · *any*  
   An image tree — or the plain images of a batch run, together with shape.
 - **shape** · *any, optional*  
-  XY Lists' shape: pours plain images into rows × columns and labels the columns with the column values.
+  XY Lists' shape: pours plain images into rows × columns and labels them (rows by x, columns by y).
 - **row_labels** · *any, optional*  
-  One label per row: a list (e.g. the x Panel), or a tree with one branch per row (Cross Reference A works too).
+  One label per row — a list, or a tree with one branch per row. Not needed when the tree or shape names its rows (XY Lists, Prompt Template, Cross Reference).
 - **col_labels** · *any, optional*  
   One label per column — overrides the labels taken from shape.
 - **fit** · *COMBO (fit · original · stretch)*  
@@ -23,7 +23,7 @@ Lay images out as an XY comparison sheet: each branch is a row, each item a colu
 - **theme** · *COMBO (light · dark)*  
   Light or dark sheet background.
 - **path_labels** · *BOOLEAN*  
-  Label rows with their branch path when no row labels are connected.
+  Label rows with their branch path when there are no row labels or row names.
 
 ## Outputs
 
@@ -31,8 +31,8 @@ Lay images out as an XY comparison sheet: each branch is a row, each item a colu
   The comparison sheet as one image.
 
 ## How to use
-- **After a batch run**: connect the decoded images to *images* and **XY Lists'** *shape* to *shape*. Rows and columns come out right, and the columns are labelled. Connect the x values to *row_labels*.
-- **From a tree**: connect any image tree — each branch becomes a row. Use **Flip Matrix** first to swap rows and columns.
+- **After a batch run**: connect the decoded images to *images* and **XY Lists'** *shape* to *shape*. Rows and columns come out right and are labelled — rows with the x values, columns with the y values. Nothing else to connect.
+- **From a tree**: connect any image tree — each branch becomes a row. Use **Reshape Tree** (*flip matrix*) first to swap rows and columns.
 
 ## Tips
 - Long labels wrap to three lines and are cut with "…".

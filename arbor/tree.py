@@ -7,7 +7,9 @@ A tree is an ordered mapping of *paths* to *branches*:
 
 A path is a tuple of non-negative ints, written ``{0;1}``. A branch is a plain
 Python list whose items can be anything ComfyUI passes around (numbers,
-strings, IMAGE tensors, LATENT dicts, ...). Trees are immutable by convention:
+strings, IMAGE tensors, LATENT dicts, ...). A branch may also carry a *name*,
+the value it stands for (XY Lists names each row after its x value), which the
+Panel shows and Image Grid uses as the row label. Trees are immutable by convention:
 every operation returns a new tree and never mutates its input, because
 ComfyUI caches node outputs and hands the same object to several consumers.
 """
@@ -21,13 +23,14 @@ Path = tuple[int, ...]
 
 
 class DataTree:
-    __slots__ = ("branches",)
+    __slots__ = ("branches", "names")
 
-    def __init__(self, branches: dict[Path, list] | None = None):
+    def __init__(self, branches: dict[Path, list] | None = None, names: dict[Path, Any] | None = None):
         self.branches: dict[Path, list] = {}
         if branches:
             for path, items in branches.items():
                 self.branches[tuple(int(i) for i in path)] = list(items)
+        self.names: dict[Path, Any] = {p: v for p, v in (names or {}).items() if p in self.branches}
 
     # ------------------------------------------------------------ queries
     def paths(self) -> list[Path]:
@@ -55,10 +58,11 @@ class DataTree:
         return max((len(p) for p in self.branches), default=0)
 
     def map_items(self, fn: Callable[[Any], Any]) -> "DataTree":
-        return DataTree({p: [fn(v) for v in items] for p, items in self.branches.items()})
+        return DataTree({p: [fn(v) for v in items] for p, items in self.branches.items()}, self.names)
 
     def map_branches(self, fn: Callable[[Path, list], list]) -> "DataTree":
-        return DataTree({p: fn(p, list(items)) for p, items in self.branches.items()})
+        """Same paths (and names), new items."""
+        return DataTree({p: fn(p, list(items)) for p, items in self.branches.items()}, self.names)
 
     def __len__(self) -> int:
         return self.item_count
@@ -211,7 +215,9 @@ def entwine(trees: list[DataTree]) -> DataTree:
 
 
 def renumber(tree: DataTree) -> DataTree:
-    return DataTree({(i,): items for i, items in enumerate(tree.branches.values())})
+    paths = tree.paths()
+    return DataTree({(i,): tree.branches[p] for i, p in enumerate(paths)},
+                    {(i,): tree.names[p] for i, p in enumerate(paths) if p in tree.names})
 
 
 def match_item(tree: DataTree, k: int, j: int):
@@ -228,12 +234,12 @@ def get_branch(tree: DataTree, path: Path | None = None, index: int | None = Non
         if path not in tree.branches:
             raise KeyError(f"Path {format_path(path)} not in tree; it has "
                            + ", ".join(format_path(p) for p in tree.paths()[:8]))
-        return DataTree({path: tree.branches[path]})
-    paths = tree.paths()
-    if not paths:
-        return DataTree()
-    p = paths[index % len(paths)]
-    return DataTree({p: tree.branches[p]})
+    else:
+        paths = tree.paths()
+        if not paths:
+            return DataTree()
+        path = paths[index % len(paths)]
+    return DataTree({path: tree.branches[path]}, tree.names)
 
 
 # ---------------------------------------------------------------- list ops
@@ -298,14 +304,40 @@ def _branch_pattern(pattern, k: int) -> list[bool]:
     return pattern or [True]
 
 
-def list_item(tree: DataTree, index: int, wrap: bool = True) -> DataTree:
+def parse_indices(spec, n: int) -> list[int]:
+    """'0, 2, -1, 3-5, 1:4, ::2' -> indices into a list of n items.
+
+    Ranges ``a-b`` are inclusive, slices are Python-style and clipped to n;
+    single indices are returned as written, so the caller decides what an
+    out-of-range index means (wrap, null or an error).
+    """
+    out = []
+    for tok in re.split(r"[\s,;]+", str(spec).strip()):
+        if not tok:
+            continue
+        if re.fullmatch(r"\d+-\d+", tok):
+            a, b = map(int, tok.split("-"))
+            out.extend(range(a, b + (1 if b >= a else -1), 1 if b >= a else -1))
+        elif ":" in tok:
+            try:
+                out.extend(range(n)[slice(*[int(p) if p else None for p in tok.split(":")])])
+            except (TypeError, ValueError):
+                raise ValueError(f"can't read slice {tok!r}") from None
+        else:
+            try:
+                out.append(int(float(tok)))
+            except ValueError:
+                raise ValueError(f"can't read index {tok!r}") from None
+    return out
+
+
+def list_items(tree: DataTree, spec, wrap: bool = True) -> DataTree:
+    """Pick items from every branch; out-of-range indices wrap, or give null."""
     def pick(_, items):
-        if not items:
-            return []
-        i = index % len(items) if wrap else index
-        if not wrap and not -len(items) <= i < len(items):
-            return [None]
-        return [items[i]]
+        n = len(items)
+        if wrap:
+            return [items[i % n] for i in parse_indices(spec, n)] if n else []
+        return [items[i] if -n <= i < n else None for i in parse_indices(spec, n)]
     return tree.map_branches(pick)
 
 
@@ -345,12 +377,14 @@ def _sort_key(v):
     return (1, 0, str(v))
 
 
-def sort_list(tree: DataTree, descending: bool = False) -> DataTree:
-    return tree.map_branches(lambda _, items: sorted(items, key=_sort_key, reverse=descending))
+SORT_ORDERS = ("ascending", "descending", "reverse")
 
 
-def reverse_list(tree: DataTree) -> DataTree:
-    return tree.map_branches(lambda _, items: items[::-1])
+def sort_list(tree: DataTree, order: str = "ascending") -> DataTree:
+    """Sort every branch (numbers before text), or just reverse it."""
+    if order == "reverse":
+        return tree.map_branches(lambda _, items: items[::-1])
+    return tree.map_branches(lambda _, items: sorted(items, key=_sort_key, reverse=order == "descending"))
 
 
 def cross_reference(a: DataTree, b: DataTree, group: bool = True) -> tuple[DataTree, DataTree]:
@@ -365,6 +399,7 @@ def cross_reference(a: DataTree, b: DataTree, group: bool = True) -> tuple[DataT
     n = max(len(pa), len(pb))
     out_a: dict[Path, list] = {}
     out_b: dict[Path, list] = {}
+    names: dict[Path, Any] = {}
     for k in range(n):
         path = pa[min(k, len(pa) - 1)] if len(pa) >= len(pb) else pb[min(k, len(pb) - 1)]
         items_a = a.branches[pa[min(k, len(pa) - 1)]]
@@ -373,11 +408,13 @@ def cross_reference(a: DataTree, b: DataTree, group: bool = True) -> tuple[DataT
             key = path + (i,) if group else path
             out_a.setdefault(key, []).extend([va] * len(items_b))
             out_b.setdefault(key, []).extend(items_b)
-    return DataTree(out_a), DataTree(out_b)
+            if group:
+                names[key] = va
+    return DataTree(out_a, names), DataTree(out_b, names)
 
 
 def rebuild(values: list, shape: DataTree) -> DataTree:
-    """Pour a flat list back into the branch layout of ``shape``."""
+    """Pour a flat list back into the branch layout (and names) of ``shape``."""
     total = shape.item_count
     if len(values) != total:
         raise ValueError(
@@ -387,4 +424,4 @@ def rebuild(values: list, shape: DataTree) -> DataTree:
     for p, items in shape.items():
         out[p] = values[k:k + len(items)]
         k += len(items)
-    return DataTree(out)
+    return DataTree(out, shape.names)

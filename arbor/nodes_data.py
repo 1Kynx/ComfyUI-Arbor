@@ -212,11 +212,13 @@ class PromptTemplate(IO.ComfyNode):
         if total > MAX_COMBOS:
             raise ValueError(f"Prompt Template: {total} combinations (max {MAX_COMBOS})")
         *outer, last = names
-        out = {}
+        out, names = {}, {}
         for idx in itertools.product(*[range(len(lists[k])) for k in outer]):
             vals = {k: lists[k][i] for k, i in zip(outer, idx)}
             out[tuple(idx) or (0,)] = [fill({**vals, last: v}) for v in lists[last]]
-        return both(T.DataTree(out))
+            if vals:
+                names[tuple(idx)] = " · ".join(vals.values())  # the row's outer values, for Image Grid
+        return both(T.DataTree(out, names))
 
 
 # ======================================================================= Expression

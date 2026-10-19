@@ -72,7 +72,19 @@ def test_tree_algebra():
     assert T.partition(T.DataTree({(0,): list(range(5))}), 2).branches == {
         (0, 0): [0, 1], (0, 1): [2, 3], (0, 2): [4]}
     assert T.repeat(t, 2, "whole").branches[(1,)] == [4, 5, 4, 5]
-    assert T.list_item(t, -1).branches == {(0,): [3], (1,): [5]}
+    assert T.list_items(t, "-1").branches == {(0,): [3], (1,): [5]}
+    assert T.list_items(t, "0, 5", wrap=False).branches == {(0,): [1, None], (1,): [4, None]}, "null keeps alignment"
+    assert T.parse_indices("0, -1, 2-4, ::3, 4-2", 6) == [0, -1, 2, 3, 4, 0, 3, 4, 3, 2]
+    assert T.parse_indices(3, 5) == [3], "a connected number"
+    raises(ValueError, T.parse_indices, "x", 3)
+    assert T.sort_list(T.DataTree({(0,): [2, 1, 3]}), "reverse").branches == {(0,): [3, 1, 2]}
+    # branch names ride along where paths stay put, and through a shape
+    named = T.DataTree({(0,): [1], (1,): [2]}, {(1,): "b", (5,): "gone"})
+    assert named.names == {(1,): "b"}, "names only for existing branches"
+    assert named.map_items(lambda v: v * 2).names == {(1,): "b"}
+    assert T.rebuild(["x", "y"], named).names == {(1,): "b"}
+    assert T.renumber(T.DataTree({(3,): [1], (7,): [2]}, {(7,): "b"})).names == {(1,): "b"}
+    assert T.get_branch(named, (1,)).names == {(1,): "b"}
     m = T.merge([t, T.DataTree({(1,): [9], (2,): [8]})])
     assert m.branches == {(0,): [1, 2, 3], (1,): [4, 5, 9], (2,): [8]}
     assert T.entwine([t, t]).paths()[2] == (1, 0)
@@ -89,6 +101,7 @@ def test_cross_and_rebuild():
     b = T.DataTree({(0,): ["x", "y", "z"]})
     ca, cb = T.cross_reference(a, b)
     assert ca.branches == {(0, 0): [3, 3, 3], (0, 1): [5, 5, 5]}
+    assert ca.names == cb.names == {(0, 0): 3, (0, 1): 5}, "each row named after its A value"
     assert cb.branches == {(0, 0): ["x", "y", "z"], (0, 1): ["x", "y", "z"]}
     back = T.rebuild([f"img{i}" for i in range(ca.item_count)], ca)
     assert back.branches[(0, 1)] == ["img3", "img4", "img5"]
@@ -223,6 +236,8 @@ def test_panel():
     data, ptree = res(out)
     assert data == tree.flat(), "data output = every item, flattened"
     assert ptree is tree, "tree output is the input tree"
+    named = run(nodes_panel.Panel, data=[T.DataTree({(0,): [1], (1,): [2]}, {(1,): 7})]).ui["arbor_panel"][0]
+    assert "name" not in named["branches"][0] and named["branches"][1]["name"] == "7"
     flat = run(nodes_panel.Panel, data=[1, 2, 3]).ui["arbor_panel"][0]
     assert flat["kind"] == "list" and flat["stats"]["items"] == 3
 
@@ -253,15 +268,26 @@ def test_panel():
 
 def test_tree_nodes():
     tr = T.DataTree({(0,): [1.0, 1.5, 2.0, 2.5]})
-    g = res(run(nodes_tree.Graft, tree=[tr]))[0]
+
+    # Reshape Tree: the mode arrives the way ComfyUI builds it for list nodes, every value list-wrapped
+    def reshape(t, mode, **kw):
+        return res(run(nodes_tree.ReshapeTree, tree=[t], mode={"mode": [mode], **{k: [v] for k, v in kw.items()}}))[0]
+
+    g = reshape(tr, "graft")
     assert g.branch_count == 4
-    assert res(run(nodes_tree.Flatten, tree=[g], path="{3}"))[0].paths() == [(3,)]
-    assert res(run(nodes_tree.ShiftPaths, tree=[g], offset=-1))[0].branches == tr.branches
+    assert reshape(g, "flatten", path="{3}").paths() == [(3,)]
+    assert reshape(g, "shift paths", offset=-1).branches == tr.branches
+    assert reshape(T.DataTree({(0, 0, 1): ["a"], (0, 0, 2): ["b"]}), "simplify").paths() == [(1,), (2,)]
+    assert reshape(T.DataTree({(0,): [1, 2], (1,): [3, 4]}), "flip matrix").branches == {(0,): [1, 3], (1,): [2, 4]}
+    assert reshape(g, "renumber").paths() == [(0,), (1,), (2,), (3,)]
+    mode = next(i for i in nodes_tree.ReshapeTree.define_schema().inputs if i.id == "mode")
+    assert [o.key for o in mode.options] == list(nodes_tree.RESHAPE)
     assert res(run(nodes_tree.TreeBranch, tree=[g], path="{0;2}", index=0))[0].branches == {(0, 2): [2.0]}
     assert res(run(nodes_tree.TreeBranch, tree=[g], path="", index=-1))[0].paths() == [(0, 3)]
-    mg = res(run(nodes_tree.Merge, trees={"tree0": [tr], "tree1": [5, 6], "tree2": [None]}))[0]
+    trees = {"tree0": [tr], "tree1": [5, 6], "tree2": [None]}
+    mg = res(run(nodes_tree.Merge, trees=trees, mode="merge"))[0]
     assert mg.branches == {(0,): [1.0, 1.5, 2.0, 2.5, 5, 6]}, "unconnected Autogrow slot ignored"
-    ew = res(run(nodes_tree.Entwine, trees={"tree0": [tr], "tree1": [5, 6], "tree2": [None]}))[0]
+    ew = res(run(nodes_tree.Merge, trees=trees, mode="entwine"))[0]
     assert ew.paths() == [(0, 0), (1, 0)]
     assert list(res(run(nodes_tree.TreeStatistics, tree=[g]))[:3]) == [4, 4, 2]
 
@@ -295,11 +321,17 @@ def test_list_nodes():
     st = T.DataTree({(0,): ["red", "blue"]})
     cx, cy = res(run(nodes_list.CrossReference, A=[tr], B=[st], group=True))
     assert cx.branch_count == 4 and cy.item_count == 8
-    assert res(run(nodes_list.SubList, tree=[tr], start=1, end=-1))[0].branches[(0,)] == [1.5, 2.0, 2.5]
-    so = res(run(nodes_list.SortList, tree=[T.DataTree({(0,): [3, "b", 1, "a"]})], descending=False))[0]
-    assert so.branches[(0,)] == [1, 3, "a", "b"]
-    assert res(run(nodes_list.ReverseList, tree=[tr]))[0].branches[(0,)] == [2.5, 2.0, 1.5, 1.0]
-    assert res(run(nodes_list.ListItem, tree=[tr], index=5, wrap=True))[0].branches[(0,)] == [1.5]
+    def item(index, wrap=True):
+        return res(run(nodes_list.ListItem, tree=[tr], index=index, wrap=wrap))[0].branches[(0,)]
+
+    assert item("1:") == [1.5, 2.0, 2.5] and item("1-2") == [1.5, 2.0] and item("::2") == [1.0, 2.0]
+    assert item(5) == [1.5] and item("-1") == [2.5] and item("9", wrap=False) == [None]
+
+    def order(o):
+        return res(run(nodes_list.SortList, tree=[T.DataTree({(0,): [3, "b", 1, "a"]})], order=o))[0].branches[(0,)]
+
+    assert order("ascending") == [1, 3, "a", "b"] and order("descending") == ["b", "a", 3, 1]
+    assert order("reverse") == ["a", 1, "b", 3]
     assert res(run(nodes_list.Partition, tree=[tr], size=3))[0].paths() == [(0, 0), (0, 1)]
     assert res(run(nodes_list.Repeat, tree=[tr], count=2, mode="whole"))[0].item_count == 8
     print("list nodes: OK")
@@ -313,10 +345,12 @@ def test_xy_lists():
     x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[cfg], y=[prompts], mode="cross"))
     assert n == 6 and x == [4, 4, 4, 7, 7, 7] and y == ["cat", "dog", "fox"] * 2 and z == [None] * 6
     assert shape.branches == {(0,): ["cat", "dog", "fox"], (1,): ["cat", "dog", "fox"]}
+    assert shape.names == {(0,): 4, (1,): 7}, "rows named after x"
     assert all(o.is_output_list for o in nodes_tree.XYLists.define_schema().outputs[:3])
     # z: rows = x × y, columns = z
     x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[cfg], y=[1, 2], z=["a", "b", "c"], mode="cross"))
     assert n == 12 and shape.paths() == [(0, 0), (0, 1), (1, 0), (1, 1)] and z[:3] == ["a", "b", "c"]
+    assert shape.names[(1, 0)] == "7 · 1"
     raises(ValueError, run, nodes_tree.XYLists, x=[cfg], z=["a"], mode="cross")
     # zip: item by item, longest list; the shape holds the y values
     x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[cfg], y=[prompts], mode="zip"))
@@ -329,6 +363,10 @@ def test_xy_lists():
     back = res(run(nodes_tree.ConstructTree, data=[v * 10 for v in x], path="{0}", split_batch=False,
                    shape=[shape]))[0]
     assert back.branches == {(0,): [10, 20], (1,): [30]}
+    # Prompt Template rows are named after their outer variables
+    pt = res(run(nodes_data.PromptTemplate, template="{a} {b}", mode="cross",
+                 vars={"a": [T.DataTree({(0,): ["cat", "dog"]})], "b": ["oil", "ink"]}))[1]
+    assert pt.names == {(0,): "cat", (1,): "dog"}
     print("xy lists: OK")
 
 
@@ -359,8 +397,10 @@ def test_image_grid():
     # a batch run: plain images + XY Lists' shape -> rows × columns, columns labelled from the shape
     x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[a], y=[b], mode="cross"))
     flat = imgs.flat()
-    g3 = res(run(nodes_image.ImageGrid, images=flat, shape=[shape], row_labels=[a], **grid_kw()))[0]
-    assert torch.equal(g3, g1), "shape lays out and labels the batch exactly like the tree"
+    g3 = res(run(nodes_image.ImageGrid, images=flat, shape=[shape], **grid_kw()))[0]
+    assert torch.equal(g3, g1), "shape lays out and labels rows and columns, nothing else to connect"
+    g4 = res(run(nodes_image.ImageGrid, images=[imgs], col_labels=[cb], **grid_kw()))[0]
+    assert torch.equal(g4, g1), "Cross Reference rows carry their names too"
     raises(ValueError, run, nodes_image.ImageGrid, images=flat[:5], shape=[shape], **grid_kw())
     print("image grid: OK")
 
@@ -442,12 +482,14 @@ def test_live_preview():
         # the mode switch arrives as dotted keys, the way the front end sends a DynamicCombo
         "2": {"class_type": "Arbor_NumberSequence",
               "inputs": {"mode": "series", "mode.start": 1.0, "mode.step": 1.0, "mode.count": 2, "as_int": True}},
-        "3": {"class_type": "Arbor_Merge", "inputs": {"trees.tree0": ["1", 1], "trees.tree1": ["2", 0]}},
+        "3": {"class_type": "Arbor_Merge", "inputs": {"trees.tree0": ["1", 1], "trees.tree1": ["2", 0], "mode": "merge"}},
         "4": panel(data=["3", 0]),
         "5": panel(data=["1", 0]),
         "6": {"class_type": "Arbor_NumberSequence",
               "inputs": {"mode": "range", "mode.start": 0.0, "mode.end": 10.0, "mode.steps": 2, "as_int": True}},
         "7": panel(data=["6", 0]),
+        "10": {"class_type": "Arbor_ReshapeTree", "inputs": {"tree": ["3", 0], "mode": "flatten", "mode.path": "{2}"}},
+        "11": panel(data=["10", 0]),
     }
     p = live.evaluate(prompt, "4")
     assert p["live"] and p["kind"] == "tree"
@@ -456,6 +498,8 @@ def test_live_preview():
     flat = live.evaluate(prompt, "5")
     assert flat["kind"] == "list" and flat["stats"]["items"] == 3
     assert [i["v"] for i in live.evaluate(prompt, "7")["branches"][0]["items"]] == ["0", "5", "10"]
+    reshaped = live.evaluate(prompt, "11")
+    assert [b["path"] for b in reshaped["branches"]] == ["{2}"] and reshaped["stats"]["items"] == 5
     prompt["8"] = {"class_type": "KSampler", "inputs": {}}
     prompt["9"] = panel(data=["8", 0])
     try:
@@ -509,7 +553,7 @@ def test_example_workflows():
 
 def test_registration():
     ids = [n.define_schema().node_id for n in pkg.NODES]
-    assert len(ids) == len(set(ids)) == 34, (len(ids), len(set(ids)))
+    assert len(ids) == len(set(ids)) == 26, (len(ids), len(set(ids)))
     cats = {}
     for n in pkg.NODES:
         s = n.define_schema()

@@ -140,7 +140,10 @@ def panel_payload(value) -> dict:
                 row["img"] = save_temp(to_pil(v[0]), "panel", THUMB_PX)
                 thumbs += 1
             rows.append(row)
-        branches.append({"path": ps, "n": len(items), "items": rows})
+        branch = {"path": ps, "n": len(items), "items": rows}
+        if path in tree.names:
+            branch["name"] = label_of(tree.names[path])
+        branches.append(branch)
     return {
         "kind": kind,
         "branches": branches,

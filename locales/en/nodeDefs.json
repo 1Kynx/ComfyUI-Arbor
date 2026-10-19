@@ -83,11 +83,11 @@
       },
       "shape": {
         "name": "shape",
-        "tooltip": "XY Lists' shape: pours plain images into rows × columns and labels the columns with the column values."
+        "tooltip": "XY Lists' shape: pours plain images into rows × columns and labels them (rows by x, columns by y)."
       },
       "row_labels": {
         "name": "row_labels",
-        "tooltip": "One label per row: a list (e.g. the x Panel), or a tree with one branch per row (Cross Reference A works too)."
+        "tooltip": "One label per row — a list, or a tree with one branch per row. Not needed when the tree or shape names its rows (XY Lists, Prompt Template, Cross Reference)."
       },
       "col_labels": {
         "name": "col_labels",
@@ -115,7 +115,7 @@
       },
       "path_labels": {
         "name": "path_labels",
-        "tooltip": "Label rows with their branch path when no row labels are connected."
+        "tooltip": "Label rows with their branch path when there are no row labels or row names."
       }
     },
     "outputs": {
@@ -725,7 +725,7 @@
       },
       "3": {
         "name": "shape",
-        "tooltip": "Layout of the runs: connect to Image Grid (rows × columns) or Construct Tree (back into a tree). Its items are the column values, so Image Grid labels its columns from it. With only x, it is x's own tree."
+        "tooltip": "Layout of the runs: connect to Image Grid (rows × columns) or Construct Tree (back into a tree). Each row is named after its x value and its items are the column values, so Image Grid labels itself. With only x, it is x's own tree."
       },
       "4": {
         "name": "count",
@@ -761,101 +761,25 @@
       }
     }
   },
-  "Arbor_Graft": {
-    "display_name": "Graft",
-    "description": "Every item gets its own branch: {p} → {p;i} (Grasshopper's Graft).",
-    "inputs": {
-      "tree": {
-        "name": "tree",
-        "tooltip": "A data tree, or any value / list (becomes branch {0})."
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "tree",
-        "tooltip": "The resulting tree."
-      }
-    }
-  },
-  "Arbor_Flatten": {
-    "display_name": "Flatten",
-    "description": "Put every item into one branch (Grasshopper's Flatten).",
+  "Arbor_ReshapeTree": {
+    "display_name": "Reshape Tree",
+    "description": "Change how items are grouped into branches — Grasshopper's Graft, Flatten, Simplify, Flip Matrix, Shift Paths and Renumber in one node.",
     "inputs": {
       "tree": {
         "name": "tree",
         "tooltip": "A data tree, or any value / list (becomes branch {0})."
       },
-      "path": {
+      "mode": {
+        "name": "mode",
+        "tooltip": "graft: every item its own branch · flatten: everything in one branch · simplify: drop path indices all branches share · flip matrix: swap rows and columns · shift paths: drop path indices, joining branches that meet · renumber: {0}, {1}, {2}, … in order."
+      },
+      "mode_path": {
         "name": "path",
-        "tooltip": "Path of the single output branch, e.g. {0}."
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "tree",
-        "tooltip": "The resulting tree."
-      }
-    }
-  },
-  "Arbor_Simplify": {
-    "display_name": "Simplify",
-    "description": "Remove path indices that every branch shares (Grasshopper's Simplify).",
-    "inputs": {
-      "tree": {
-        "name": "tree",
-        "tooltip": "A data tree, or any value / list (becomes branch {0})."
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "tree",
-        "tooltip": "The resulting tree."
-      }
-    }
-  },
-  "Arbor_FlipMatrix": {
-    "display_name": "Flip Matrix",
-    "description": "Swap rows and columns: item j of every branch goes to {j} (Grasshopper's Flip Matrix).",
-    "inputs": {
-      "tree": {
-        "name": "tree",
-        "tooltip": "A data tree, or any value / list (becomes branch {0})."
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "tree",
-        "tooltip": "The resulting tree."
-      }
-    }
-  },
-  "Arbor_ShiftPaths": {
-    "display_name": "Shift Paths",
-    "description": "Drop path indices: +1 removes the first, −1 the last; branches that end up on the same path are joined (Grasshopper's Shift Paths).",
-    "inputs": {
-      "tree": {
-        "name": "tree",
-        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+        "tooltip": "flatten: path of the single output branch, e.g. {0}."
       },
-      "offset": {
+      "mode_offset": {
         "name": "offset",
-        "tooltip": "Positive drops leading indices, negative drops trailing ones."
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "tree",
-        "tooltip": "The resulting tree."
-      }
-    }
-  },
-  "Arbor_Renumber": {
-    "display_name": "Renumber",
-    "description": "Re-index branches as {0}, {1}, {2}, … keeping their order.",
-    "inputs": {
-      "tree": {
-        "name": "tree",
-        "tooltip": "A data tree, or any value / list (becomes branch {0})."
+        "tooltip": "shift paths: −1 drops the last index (undoes graft), +1 the first."
       }
     },
     "outputs": {
@@ -891,7 +815,7 @@
   },
   "Arbor_Merge": {
     "display_name": "Merge",
-    "description": "Combine trees; items on the same path are appended in input order (Grasshopper's Merge).",
+    "description": "Combine trees — Grasshopper's Merge and Entwine in one node.",
     "inputs": {
       "trees": {
         "name": "trees",
@@ -960,86 +884,10 @@
       "trees_tree15": {
         "name": "tree15",
         "tooltip": "Trees to combine. Every connection adds a slot."
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "tree",
-        "tooltip": "The resulting tree."
-      }
-    }
-  },
-  "Arbor_Entwine": {
-    "display_name": "Entwine",
-    "description": "Stack trees side by side: input i is placed under {i;…} (Grasshopper's Entwine).",
-    "inputs": {
-      "trees": {
-        "name": "trees",
-        "tooltip": "Trees to stack. Every connection adds a slot."
       },
-      "trees_tree0": {
-        "name": "tree0",
-        "tooltip": "Trees to stack. Every connection adds a slot."
-      },
-      "trees_tree1": {
-        "name": "tree1",
-        "tooltip": "Trees to stack. Every connection adds a slot."
-      },
-      "trees_tree2": {
-        "name": "tree2",
-        "tooltip": "Trees to stack. Every connection adds a slot."
-      },
-      "trees_tree3": {
-        "name": "tree3",
-        "tooltip": "Trees to stack. Every connection adds a slot."
-      },
-      "trees_tree4": {
-        "name": "tree4",
-        "tooltip": "Trees to stack. Every connection adds a slot."
-      },
-      "trees_tree5": {
-        "name": "tree5",
-        "tooltip": "Trees to stack. Every connection adds a slot."
-      },
-      "trees_tree6": {
-        "name": "tree6",
-        "tooltip": "Trees to stack. Every connection adds a slot."
-      },
-      "trees_tree7": {
-        "name": "tree7",
-        "tooltip": "Trees to stack. Every connection adds a slot."
-      },
-      "trees_tree8": {
-        "name": "tree8",
-        "tooltip": "Trees to stack. Every connection adds a slot."
-      },
-      "trees_tree9": {
-        "name": "tree9",
-        "tooltip": "Trees to stack. Every connection adds a slot."
-      },
-      "trees_tree10": {
-        "name": "tree10",
-        "tooltip": "Trees to stack. Every connection adds a slot."
-      },
-      "trees_tree11": {
-        "name": "tree11",
-        "tooltip": "Trees to stack. Every connection adds a slot."
-      },
-      "trees_tree12": {
-        "name": "tree12",
-        "tooltip": "Trees to stack. Every connection adds a slot."
-      },
-      "trees_tree13": {
-        "name": "tree13",
-        "tooltip": "Trees to stack. Every connection adds a slot."
-      },
-      "trees_tree14": {
-        "name": "tree14",
-        "tooltip": "Trees to stack. Every connection adds a slot."
-      },
-      "trees_tree15": {
-        "name": "tree15",
-        "tooltip": "Trees to stack. Every connection adds a slot."
+      "mode": {
+        "name": "mode",
+        "tooltip": "merge: items on the same path are appended in input order · entwine: input i is placed under {i;…}, so the inputs stay apart."
       }
     },
     "outputs": {
@@ -1079,7 +927,7 @@
   },
   "Arbor_ListItem": {
     "display_name": "List Item",
-    "description": "Pick item i from every branch (Grasshopper's List Item).",
+    "description": "Pick items from every branch by index, list, range or slice — Grasshopper's List Item and Sub List in one node.",
     "inputs": {
       "tree": {
         "name": "tree",
@@ -1087,41 +935,17 @@
       },
       "index": {
         "name": "index",
-        "tooltip": "Item index; negative counts from the end (−1 = last)."
+        "tooltip": "Which items: `0` · `-1` (last) · `0, 2` · `1:4` (slice, end excluded) · `2-5` (range, end included) · `::2` (every other). A connected number works too."
       },
       "wrap": {
         "name": "wrap",
-        "tooltip": "Wrap the index around the branch length. Off: out-of-range gives an empty value."
+        "tooltip": "Out-of-range indices wrap around the branch length. Off: they give an empty value, so branches stay aligned."
       }
     },
     "outputs": {
       "0": {
         "name": "tree",
-        "tooltip": "One item per branch."
-      }
-    }
-  },
-  "Arbor_SubList": {
-    "display_name": "Sub List",
-    "description": "Slice items [start, end) from every branch.",
-    "inputs": {
-      "tree": {
-        "name": "tree",
-        "tooltip": "A data tree, or any value / list (becomes branch {0})."
-      },
-      "start": {
-        "name": "start",
-        "tooltip": "First item to keep (negative counts from the end)."
-      },
-      "end": {
-        "name": "end",
-        "tooltip": "Stop before this item; −1 keeps through the last item."
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "tree",
-        "tooltip": "The resulting tree."
+        "tooltip": "The picked items, branch by branch."
       }
     }
   },
@@ -1193,33 +1017,17 @@
       }
     }
   },
-  "Arbor_ReverseList": {
-    "display_name": "Reverse List",
-    "description": "Reverse the item order in every branch.",
-    "inputs": {
-      "tree": {
-        "name": "tree",
-        "tooltip": "A data tree, or any value / list (becomes branch {0})."
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "tree",
-        "tooltip": "The resulting tree."
-      }
-    }
-  },
   "Arbor_SortList": {
     "display_name": "Sort List",
-    "description": "Sort every branch — numbers first (by value), then text (alphabetically).",
+    "description": "Sort every branch — numbers first (by value), then text (alphabetically) — or reverse it.",
     "inputs": {
       "tree": {
         "name": "tree",
         "tooltip": "A data tree, or any value / list (becomes branch {0})."
       },
-      "descending": {
-        "name": "descending",
-        "tooltip": "Largest first."
+      "order": {
+        "name": "order",
+        "tooltip": "ascending · descending · reverse (keep the items, flip their order)."
       }
     },
     "outputs": {

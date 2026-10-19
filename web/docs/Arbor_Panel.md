@@ -21,7 +21,7 @@ Inspect anything, or type data in. Connected: shows the input and passes it thro
   The data as a tree — for Arbor nodes, keeps the branches.
 
 ## Viewing (input connected)
-- Trees show as collapsible branches with their path and count (`{0;1} N=3`); images as thumbnails.
+- Trees show as collapsible branches with their path, name and count (`{1} 7 N=3` — XY Lists names each row after its x value); images as thumbnails.
 - Long text folds to four lines — *more* unfolds it. Hover an item to copy it; the toolbar copies everything.
 - **Live**: when everything upstream is a lightweight data node (Arbor data / tree / list nodes, primitives, string and math nodes) the view updates as you edit — no run needed (green dot). Anything heavier upstream (samplers, loaders) never runs on its own; the panel then shows the last run.
 - ⤢ opens a large view.

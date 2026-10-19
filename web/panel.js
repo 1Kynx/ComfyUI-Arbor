@@ -209,9 +209,10 @@ function renderData(body, d, state, opts = {}) {
     const wrap = el("div", "arb-br" + (state.closed.has(br.path) ? " closed" : ""));
     if (d.kind === "tree") {
       const hd = el("div", "arb-br-hd");
-      hd.innerHTML = `<span class="arb-caret">▾</span><span class="arb-path"></span><span class="arb-n"></span>`;
+      hd.innerHTML = `<span class="arb-caret">▾</span><span class="arb-path"></span><span class="arb-name"></span><span class="arb-n"></span>`;
       hd.children[1].textContent = br.path;
-      hd.children[2].textContent = `N=${br.n}`;
+      hd.children[2].textContent = br.name ?? "";
+      hd.children[3].textContent = `N=${br.n}`;
       hd.addEventListener("click", () => {
         wrap.classList.toggle("closed");
         if (wrap.classList.contains("closed")) state.closed.add(br.path);
