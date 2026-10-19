@@ -27,7 +27,9 @@ CORE_SAFE = {
     "StringReplace", "StringContains", "StringCompare", "RegexMatch", "RegexExtract", "RegexReplace",
     "ComfyMathExpression",
 }
-ARBOR_UNSAFE = {"Arbor_ImageSlider"}  # writes preview files for every frame
+# file I/O, heavy image work, or lazy evaluation the in-place evaluator doesn't model
+ARBOR_UNSAFE = {"Arbor_ImageSlider", "Arbor_LoadFolder", "Arbor_SaveByPath", "Arbor_TreeToGrid",
+                "Arbor_SmartResize", "Arbor_BatchPick", "Arbor_IndexSwitch"}
 MAX_NODES = 200
 
 

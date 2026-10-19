@@ -23,10 +23,11 @@ Split Text ───┘   (rows = A)        └─ Tree → List ─► CLIP Tex
 
 | Category | Nodes |
 |---|---|
-| **Arbor/Image** | Image Slider · Tree → Grid |
-| **Arbor/Data** | Panel · Construct Tree · Series · Range · Split Text |
+| **Arbor/Image** | Image Slider · Tree → Grid · Load Folder as Tree · Save by Path · Smart Resize · Batch Pick |
+| **Arbor/Data** | Panel · Construct Tree · Series · Range · Split Text · Prompt Template · Expression · Random |
 | **Arbor/Tree** | Tree → List · List → Tree · Graft · Flatten · Simplify · Flip Matrix · Shift Paths · Renumber · Tree Branch · Merge · Entwine · Tree Statistics |
 | **Arbor/List** | List Item · Sub List · Cull Pattern · Dispatch · Partition · Repeat · Reverse List · Sort List · Cross Reference |
+| **Arbor/Util** | Index Switch |
 
 **Image Slider** — connect any number of images (inputs grow as you connect) of any size.
 *Flip*: drag the scrubber or press ← → to step through them. *Wipe*: A/B split that follows the pointer.
@@ -41,6 +42,21 @@ Anything heavier upstream (samplers, loaders, …) never runs on its own; the Pa
 *Unconnected*: type data in. **Lines** mode: each line is an item, an empty line starts a new branch;
 **Text** mode: the whole text is one item. **123 / abc** toggles reading numbers (`7` → INT, `3.5` → FLOAT).
 Outputs `data` (native list) and `tree`.
+
+**Prompt Template** — `a photo of {a}, {b}` filled from trees. *Cross* builds every combination as a
+grid-ready tree (rows = `{a}`, columns = the last variable); *zip* pairs items one by one.
+
+**Expression** — per-item formula like `x * 2 + i` or `upper(x) if len(x) > 2 else x`.
+Names: `x`, `y` (matched longest-list), `i` item index, `b` branch index, `n` branch length.
+A safe evaluator: no attribute access or imports.
+
+**Load Folder as Tree / Save by Path** — subfolders become branches on the way in; branch paths become
+subfolders (or filename parts) on the way out, with optional names per file.
+
+**Smart Resize** — longest / shortest side, megapixels, fit, fill & crop or scale; snaps to multiples of
+8/16/32/64. Only the fields for the chosen mode are shown.
+
+**Index Switch** — pick input N; unselected inputs are lazy and never execute.
 
 Every tree input also accepts plain values or native lists (they become branch `{0}`).
 

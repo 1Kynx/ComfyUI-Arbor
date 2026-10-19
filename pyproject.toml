@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-arbor"
 description = "Grasshopper-style data trees, a data Panel, multi-image compare and XY grids for ComfyUI."
-version = "0.1.0"
+version = "0.2.0"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = []

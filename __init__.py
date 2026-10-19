@@ -6,7 +6,8 @@ Inspired by Grasshopper; not affiliated with Robert McNeel & Associates.
 
 from comfy_api.latest import ComfyExtension
 
-from .arbor import nodes_grid, nodes_image, nodes_list, nodes_panel, nodes_tree
+from .arbor import (nodes_data, nodes_files, nodes_grid, nodes_image, nodes_list, nodes_panel,
+                    nodes_tree, nodes_util)
 
 WEB_DIRECTORY = "./web"
 
@@ -16,8 +17,8 @@ try:  # live Panel preview endpoint; absent when imported outside a running serv
 except Exception as e:  # pragma: no cover
     print(f"[Arbor] live preview disabled: {e}")
 
-NODES = [*nodes_image.NODES, *nodes_grid.NODES, *nodes_panel.NODES,
-         *nodes_tree.NODES, *nodes_list.NODES]
+NODES = [*nodes_image.NODES, *nodes_grid.NODES, *nodes_files.NODES, *nodes_panel.NODES,
+         *nodes_data.NODES, *nodes_tree.NODES, *nodes_list.NODES, *nodes_util.NODES]
 
 
 class ArborExtension(ComfyExtension):

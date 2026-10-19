@@ -216,6 +216,105 @@ def test_live_preview():
     print("live preview: OK")
 
 
+def test_v02_nodes():
+    import tempfile
+    import folder_paths
+    from PIL import Image
+    from arbor_pkg.arbor import expr as E, nodes_data, nodes_files, nodes_util
+
+    # Prompt Template
+    a = T.DataTree({(0,): ["cat", "dog"]})
+    b = T.DataTree({(0,): ["oil", "ink", "pixel"]})
+    cross = res(run(nodes_data.PromptTemplate, template="{a} in {b} style", mode="cross",
+                    vars={"a": [a], "b": [b]}))[0]
+    assert cross.branches == {(0,): ["cat in oil style", "cat in ink style", "cat in pixel style"],
+                              (1,): ["dog in oil style", "dog in ink style", "dog in pixel style"]}
+    z = res(run(nodes_data.PromptTemplate, template="{a}/{b}/{c}", mode="zip",
+                vars={"a": [a], "b": [b]}))[0]
+    assert z.branches == {(0,): ["cat/oil/{c}", "dog/ink/{c}", "dog/pixel/{c}"]}, z.branches
+    one = res(run(nodes_data.PromptTemplate, template="{a}!", mode="cross", vars={"a": [7, 8]}))[0]
+    assert one.branches == {(0,): ["7!", "8!"]}
+
+    # Expression
+    xs = T.DataTree({(0,): [1, 2, 3], (1,): [10]})
+    r = res(run(nodes_data.Expression, expression="x * 2 + i", x=[xs]))[0]
+    assert r.branches == {(0,): [2, 5, 8], (1,): [20]}
+    r = res(run(nodes_data.Expression, expression="x + y", x=[xs], y=[T.DataTree({(0,): [100]})]))[0]
+    assert r.branches == {(0,): [101, 102, 103], (1,): [110]}, "longest-list matching"
+    r = res(run(nodes_data.Expression, expression="upper(x) if len(x) > 2 else x", x=["ab", "cat"]))[0]
+    assert r.branches == {(0,): ["ab", "CAT"]}
+    for bad in ["__import__('os')", "x.__class__", "(lambda: 1)()", "9 ** 9 ** 9", "'a' * 10**7"]:
+        try:
+            res(run(nodes_data.Expression, expression=bad, x=[1]))
+            raise AssertionError(f"should reject {bad}")
+        except E.ExprError:
+            pass
+
+    # Random: deterministic per seed
+    t = T.DataTree({(0,): list(range(20))})
+    r1 = res(run(nodes_data.RandomPick, tree=[t], mode="pick", count=5, seed=42, per_branch=True))[0]
+    r2 = res(run(nodes_data.RandomPick, tree=[t], mode="pick", count=5, seed=42, per_branch=True))[0]
+    assert r1.branches == r2.branches and len(r1.branches[(0,)]) == 5
+    sh = res(run(nodes_data.RandomPick, tree=[t], mode="shuffle", count=1, seed=1, per_branch=True))[0]
+    assert sorted(sh.branches[(0,)]) == list(range(20))
+
+    # Load Folder / Save by Path round trip in a temp dir
+    with tempfile.TemporaryDirectory() as d:
+        src = os.path.join(d, "src")
+        for sub, n in (("a", 2), ("b10", 1), ("b2", 3)):
+            os.makedirs(os.path.join(src, sub))
+            for k in range(n):
+                Image.new("RGB", (16 + k, 8), (k * 40, 0, 0)).save(os.path.join(src, sub, f"img{k}.png"))
+        Image.new("RGB", (4, 4)).save(os.path.join(src, "root.png"))
+        open(os.path.join(src, "notes.txt"), "w").close()
+        imgs, names, folders, count = res(nodes_files.LoadFolder.execute(
+            folder=src, pattern="*.png", subfolders=True, sort="name", limit=0))
+        assert count == 7 and folders.branches[(0,)] == ["src", "a", "b2", "b10"], folders.branches
+        assert names.branches[(1,)] == ["img0", "img1"] and imgs.branches[(2,)][2].shape == (1, 8, 18, 3)
+        assert nodes_files.LoadFolder.fingerprint_inputs(src, "*.png", True, "name", 0)
+        lim = res(nodes_files.LoadFolder.execute(folder=src, pattern="*.png", subfolders=True,
+                                                 sort="name", limit=3))[3]
+        assert lim == 3
+
+        out = os.path.join(d, "out")
+        os.makedirs(out)
+        old = folder_paths.get_output_directory()
+        folder_paths.set_output_directory(out)
+        try:
+            saved = run(nodes_files.SaveByPath, images=[imgs], filename_prefix="xy/run",
+                        layout="subfolders", names=[names])
+            paths = res(saved)[0]
+            assert os.path.basename(paths.branches[(1,)][1]) == "img1.png"
+            assert os.path.basename(os.path.dirname(paths.branches[(2,)][0])) == "run_2"
+            again = res(run(nodes_files.SaveByPath, images=[imgs], filename_prefix="xy/run",
+                            layout="flat"))[0]
+            assert os.path.basename(again.branches[(0,)][0]) == "run_0_000.png"
+            assert saved.ui["images"][0]["subfolder"].replace("\\", "/") == "xy/run_0"
+        finally:
+            folder_paths.set_output_directory(old)
+
+    # Smart Resize / Batch Pick
+    img = torch.rand(2, 300, 500, 3)
+    out = res(nodes_image.SmartResize.execute(img, {"mode": "longest side", "size": 1000}, "64", "bilinear", True))
+    assert tuple(out[0].shape) == (2, 576, 1024, 3) and (out[2], out[3]) == (1024, 576), out[0].shape
+    out = res(nodes_image.SmartResize.execute(img, {"mode": "fill & crop", "width": 256, "height": 256},
+                                              "8", "area", True))
+    assert tuple(out[0].shape) == (2, 256, 256, 3) and tuple(out[1].shape) == (2, 256, 256)
+    out = res(nodes_image.SmartResize.execute(img, {"mode": "scale", "factor": 3.0}, "1", "bilinear", False))
+    assert (out[2], out[3]) == (500, 300), "no upscale"
+    assert nodes_image.parse_indices("0, -1, 2-4, ::3", 6) == [0, 5, 2, 3, 4, 0, 3]
+    picked = res(nodes_image.BatchPick.execute(torch.rand(6, 4, 4, 3), "1, 1, -1"))
+    assert picked[0].shape[0] == 3 and picked[1] == 3
+
+    # Index Switch: lazy status asks only for the chosen, connected input
+    ins = {"input0": (None, "inputs.input0"), "input1": (None, "inputs.input1"), "input2": (None, "inputs.input2")}
+    assert nodes_util.IndexSwitch.check_lazy_status(1, ins) == ["inputs.input1"]
+    assert nodes_util.IndexSwitch.check_lazy_status(-1, ins) == ["inputs.input2"]
+    o = res(nodes_util.IndexSwitch.execute(4, {"input0": "a", "input1": "b"}))
+    assert o == ("a", 2) or list(o) == ["a", 2]
+    print("v0.2 nodes: OK")
+
+
 def test_registration():
     ids = [n.define_schema().node_id for n in pkg.NODES]
     assert len(ids) == len(set(ids)), "duplicate node ids"
@@ -233,5 +332,6 @@ if __name__ == "__main__":
     test_nodes()
     test_panel_slider_grid()
     test_live_preview()
+    test_v02_nodes()
     test_registration()
     print("ALL OK")
