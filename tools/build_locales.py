@@ -116,9 +116,10 @@ def check(nodes):
 
 
 def label_tip(lang, value, fallback):
-    if lang == "en":
-        return fallback, value
-    return value
+    """zh entries are (label, tip); en entries are a tip, or (label, tip) to rename the socket."""
+    if isinstance(value, tuple):
+        return value
+    return fallback, value
 
 
 def node_defs(nodes, lang):
@@ -158,7 +159,7 @@ def help_page(n, lang):
     lines = [f"# {title}", "", d["desc"], ""]
 
     def item(label, ident, typ, tip, sub=False):
-        name = f"**{ident}**" if lang == "en" or label == ident else f"**{label}** `{ident}`"
+        name = f"**{label}**" if label == ident else f"**{label}** `{ident}`"
         pad = "  " if sub else ""
         return f"{pad}- {name} · *{typ}*  \n{pad}  {tip}"
 

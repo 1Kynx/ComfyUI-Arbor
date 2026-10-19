@@ -369,7 +369,7 @@ node("Arbor_NumberSlider", en=dict(
             "min": ("最小值", "范围下限（点击滑条下方左侧的数字修改）。"),
             "max": ("最大值", "范围上限（点击滑条下方右侧的数字修改）。"),
             "step": ("步长", "数值对齐到 最小值 + k × 步长：1 = 整数，0.05 = 以 0.05 为间隔，0 = 连续取值。同时决定显示几位小数。")},
-    outputs=[("数值", "一个输出兼顾所有数值输入：INT（步数、种子）和 FLOAT（cfg、denoise）都能直接连接。整数以 INT 输出，其余以 FLOAT 输出。")],
+    outputs=[("数据", "一个输出兼顾所有数值输入：INT（步数、种子）和 FLOAT（cfg、denoise）都能直接连接。整数以 INT 输出，其余以 FLOAT 输出。")],
     doc="""## 用法
 - 在滑条上**拖动**——数值跟随鼠标位置。拖动时按住 **Shift** 可精细调节（10 倍精度）。
 - **单击**滑条（不拖动）直接输入数值；Enter 确认，Esc 取消。输入超出范围的值时，范围会自动扩展。
@@ -394,7 +394,8 @@ node("Arbor_PromptTemplate", en=dict(
     inputs={"template": "Text with placeholders {a} … {f}. Placeholders without a connected value stay as they are.",
             "mode": "cross: every combination — rows = {a}, columns = the last variable used. zip: item by item (longest list).",
             "vars": "Values for {a}, {b}, … — a tree, a list or a single value. Each connection adds the next letter."},
-    outputs=["The filled prompts as a tree (cross: one branch per combination of the outer variables)."],
+    outputs=["Every filled prompt as plain data — connect straight to a text encoder (it runs once per prompt).",
+             "The prompts as a tree (cross: one branch per combination of the outer variables — ready for Image Grid)."],
     doc="""## Example
 Template `a photo of {a}, {b} style`, a = `cat, dog`, b = `oil, ink`:
 
@@ -404,7 +405,7 @@ Template `a photo of {a}, {b} style`, a = `cat, dog`, b = `oil, ink`:
 | zip | `{0}: cat·oil, dog·ink` |
 
 ## Tips
-- Type the values in **Panels** (one per line) and connect their *tree* output.
+- Type the values in **Panels** (one per line) and connect their *data* output (or *tree*, to keep branches).
 - Feed the result to **XY Lists** or **Tree → List** to run a sampler once per prompt. Up to 10 000 combinations.
 """), zh=dict(
     name="提示词模板",
@@ -412,7 +413,8 @@ Template `a photo of {a}, {b} style`, a = `cat, dog`, b = `oil, ink`:
     inputs={"template": ("模板", "带占位符 {a} … {f} 的文本；没接值的占位符保持原样。"),
             "mode": ("模式", "cross 交叉：所有组合——行 = {a}，列 = 最后一个用到的变量。zip 配对：逐项对应（最长列表）。"),
             "vars": ("变量", "{a}、{b} …… 的取值——数据树、列表或单个值。每接一个就多出下一个字母。")},
-    outputs=[("提示词", "填好的提示词数据树（交叉模式下，外层变量的每种组合一个分支）。")],
+    outputs=[("数据", "所有填好的提示词（普通数据）——可直接接文本编码器，每个提示词运行一次。"),
+             ("数据树", "提示词数据树（交叉模式下，外层变量的每种组合一个分支——可直接做图像网格）。")],
     doc="""## 示例
 模板 `a photo of {a}, {b} style`，a = `cat, dog`，b = `oil, ink`：
 
@@ -422,7 +424,7 @@ Template `a photo of {a}, {b} style`, a = `cat, dog`, b = `oil, ink`:
 | zip 配对 | `{0}: cat·oil, dog·ink` |
 
 ## 提示
-- 在 **面板** 里逐行输入取值，接它的 *数据树* 输出。
+- 在 **面板** 里逐行输入取值，接它的 *数据* 输出（想保留分支就接 *数据树*）。
 - 结果接 **XY 组合列表** 或 **数据树 → 列表**，就能让采样器每个提示词各跑一次。最多 1 万种组合。
 """))
 
@@ -431,7 +433,8 @@ node("Arbor_Expression", en=dict(
     inputs={"expression": "Python-style formula, e.g. x * 2 + 1, x > 3, upper(x), x if i % 2 else -x.",
             "x": "Main input — the result has the same tree layout. Leave empty for a single constant result.",
             "y": "Optional second value, matched to x branch by branch, item by item (the last item repeats)."},
-    outputs=["Results, in x's tree layout. Comparisons give booleans — ready for Cull Pattern / Dispatch."],
+    outputs=["Every result as plain data.",
+             "Results in x's tree layout. Comparisons give booleans — ready for Cull Pattern / Dispatch."],
     doc="""## Names
 | name | meaning |
 |---|---|
@@ -459,7 +462,8 @@ Attribute access, imports, lambdas and comprehensions are rejected, and results 
     inputs={"expression": ("表达式", "Python 风格的公式，例如 x * 2 + 1、x > 3、upper(x)、x if i % 2 else -x。"),
             "x": ("x", "主输入——结果与它的数据树结构相同。不接则只计算一个常量结果。"),
             "y": ("y", "可选的第二个值，按分支、按项与 x 对应（不够时重复最后一项）。")},
-    outputs=[("结果", "计算结果，结构与 x 相同。比较运算得到布尔值——可直接接「按模式剔除 / 分流」。")],
+    outputs=[("数据", "所有计算结果（普通数据）。"),
+             ("数据树", "计算结果，结构与 x 相同。比较运算得到布尔值——可直接接「按模式剔除 / 分流」。")],
     doc="""## 可用名称
 | 名称 | 含义 |
 |---|---|
@@ -485,24 +489,24 @@ Attribute access, imports, lambdas and comprehensions are rejected, and results 
 
 node("Arbor_Random", en=dict(
     desc="Seeded shuffle, or pick a number of items (with or without repeats). Same seed, same result.",
-    inputs={"tree": "Items to shuffle or pick from.",
+    inputs={"tree": ("data", "Items to shuffle or pick from — plain data or a tree (handled branch by branch)."),
             "mode": "shuffle: reorder everything · pick: choose count different items · pick (repeats): choose count items, repeats allowed.",
             "count": "Items to pick per branch (ignored by shuffle).",
             "seed": "Random seed — the same seed always gives the same result.",
             "per_branch": "On: every branch separately. Off: all items as one list."},
-    outputs=["The shuffled / picked items."],
+    outputs=["The shuffled / picked items as plain data.", "The shuffled / picked items, branch by branch."],
     doc="""## Tips
 - Pick random prompts or styles for a batch: Panel (one per line) → **Random** (pick 4) → XY Lists / Tree → List.
 - Set the seed's *control after generate* to *randomize* for a new pick on every run.
 """), zh=dict(
     name="随机",
     desc="带种子的打乱，或抽取若干项（可选允许重复）。种子相同，结果相同。",
-    inputs={"tree": ("数据树", "要打乱或从中抽取的项。"),
+    inputs={"tree": ("数据", "要打乱或从中抽取的项——普通数据或数据树（按分支处理）。"),
             "mode": ("模式", "shuffle 打乱：重新排序 · pick 抽取：抽 count 个不同的项 · pick (repeats)：抽 count 个，允许重复。"),
             "count": ("数量", "每个分支抽取的项数（打乱模式忽略）。"),
             "seed": ("种子", "随机种子——相同的种子总是得到相同的结果。"),
             "per_branch": ("逐分支", "开启：每个分支分别处理。关闭：所有项当作一个列表。")},
-    outputs=[("数据树", "打乱 / 抽取后的项。")],
+    outputs=[("数据", "打乱 / 抽取后的项（普通数据）。"), ("数据树", "打乱 / 抽取后的项，按分支排列。")],
     doc="""## 提示
 - 为批量出图随机挑选提示词或风格：面板（每行一个）→ **随机**（抽 4 个）→ XY 组合列表 / 数据树 → 列表。
 - 把种子的「运行后操作」设为随机，每次运行都会重新抽取。
@@ -531,7 +535,7 @@ node("Arbor_Series", en=dict(
     desc="Arithmetic sequence: start, start + step, … — count numbers (Grasshopper's Series).",
     inputs={"start": "First number.", "step": "Difference between neighbours (negative counts down).",
             "count": "How many numbers.", "as_int": "Output whole numbers — for seeds, steps, sizes."},
-    outputs=["The numbers in branch {0}."],
+    outputs=["The numbers as plain data — connect straight to cfg, steps, seed… (the node runs once per number) or to any Arbor input."],
     doc="""## Examples
 | start | step | count | result |
 |---|---|---|---|
@@ -543,7 +547,7 @@ node("Arbor_Series", en=dict(
     desc="等差数列：起始值、起始值 + 步长……共 count 个数（对应 Grasshopper 的 Series）。",
     inputs={"start": ("起始值", "第一个数。"), "step": ("步长", "相邻两数之差（负数为递减）。"),
             "count": ("数量", "数的个数。"), "as_int": ("输出整数", "输出整数——用于种子、步数、尺寸。")},
-    outputs=[("数据树", "这些数，放在分支 {0}。")],
+    outputs=[("数据", "这些数（普通数据）——可直接接 cfg、步数、种子等参数（每个数运行一次），也可接任何 Arbor 输入。")],
     doc="""## 示例
 | 起始值 | 步长 | 数量 | 结果 |
 |---|---|---|---|
@@ -556,7 +560,7 @@ node("Arbor_Range", en=dict(
     desc="Evenly divide [start, end] into steps parts — steps + 1 numbers including both ends (Grasshopper's Range).",
     inputs={"start": "First number.", "end": "Last number (included).", "steps": "Number of equal parts; you get steps + 1 numbers.",
             "as_int": "Round to whole numbers (duplicates are possible for small ranges)."},
-    outputs=["The numbers in branch {0}."],
+    outputs=["The numbers as plain data — connect straight to cfg, steps, seed… (the node runs once per number) or to any Arbor input."],
     doc="""## Examples
 | start | end | steps | result |
 |---|---|---|---|
@@ -569,7 +573,7 @@ Use **Range** when you know both ends (e.g. cfg 3 → 9), **Series** when you kn
     desc="把 [起点, 终点] 平均分成 steps 段——共 steps + 1 个数，包含两端（对应 Grasshopper 的 Range）。",
     inputs={"start": ("起点", "第一个数。"), "end": ("终点", "最后一个数（包含）。"), "steps": ("段数", "等分的段数，得到 steps + 1 个数。"),
             "as_int": ("输出整数", "取整（范围很小时可能出现重复）。")},
-    outputs=[("数据树", "这些数，放在分支 {0}。")],
+    outputs=[("数据", "这些数（普通数据）——可直接接 cfg、步数、种子等参数（每个数运行一次），也可接任何 Arbor 输入。")],
     doc="""## 示例
 | 起点 | 终点 | 段数 | 结果 |
 |---|---|---|---|
@@ -585,7 +589,7 @@ node("Arbor_SplitText", en=dict(
             "separator": "What separates items inside a paragraph: newline, comma, semicolon or |.",
             "blank_line_branches": "Paragraphs separated by an empty line become branches {0}, {1}, …",
             "strip": "Trim spaces around every item."},
-    outputs=["The items as a tree."],
+    outputs=["Every item as plain text data (paragraphs one after another).", "The items as a tree: one branch per paragraph."],
     doc="""## Example
 `red, green` ⏎ ⏎ `cat, dog` with separator `,` → `{0}: red, green` · `{1}: cat, dog`.
 
@@ -598,7 +602,7 @@ node("Arbor_SplitText", en=dict(
             "separator": ("分隔符", "段落内用什么分隔各项：换行、逗号、分号或 |。"),
             "blank_line_branches": ("空行分支", "用空行分隔的段落分别成为分支 {0}、{1}……"),
             "strip": ("去除首尾空白", "去掉每一项两端的空格。")},
-    outputs=[("数据树", "拆分后的项。")],
+    outputs=[("数据", "拆分后的所有项（普通文本数据，各段依次排列）。"), ("数据树", "拆分后的数据树：每个段落一个分支。")],
     doc="""## 示例
 `red, green` ⏎ ⏎ `cat, dog`，分隔符 `,` → `{0}: red, green` · `{1}: cat, dog`。
 

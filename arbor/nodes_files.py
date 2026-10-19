@@ -16,7 +16,7 @@ from PIL.PngImagePlugin import PngInfo
 import folder_paths
 
 from . import tree as T
-from .common import IO, CAT_IMAGE, tree_in, tree_out, to_tree, unwrap
+from .common import IO, CAT_IMAGE, data_out, tree_in, tree_out, to_tree, unwrap
 from .preview import is_image, label_of, to_pil
 
 MAX_PREVIEWS = 64
@@ -91,7 +91,9 @@ class LoadFolder(IO.ComfyNode):
                 IO.Combo.Input("sort", options=["name", "modified"], default="name"),
                 IO.Int.Input("limit", default=0, min=0, max=100000, tooltip="Max images in total; 0 = all"),
             ],
-            outputs=[tree_out("images"), tree_out("names"), tree_out("folders"),
+            outputs=[tree_out("images"), tree_out("names"),
+                     IO.String.Output(display_name="folders", is_output_list=True,
+                                      tooltip="Folder names, one per branch (plain data)"),
                      IO.Int.Output(display_name="count")])
 
     @classmethod
@@ -118,7 +120,7 @@ class LoadFolder(IO.ComfyNode):
             names[(b,)] = [os.path.splitext(os.path.basename(p))[0] for p in files]
         folders = [rel or os.path.basename(root) for rel in groups]
         count = sum(len(v) for v in images.values())
-        return IO.NodeOutput(T.DataTree(images), T.DataTree(names), T.DataTree({(0,): folders}), count)
+        return IO.NodeOutput(T.DataTree(images), T.DataTree(names), folders, count)
 
 
 _BAD = re.compile(r'[\\/:*?"<>|\x00-\x1f]+')

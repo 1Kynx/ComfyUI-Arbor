@@ -9,7 +9,7 @@ read through ``unwrap``.
 import re
 
 from . import tree as T
-from .common import IO, TREE, CAT_TREE, CAT_DATA, connected, tree_in, tree_out, to_tree, unwrap
+from .common import IO, TREE, NUMBER, CAT_TREE, CAT_DATA, connected, data_out, tree_in, tree_out, to_tree, unwrap
 
 
 def _schema(node_id, display_name, category, description, inputs, outputs, aliases=()):
@@ -51,14 +51,15 @@ class NumberSeries(IO.ComfyNode):
              IO.Float.Input("step", default=1.0, step=0.1, min=-1e9, max=1e9),
              IO.Int.Input("count", default=5, min=1, max=10000),
              IO.Boolean.Input("as_int", default=False, tooltip="Output integers (for seeds, steps, ...)")],
-            [tree_out()], ["sequence", "arithmetic", "number list"])
+            [data_out(NUMBER, "The numbers as plain data — connect straight to cfg, steps, seed…, "
+                              "or to any Arbor input")], ["sequence", "arithmetic", "number list"])
 
     @classmethod
     def execute(cls, start, step, count, as_int) -> IO.NodeOutput:
         s, d, n = unwrap(start), unwrap(step), unwrap(count)
         vals = [s + d * i for i in range(n)]
         vals = [int(round(v)) for v in vals] if unwrap(as_int) else [round(v, 10) for v in vals]
-        return IO.NodeOutput(T.DataTree({(0,): vals}))
+        return IO.NodeOutput(vals)
 
 
 class NumberRange(IO.ComfyNode):
@@ -71,14 +72,15 @@ class NumberRange(IO.ComfyNode):
              IO.Float.Input("end", default=1.0, step=0.1, min=-1e9, max=1e9),
              IO.Int.Input("steps", default=4, min=1, max=10000),
              IO.Boolean.Input("as_int", default=False)],
-            [tree_out()], ["linspace", "domain", "interpolate"])
+            [data_out(NUMBER, "The numbers as plain data — connect straight to cfg, denoise…, "
+                              "or to any Arbor input")], ["linspace", "domain", "interpolate"])
 
     @classmethod
     def execute(cls, start, end, steps, as_int) -> IO.NodeOutput:
         a, b, n = unwrap(start), unwrap(end), unwrap(steps)
         vals = [a + (b - a) * i / n for i in range(n + 1)]
         vals = [int(round(v)) for v in vals] if unwrap(as_int) else [round(v, 10) for v in vals]
-        return IO.NodeOutput(T.DataTree({(0,): vals}))
+        return IO.NodeOutput(vals)
 
 
 class SplitText(IO.ComfyNode):
@@ -92,7 +94,8 @@ class SplitText(IO.ComfyNode):
              IO.Boolean.Input("blank_line_branches", default=True,
                               tooltip="Paragraphs separated by an empty line become branches {0},{1},..."),
              IO.Boolean.Input("strip", default=True)],
-            [tree_out()], ["prompt list", "lines", "text list", "wildcard"])
+            [data_out(IO.String, "Every item as plain text data (paragraphs one after another)"),
+             tree_out(tooltip="One branch per paragraph")], ["prompt list", "lines", "text list", "wildcard"])
 
     @classmethod
     def execute(cls, text, separator, blank_line_branches, strip) -> IO.NodeOutput:
@@ -107,7 +110,8 @@ class SplitText(IO.ComfyNode):
             parts = [p for p in parts if p != ""]
             if parts:
                 out[(len(out),)] = parts
-        return IO.NodeOutput(T.DataTree(out or {(0,): []}))
+        tree = T.DataTree(out or {(0,): []})
+        return IO.NodeOutput(tree.flat(), tree)
 
 
 # ======================================================================= bridge
@@ -120,7 +124,7 @@ class TreeToList(IO.ComfyNode):
             "Flatten a tree into a native ComfyUI list. Downstream nodes then run once "
             "per item; collect the results with List → Tree.",
             [tree_in()],
-            [IO.AnyType.Output(display_name="list", is_output_list=True),
+            [data_out(tooltip="Every item as plain data: downstream nodes run once per item"),
              IO.Int.Output(display_name="count")],
             ["flatten to list", "batch run", "iterate", "for each"])
 
@@ -269,7 +273,7 @@ class TreeBranch(IO.ComfyNode):
             [tree_in(),
              IO.String.Input("path", default="", tooltip="Exact path; leave empty to use index"),
              IO.Int.Input("index", default=0, min=-10000, max=10000, tooltip="Branch index (wraps)")],
-            [tree_out("branch")], ["get branch", "explode tree"])
+            [tree_out()], ["get branch", "explode tree"])
 
     @classmethod
     def execute(cls, tree, path, index) -> IO.NodeOutput:

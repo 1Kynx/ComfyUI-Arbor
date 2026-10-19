@@ -13,7 +13,7 @@ Pick item i from every branch (Grasshopper's List Item).
 
 ## Outputs
 
-- **item** · *TREE*  
+- **tree** · *TREE*  
   One item per branch.
 
 ## Example

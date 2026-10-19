@@ -13,8 +13,10 @@ Evaluate a formula for every item of x (y matched longest-list), like Grasshoppe
 
 ## Outputs
 
-- **result** · *TREE*  
-  Results, in x's tree layout. Comparisons give booleans — ready for Cull Pattern / Dispatch.
+- **data** · *any ×N*  
+  Every result as plain data.
+- **tree** · *TREE*  
+  Results in x's tree layout. Comparisons give booleans — ready for Cull Pattern / Dispatch.
 
 ## Names
 | name | meaning |

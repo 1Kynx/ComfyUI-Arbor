@@ -9,8 +9,8 @@ Flatten a tree into a native ComfyUI list: downstream nodes then run once per it
 
 ## Outputs
 
-- **list** · *any ×N*  
-  Every item as a native list (branch order, then item order).
+- **data** · *any ×N*  
+  Every item as plain data, branch order then item order — downstream nodes run once per item.
 - **count** · *INT*  
   Number of items.
 

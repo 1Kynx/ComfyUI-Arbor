@@ -15,8 +15,10 @@ Split text into items — one per line or separator; an empty line starts a new 
 
 ## Outputs
 
+- **data** · *STRING ×N*  
+  Every item as plain text data (paragraphs one after another).
 - **tree** · *TREE*  
-  The items as a tree.
+  The items as a tree: one branch per paragraph.
 
 ## Example
 `red, green` ⏎ ⏎ `cat, dog` with separator `,` → `{0}: red, green` · `{1}: cat, dog`.

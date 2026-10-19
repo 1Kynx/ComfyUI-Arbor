@@ -15,8 +15,8 @@ Arithmetic sequence: start, start + step, … — count numbers (Grasshopper's S
 
 ## Outputs
 
-- **tree** · *TREE*  
-  The numbers in branch {0}.
+- **data** · *FLOAT / INT ×N*  
+  The numbers as plain data — connect straight to cfg, steps, seed… (the node runs once per number) or to any Arbor input.
 
 ## Examples
 | start | step | count | result |

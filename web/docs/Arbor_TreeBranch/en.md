@@ -13,7 +13,7 @@ Pick one branch by path (e.g. {0;1}) or, when path is empty, by index (Grasshopp
 
 ## Outputs
 
-- **branch** · *TREE*  
+- **tree** · *TREE*  
   A tree with only that branch.
 
 ## Tips

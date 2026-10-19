@@ -15,8 +15,8 @@ Evenly divide [start, end] into steps parts — steps + 1 numbers including both
 
 ## Outputs
 
-- **tree** · *TREE*  
-  The numbers in branch {0}.
+- **data** · *FLOAT / INT ×N*  
+  The numbers as plain data — connect straight to cfg, steps, seed… (the node runs once per number) or to any Arbor input.
 
 ## Examples
 | start | end | steps | result |

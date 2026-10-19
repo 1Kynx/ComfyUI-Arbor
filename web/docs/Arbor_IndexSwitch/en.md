@@ -11,7 +11,7 @@ Pass through input N (counting connected inputs, wrapping around). Unselected in
 
 ## Outputs
 
-- **output** · *any*  
+- **data** · *any*  
   The selected input.
 - **count** · *INT*  
   Number of connected inputs.

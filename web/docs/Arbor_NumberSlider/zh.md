@@ -15,7 +15,7 @@ Grasshopper 风格的数值滑块：在滑条上拖动，在最小值和最大�
 
 ## 输出
 
-- **数值** `value` · *FLOAT / INT*  
+- **数据** `data` · *FLOAT / INT*  
   一个输出兼顾所有数值输入：INT（步数、种子）和 FLOAT（cfg、denoise）都能直接连接。整数以 INT 输出，其余以 FLOAT 输出。
 
 ## 用法

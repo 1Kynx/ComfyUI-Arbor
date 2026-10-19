@@ -21,7 +21,7 @@ Load every image in a folder; with subfolders on, each folder becomes a branch �
   Image tree, one branch per folder.
 - **names** · *TREE*  
   File names without extension, same layout — handy as labels or for Save Images by Path.
-- **folders** · *TREE*  
+- **folders** · *STRING ×N*  
   Folder names, one per branch — use as row labels.
 - **count** · *INT*  
   Total number of images.

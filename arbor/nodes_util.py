@@ -23,7 +23,8 @@ class IndexSwitch(IO.ComfyNode):
                                              "A BOOLEAN works too: False = 0, True = 1"),
                         types=[IO.Boolean]),
                     IO.Autogrow.Input("inputs", template=slot)],
-            outputs=[IO.AnyType.Output(display_name="output"), IO.Int.Output(display_name="count")])
+            outputs=[IO.AnyType.Output(display_name="data", tooltip="The selected input, passed through"),
+                     IO.Int.Output(display_name="count")])
 
     @classmethod
     def _connected(cls, inputs) -> list[str]:

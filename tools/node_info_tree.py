@@ -25,7 +25,7 @@ Panel (cfg) ─x─┐               ┌─ x ─► KSampler.cfg ─┐
                ├─ XY Lists ────┤─ y ─► CLIP Text ────┴─► VAE Decode ─► List → Tree ─► Image Grid
 Panel (text)─y─┘               └─ shape ──────────────────────────────┘
 ```
-1. Type the x values and the y values in two **Panels** and connect their *tree* outputs.
+1. Type the x values and the y values in two **Panels** (or use **Series** / **Range**) and connect them.
 2. Connect XY Lists' *x* / *y* to the inputs you want to vary — ordinary nodes run once per combination.
 3. Collect the images with **List → Tree** (*shape* from this node), then **Image Grid** (row labels = the x Panel, column labels = *shape*).
 
@@ -51,7 +51,7 @@ Example template: *Templates → ComfyUI-Arbor → arbor_xy_sampler*.
              ├─ XY 组合列表 ──┤─ y ─► CLIP 文本 ────┴─► VAE 解码 ─► 列表 → 数据树 ─► 图像网格
 面板(提示词)─y┘               └─ 形状 ─────────────────────────────┘
 ```
-1. 在两个 **面板** 里分别输入 x 和 y 的取值，接它们的 *数据树* 输出。
+1. 在两个 **面板** 里分别输入 x 和 y 的取值（或用 **等差数列** / **区间**），接到 x、y 上。
 2. 把 *x* / *y* 接到想要变化的参数上——普通节点会对每种组合各运行一次。
 3. 用 **列表 → 数据树**（*形状* 接本节点）收集图片，再接 **图像网格**（行标签 = x 的面板，列标签 = *形状*）。
 
@@ -65,7 +65,7 @@ Example template: *Templates → ComfyUI-Arbor → arbor_xy_sampler*.
 node("Arbor_TreeToList", en=dict(
     desc="Flatten a tree into a native ComfyUI list: downstream nodes then run once per item. Collect the results with List → Tree.",
     inputs={"tree": TREE_EN},
-    outputs=["Every item as a native list (branch order, then item order).", "Number of items."],
+    outputs=["Every item as plain data, branch order then item order — downstream nodes run once per item.", "Number of items."],
     doc="""## How it works
 ComfyUI runs a node once per item when it receives a list. **Tree → List** turns a tree into such a list, so an ordinary node (a sampler, a text encoder…) processes every item. Afterwards **List → Tree** with the same tree as *shape* restores the branches.
 
@@ -76,7 +76,7 @@ ComfyUI runs a node once per item when it receives a list. **Tree → List** tur
     name="数据树 → 列表",
     desc="把数据树展开成 ComfyUI 原生列表，下游节点会对每一项各运行一次；再用「列表 → 数据树」收回结果。",
     inputs={"tree": TREE_ZH},
-    outputs=[("列表", "所有项组成的原生列表（先按分支、再按项的顺序）。"), ("数量", "项数。")],
+    outputs=[("数据", "所有项（普通数据，先按分支、再按项的顺序）——下游节点会对每一项各运行一次。"), ("数量", "项数。")],
     doc="""## 原理
 ComfyUI 的节点收到列表时会对每一项各运行一次。**数据树 → 列表** 把数据树变成这样的列表，于是普通节点（采样器、文本编码器……）会处理每一项；之后用 **列表 → 数据树** 并接上同一棵树作为 *形状*，即可还原分支。
 
@@ -195,7 +195,7 @@ node("Arbor_TreeBranch", en=dict(
     desc="按路径（如 {0;1}）取出一个分支；路径留空时按序号取（对应 Grasshopper 的 Tree Branch）。",
     inputs={"tree": TREE_ZH, "path": ("路径", "完整路径，如 {0;1}；留空则按序号取。"),
             "index": ("序号", "路径为空时使用的分支序号；会循环，−1 = 最后一个分支。")},
-    outputs=[("分支", "只含该分支的数据树。")],
+    outputs=[("数据树", "只含该分支的数据树。")],
     doc="""## 提示
 - 路径不存在时会报错，并列出实际存在的路径。
 """))
@@ -263,7 +263,7 @@ index 1: `{0}: a, b, c · {1}: d, e` → `{0}: b · {1}: e`
     desc="从每个分支取第 i 项（对应 Grasshopper 的 List Item）。",
     inputs={"tree": TREE_ZH, "index": ("序号", "项序号；负数从末尾数（−1 = 最后一项）。"),
             "wrap": ("循环", "序号超出长度时循环。关闭时超出范围得到空值。")},
-    outputs=[("项", "每个分支取出的一项。")],
+    outputs=[("数据树", "每个分支取出的一项。")],
     doc="""## 示例
 序号 1：`{0}: a, b, c · {1}: d, e` → `{0}: b · {1}: e`
 """))
@@ -420,7 +420,7 @@ node("Arbor_IndexSwitch", en=dict(
     desc="按序号传出第 N 个输入（按已连接的输入计数，循环）。未选中的输入不会被计算。",
     inputs={"index": ("序号", "0 = 第一个已连接的输入；负数从末尾数；会循环。也可接 BOOLEAN：False = 0，True = 1。"),
             "inputs": ("输入", "任意类型的候选输入，每连一个就多出一个输入口；只有被选中的才会计算。")},
-    outputs=[("输出", "被选中的输入。"), ("数量", "已连接的输入数量。")],
+    outputs=[("数据", "被选中的输入，原样传出。"), ("数量", "已连接的输入数量。")],
     doc="""## 提示
 - 在工作流的整条分支之间切换（模型、提示词、图片来源），其余分支完全不计算。
 - 用 **数值滑块**（*整数* 输出）或布尔值驱动 *序号*，就是一个 if / else。

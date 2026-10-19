@@ -86,15 +86,22 @@ def test_cross_and_rebuild():
 
 
 def test_nodes():
-    tr = res(run(nodes_tree.NumberSeries, start=1.0, step=0.5, count=4, as_int=False))[0]
+    # Series / Range output plain data (a native list) — an Arbor input reads it as {0}
+    series = res(run(nodes_tree.NumberSeries, start=1.0, step=0.5, count=4, as_int=False))
+    assert len(series) == 1 and series[0] == [1.0, 1.5, 2.0, 2.5]
+    out = nodes_tree.NumberSeries.define_schema().outputs[0]
+    assert out.is_output_list and out.get_io_type() == "FLOAT,INT" and out.display_name == "data"
+    tr = T.to_tree(series[0])
     assert tr.branches == {(0,): [1.0, 1.5, 2.0, 2.5]}
     rg = res(run(nodes_tree.NumberRange, start=0.0, end=10.0, steps=2, as_int=True))[0]
-    assert rg.branches == {(0,): [0, 5, 10]}
-    st = res(run(nodes_tree.SplitText, text="cat\ndog\n\nred, blue", separator="newline",
-                 blank_line_branches=True, strip=True))[0]
+    assert rg == [0, 5, 10] and all(isinstance(v, int) for v in rg)
+    # Split Text: data (every item) + tree (one branch per paragraph)
+    flat, st = res(run(nodes_tree.SplitText, text="cat\ndog\n\nred, blue", separator="newline",
+                       blank_line_branches=True, strip=True))
+    assert flat == ["cat", "dog", "red, blue"]
     assert st.branches == {(0,): ["cat", "dog"], (1,): ["red, blue"]}
     st2 = res(run(nodes_tree.SplitText, text="red, blue", separator=",",
-                  blank_line_branches=True, strip=True))[0]
+                  blank_line_branches=True, strip=True))[1]
     assert st2.branches == {(0,): ["red", "blue"]}
 
     items, count = res(run(nodes_tree.TreeToList, tree=[tr]))
@@ -226,22 +233,26 @@ def test_v02_nodes():
     a = T.DataTree({(0,): ["cat", "dog"]})
     b = T.DataTree({(0,): ["oil", "ink", "pixel"]})
     cross = res(run(nodes_data.PromptTemplate, template="{a} in {b} style", mode="cross",
-                    vars={"a": [a], "b": [b]}))[0]
+                    vars={"a": [a], "b": [b]}))[1]
     assert cross.branches == {(0,): ["cat in oil style", "cat in ink style", "cat in pixel style"],
                               (1,): ["dog in oil style", "dog in ink style", "dog in pixel style"]}
     z = res(run(nodes_data.PromptTemplate, template="{a}/{b}/{c}", mode="zip",
-                vars={"a": [a], "b": [b]}))[0]
+                vars={"a": [a], "b": [b]}))[1]
     assert z.branches == {(0,): ["cat/oil/{c}", "dog/ink/{c}", "dog/pixel/{c}"]}, z.branches
-    one = res(run(nodes_data.PromptTemplate, template="{a}!", mode="cross", vars={"a": [7, 8]}))[0]
+    one = res(run(nodes_data.PromptTemplate, template="{a}!", mode="cross", vars={"a": [7, 8]}))[1]
     assert one.branches == {(0,): ["7!", "8!"]}
+    data, tree = res(run(nodes_data.PromptTemplate, template="{a} in {b} style", mode="cross",
+                         vars={"a": [a], "b": [b]}))
+    assert data == tree.flat() and len(data) == 6, "data = every prompt, flat"
 
     # Expression
     xs = T.DataTree({(0,): [1, 2, 3], (1,): [10]})
-    r = res(run(nodes_data.Expression, expression="x * 2 + i", x=[xs]))[0]
+    r = res(run(nodes_data.Expression, expression="x * 2 + i", x=[xs]))[1]
     assert r.branches == {(0,): [2, 5, 8], (1,): [20]}
-    r = res(run(nodes_data.Expression, expression="x + y", x=[xs], y=[T.DataTree({(0,): [100]})]))[0]
+    assert res(run(nodes_data.Expression, expression="x * 2 + i", x=[xs]))[0] == [2, 5, 8, 20]
+    r = res(run(nodes_data.Expression, expression="x + y", x=[xs], y=[T.DataTree({(0,): [100]})]))[1]
     assert r.branches == {(0,): [101, 102, 103], (1,): [110]}, "longest-list matching"
-    r = res(run(nodes_data.Expression, expression="upper(x) if len(x) > 2 else x", x=["ab", "cat"]))[0]
+    r = res(run(nodes_data.Expression, expression="upper(x) if len(x) > 2 else x", x=["ab", "cat"]))[1]
     assert r.branches == {(0,): ["ab", "CAT"]}
     for bad in ["__import__('os')", "x.__class__", "(lambda: 1)()", "9 ** 9 ** 9", "'a' * 10**7"]:
         try:
@@ -252,10 +263,10 @@ def test_v02_nodes():
 
     # Random: deterministic per seed
     t = T.DataTree({(0,): list(range(20))})
-    r1 = res(run(nodes_data.RandomPick, tree=[t], mode="pick", count=5, seed=42, per_branch=True))[0]
-    r2 = res(run(nodes_data.RandomPick, tree=[t], mode="pick", count=5, seed=42, per_branch=True))[0]
+    r1 = res(run(nodes_data.RandomPick, tree=[t], mode="pick", count=5, seed=42, per_branch=True))[1]
+    r2 = res(run(nodes_data.RandomPick, tree=[t], mode="pick", count=5, seed=42, per_branch=True))[1]
     assert r1.branches == r2.branches and len(r1.branches[(0,)]) == 5
-    sh = res(run(nodes_data.RandomPick, tree=[t], mode="shuffle", count=1, seed=1, per_branch=True))[0]
+    sh = res(run(nodes_data.RandomPick, tree=[t], mode="shuffle", count=1, seed=1, per_branch=True))[1]
     assert sorted(sh.branches[(0,)]) == list(range(20))
 
     # Load Folder / Save by Path round trip in a temp dir
@@ -269,7 +280,7 @@ def test_v02_nodes():
         open(os.path.join(src, "notes.txt"), "w").close()
         imgs, names, folders, count = res(nodes_files.LoadFolder.execute(
             folder=src, pattern="*.png", subfolders=True, sort="name", limit=0))
-        assert count == 7 and folders.branches[(0,)] == ["src", "a", "b2", "b10"], folders.branches
+        assert count == 7 and folders == ["src", "a", "b2", "b10"], folders  # plain data, one per branch
         assert names.branches[(1,)] == ["img0", "img1"] and imgs.branches[(2,)][2].shape == (1, 8, 18, 3)
         assert nodes_files.LoadFolder.fingerprint_inputs(src, "*.png", True, "name", 0)
         lim = res(nodes_files.LoadFolder.execute(folder=src, pattern="*.png", subfolders=True,
@@ -328,7 +339,7 @@ def test_v03_booleans_slider_text():
     assert res(run(nodes_list.CullPattern, tree=[t], pattern=[True, True, False]))[0].branches == {
         (0,): [1, 2, 4], (1,): [5, 6]}
     # a boolean tree is matched branch by branch (e.g. from Expression "x > 2")
-    mask = res(run(nodes_data.Expression, expression="x > 2", x=[t]))[0]
+    mask = res(run(nodes_data.Expression, expression="x > 2", x=[t]))[1]
     a, b = res(run(nodes_list.Dispatch, tree=[t], pattern=[mask]))
     assert a.branches == {(0,): [3, 4], (1,): [5, 6]} and b.branches == {(0,): [1, 2], (1,): []}
     assert T.to_bool("TRUE") and not T.to_bool(0) and not T.to_bool("off")
@@ -411,7 +422,7 @@ def test_review_fixes():
     e = res(run(nodes_tree.Entwine, trees={"tree0": [t], "tree1": [t], "tree2": [None]}))[0]
     assert e.paths() == [(0, 0), (1, 0)], e.paths()
     pt = res(run(nodes_data.PromptTemplate, template="{a}-{b}", mode="cross",
-                 vars={"a": ["x"], "b": [None], "c": [None]}))[0]
+                 vars={"a": ["x"], "b": [None], "c": [None]}))[1]
     assert pt.branches == {(0,): ["x-{b}"]}, pt.branches
 
     # grid labels straight from Cross Reference outputs

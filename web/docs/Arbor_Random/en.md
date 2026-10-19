@@ -4,8 +4,8 @@ Seeded shuffle, or pick a number of items (with or without repeats). Same seed, 
 
 ## Inputs
 
-- **tree** · *any*  
-  Items to shuffle or pick from.
+- **data** `tree` · *any*  
+  Items to shuffle or pick from — plain data or a tree (handled branch by branch).
 - **mode** · *COMBO (shuffle · pick · pick (repeats))*  
   shuffle: reorder everything · pick: choose count different items · pick (repeats): choose count items, repeats allowed.
 - **count** · *INT*  
@@ -17,8 +17,10 @@ Seeded shuffle, or pick a number of items (with or without repeats). Same seed, 
 
 ## Outputs
 
+- **data** · *any ×N*  
+  The shuffled / picked items as plain data.
 - **tree** · *TREE*  
-  The shuffled / picked items.
+  The shuffled / picked items, branch by branch.
 
 ## Tips
 - Pick random prompts or styles for a batch: Panel (one per line) → **Random** (pick 4) → XY Lists / Tree → List.

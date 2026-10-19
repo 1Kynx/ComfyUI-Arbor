@@ -15,7 +15,7 @@ Grasshopper-style number slider: drag the bar to set a value between min and max
 
 ## Outputs
 
-- **value** · *FLOAT / INT*  
+- **data** · *FLOAT / INT*  
   One output for every number input: connects to INT inputs (steps, seed) and FLOAT inputs (cfg, denoise) alike. Whole numbers come out as INT, others as FLOAT.
 
 ## How to use

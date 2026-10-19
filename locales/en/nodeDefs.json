@@ -340,7 +340,7 @@
     },
     "outputs": {
       "0": {
-        "name": "value",
+        "name": "data",
         "tooltip": "One output for every number input: connects to INT inputs (steps, seed) and FLOAT inputs (cfg, denoise) alike. Whole numbers come out as INT, others as FLOAT."
       }
     }
@@ -388,8 +388,12 @@
     },
     "outputs": {
       "0": {
-        "name": "prompts",
-        "tooltip": "The filled prompts as a tree (cross: one branch per combination of the outer variables)."
+        "name": "data",
+        "tooltip": "Every filled prompt as plain data — connect straight to a text encoder (it runs once per prompt)."
+      },
+      "1": {
+        "name": "tree",
+        "tooltip": "The prompts as a tree (cross: one branch per combination of the outer variables — ready for Image Grid)."
       }
     }
   },
@@ -412,8 +416,12 @@
     },
     "outputs": {
       "0": {
-        "name": "result",
-        "tooltip": "Results, in x's tree layout. Comparisons give booleans — ready for Cull Pattern / Dispatch."
+        "name": "data",
+        "tooltip": "Every result as plain data."
+      },
+      "1": {
+        "name": "tree",
+        "tooltip": "Results in x's tree layout. Comparisons give booleans — ready for Cull Pattern / Dispatch."
       }
     }
   },
@@ -422,8 +430,8 @@
     "description": "Seeded shuffle, or pick a number of items (with or without repeats). Same seed, same result.",
     "inputs": {
       "tree": {
-        "name": "tree",
-        "tooltip": "Items to shuffle or pick from."
+        "name": "data",
+        "tooltip": "Items to shuffle or pick from — plain data or a tree (handled branch by branch)."
       },
       "mode": {
         "name": "mode",
@@ -444,8 +452,12 @@
     },
     "outputs": {
       "0": {
+        "name": "data",
+        "tooltip": "The shuffled / picked items as plain data."
+      },
+      "1": {
         "name": "tree",
-        "tooltip": "The shuffled / picked items."
+        "tooltip": "The shuffled / picked items, branch by branch."
       }
     }
   },
@@ -496,8 +508,8 @@
     },
     "outputs": {
       "0": {
-        "name": "tree",
-        "tooltip": "The numbers in branch {0}."
+        "name": "data",
+        "tooltip": "The numbers as plain data — connect straight to cfg, steps, seed… (the node runs once per number) or to any Arbor input."
       }
     }
   },
@@ -524,8 +536,8 @@
     },
     "outputs": {
       "0": {
-        "name": "tree",
-        "tooltip": "The numbers in branch {0}."
+        "name": "data",
+        "tooltip": "The numbers as plain data — connect straight to cfg, steps, seed… (the node runs once per number) or to any Arbor input."
       }
     }
   },
@@ -552,8 +564,12 @@
     },
     "outputs": {
       "0": {
+        "name": "data",
+        "tooltip": "Every item as plain text data (paragraphs one after another)."
+      },
+      "1": {
         "name": "tree",
-        "tooltip": "The items as a tree."
+        "tooltip": "The items as a tree: one branch per paragraph."
       }
     }
   },
@@ -612,8 +628,8 @@
     },
     "outputs": {
       "0": {
-        "name": "list",
-        "tooltip": "Every item as a native list (branch order, then item order)."
+        "name": "data",
+        "tooltip": "Every item as plain data, branch order then item order — downstream nodes run once per item."
       },
       "1": {
         "name": "count",
@@ -768,7 +784,7 @@
     },
     "outputs": {
       "0": {
-        "name": "branch",
+        "name": "tree",
         "tooltip": "A tree with only that branch."
       }
     }
@@ -980,7 +996,7 @@
     },
     "outputs": {
       "0": {
-        "name": "item",
+        "name": "tree",
         "tooltip": "One item per branch."
       }
     }
@@ -1304,7 +1320,7 @@
     },
     "outputs": {
       "0": {
-        "name": "output",
+        "name": "data",
         "tooltip": "The selected input."
       },
       "1": {

@@ -24,7 +24,7 @@ class ListItem(IO.ComfyNode):
         return _schema("Arbor_ListItem", "List Item", "Pick item i from every branch.",
                        [IO.Int.Input("index", default=0, min=-100000, max=100000),
                         IO.Boolean.Input("wrap", default=True, tooltip="Wrap index around the list length")],
-                       [tree_out("item")], ["get item", "index", "pick"])
+                       [tree_out()], ["get item", "index", "pick"])
 
     @classmethod
     def execute(cls, tree, index, wrap) -> IO.NodeOutput:

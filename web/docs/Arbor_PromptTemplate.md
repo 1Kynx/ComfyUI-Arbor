@@ -13,8 +13,10 @@ Fill {a} {b} … in a template from trees. Cross builds every combination as a g
 
 ## Outputs
 
-- **prompts** · *TREE*  
-  The filled prompts as a tree (cross: one branch per combination of the outer variables).
+- **data** · *STRING ×N*  
+  Every filled prompt as plain data — connect straight to a text encoder (it runs once per prompt).
+- **tree** · *TREE*  
+  The prompts as a tree (cross: one branch per combination of the outer variables — ready for Image Grid).
 
 ## Example
 Template `a photo of {a}, {b} style`, a = `cat, dog`, b = `oil, ink`:
@@ -25,5 +27,5 @@ Template `a photo of {a}, {b} style`, a = `cat, dog`, b = `oil, ink`:
 | zip | `{0}: cat·oil, dog·ink` |
 
 ## Tips
-- Type the values in **Panels** (one per line) and connect their *tree* output.
+- Type the values in **Panels** (one per line) and connect their *data* output (or *tree*, to keep branches).
 - Feed the result to **XY Lists** or **Tree → List** to run a sampler once per prompt. Up to 10 000 combinations.

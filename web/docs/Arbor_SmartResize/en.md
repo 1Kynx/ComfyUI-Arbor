@@ -8,15 +8,15 @@ Resize by longest / shortest side, megapixels, a box or a scale factor, snapping
   Image or batch to resize.
 - **mode** · *COMBO*  
   How the target size is chosen. Only the fields for the chosen mode are shown.
-  - **size** · *INT*  
+  - **mode.size** `size` · *INT*  
     Target length of the longest / shortest side, in pixels.
-  - **megapixels** · *FLOAT*  
+  - **mode.megapixels** `megapixels` · *FLOAT*  
     Target area in megapixels (1.0 ≈ 1024 × 1024); aspect ratio is kept.
-  - **width** · *INT*  
+  - **mode.width** `width` · *INT*  
     Target box width.
-  - **height** · *INT*  
+  - **mode.height** `height` · *INT*  
     Target box height.
-  - **factor** · *FLOAT*  
+  - **mode.factor** `factor` · *FLOAT*  
     Scale factor (2.0 = twice as large).
 - **multiple_of** · *COMBO (1 · 8 · 16 · 32 · 64)*  
   Round both sides to a multiple of this — use 8 / 16 / 64 for diffusion models.

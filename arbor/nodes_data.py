@@ -7,7 +7,7 @@ import re
 
 from . import expr as E
 from . import tree as T
-from .common import IO, CAT_DATA, connected, tree_in, tree_out, to_tree, unwrap
+from .common import IO, NUMBER, CAT_DATA, connected, data_out, tree_in, tree_out, to_tree, unwrap
 from .preview import label_of
 
 TEMPLATE_VARS = ["a", "b", "c", "d", "e", "f"]
@@ -20,11 +20,6 @@ def _match(tree: T.DataTree, k: int, j: int):
     paths = tree.paths()
     items = tree.branches[paths[min(k, len(paths) - 1)]]
     return items[min(j, len(items) - 1)] if items else None
-
-
-# A socket that is both: the front end and the server accept "FLOAT,INT" on
-# any INT or FLOAT input (comma types match when they overlap).
-NUMBER = IO.Custom("FLOAT,INT")
 
 
 def as_number(v: float) -> int | float:
@@ -58,6 +53,11 @@ def feeds_int(prompt: dict | None, node_id) -> bool:
                 if isinstance(t, str) and "INT" in t.split(",") and "FLOAT" not in t.split(","):
                     return True
     return False
+
+
+def both(tree: T.DataTree) -> IO.NodeOutput:
+    """data (every item, flat) + tree (with its branches)."""
+    return IO.NodeOutput(tree.flat(), tree)
 
 
 def step_decimals(step: float) -> int:
@@ -94,7 +94,7 @@ class NumberSlider(IO.ComfyNode):
                 IO.Float.Input("max", default=1.0, min=-big, max=big, step=0.0001, round=False),
                 IO.Float.Input("step", default=0.01, min=0.0, max=big, step=0.0001, round=False),
             ],
-            outputs=[NUMBER.Output(display_name="value",
+            outputs=[NUMBER.Output(display_name="data",
                                    tooltip="One output for both: connects to INT and FLOAT inputs. "
                                            "Whole numbers come out as INT, others as FLOAT.")])
 
@@ -124,7 +124,8 @@ class PromptTemplate(IO.ComfyNode):
                 IO.Combo.Input("mode", options=["cross", "zip"], default="cross"),
                 IO.Autogrow.Input("vars", template=vars_, optional=True),
             ],
-            outputs=[tree_out("prompts")])
+            outputs=[data_out(IO.String, "Every prompt as plain text data — connect straight to a text encoder"),
+                     tree_out(tooltip="The prompts as a tree (cross: rows × columns, ready for Image Grid)")])
 
     @classmethod
     def execute(cls, template, mode, vars=None) -> IO.NodeOutput:
@@ -139,11 +140,11 @@ class PromptTemplate(IO.ComfyNode):
             return _VAR_RE.sub(lambda m: values.get(m.group(1), m.group(0)), text)
 
         if not names:
-            return IO.NodeOutput(T.DataTree({(0,): [fill({})]}))
+            return both(T.DataTree({(0,): [fill({})]}))
         if unwrap(mode) == "zip":
             n = max(len(lists[k]) for k in names)
             out = [fill({k: lists[k][min(i, len(lists[k]) - 1)] for k in names}) for i in range(n)]
-            return IO.NodeOutput(T.DataTree({(0,): out}))
+            return both(T.DataTree({(0,): out}))
 
         total = 1
         for k in names:
@@ -155,7 +156,7 @@ class PromptTemplate(IO.ComfyNode):
         for idx in itertools.product(*[range(len(lists[k])) for k in outer]):
             vals = {k: lists[k][i] for k, i in zip(outer, idx)}
             out[tuple(idx) or (0,)] = [fill({**vals, last: v}) for v in lists[last]]
-        return IO.NodeOutput(T.DataTree(out))
+        return both(T.DataTree(out))
 
 
 class Expression(IO.ComfyNode):
@@ -174,7 +175,8 @@ class Expression(IO.ComfyNode):
                 tree_in("x", optional=True),
                 tree_in("y", optional=True),
             ],
-            outputs=[tree_out("result")])
+            outputs=[data_out(tooltip="Every result as plain data"),
+                     tree_out(tooltip="The results in x's tree layout")])
 
     @classmethod
     def execute(cls, expression, x=None, y=None) -> IO.NodeOutput:
@@ -187,7 +189,7 @@ class Expression(IO.ComfyNode):
             out[path] = [E.evaluate(code, {"x": v, "y": _match(ty, b, j) if ty is not None else None,
                                            "i": j, "b": b, "n": n})
                          for j, v in enumerate(items)]
-        return IO.NodeOutput(T.DataTree(out))
+        return both(T.DataTree(out))
 
 
 class RandomPick(IO.ComfyNode):
@@ -207,7 +209,8 @@ class RandomPick(IO.ComfyNode):
                 IO.Boolean.Input("per_branch", default=True,
                                  tooltip="Work on every branch separately; off = on all items as one list"),
             ],
-            outputs=[tree_out()])
+            outputs=[data_out(tooltip="The picked items as plain data"),
+                     tree_out(tooltip="The picked items, branch by branch")])
 
     @classmethod
     def execute(cls, tree, mode, count, seed, per_branch) -> IO.NodeOutput:
@@ -228,7 +231,7 @@ class RandomPick(IO.ComfyNode):
                 return rng.sample(items, min(k, len(items)))
             return [rng.choice(items) for _ in range(k)]
 
-        return IO.NodeOutput(t.map_branches(run))
+        return both(t.map_branches(run))
 
 
 NODES = [NumberSlider, PromptTemplate, Expression, RandomPick]
