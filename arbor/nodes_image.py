@@ -67,7 +67,8 @@ class ImageGrid(IO.ComfyNode):
             "and label the images of a batch run directly; use Reshape Tree (flip matrix) to swap the axes.",
             [tree_in("images", tooltip="Image tree, or the plain images of a batch run (with shape)"),
              tree_in("shape", optional=True,
-                     tooltip="Layout to pour plain images into (XY Lists' shape); also labels the columns"),
+                     tooltip="Layout to pour plain images into (XY Lists' shape); labels the columns when "
+                             "every row holds the same values"),
              tree_in("row_labels", optional=True,
                      tooltip="One label per row — overrides the row names the tree or shape carries"),
              tree_in("col_labels", optional=True,
@@ -80,7 +81,7 @@ class ImageGrid(IO.ComfyNode):
              IO.Int.Input("font_size", default=24, min=8, max=200),
              IO.Combo.Input("theme", options=["light", "dark"], default="light"),
              IO.Boolean.Input("path_labels", default=False,
-                              tooltip="Label rows with their branch path when no row labels are given")],
+                              tooltip="Label rows with their branch path when there are no row labels or names")],
             [IO.Image.Output(display_name="image")],
             ["xy plot", "xyz plot", "grid", "contact sheet", "comparison", "tree to grid"])
 
@@ -91,8 +92,8 @@ class ImageGrid(IO.ComfyNode):
         if connected(shape):
             layout = to_tree(shape)
             tree = T.rebuild(tree.flat(), layout)
-            rows = [[label_of(v) for v in items] for items in layout.branches.values()]
-            if not connected(col_labels) and all(r == rows[0] for r in rows):
+            row_values = [[label_of(v) for v in items] for items in layout.branches.values()]
+            if not connected(col_labels) and all(r == row_values[0] for r in row_values):
                 col_labels = shape  # a true matrix (XY Lists): every row holds the column values
         rows, cols = grid_size(tree)
         if not connected(row_labels) and tree.names:  # e.g. XY Lists' x values, "Mira · lab coat"

@@ -13,17 +13,10 @@
  */
 
 import { app } from "../../scripts/app.js";
-import { injectStyle, el, isolatePointer, isolateKeys, markChanged, chain, t, onLocaleChange } from "./arbor_common.js";
+import { injectStyle, el, isolatePointer, isolateKeys, markChanged, chain, hideWidget, t, onLocaleChange } from "./arbor_common.js";
 
 const NODE = "Arbor_NumberSlider";
 const DRAG_PX = 3;
-
-function hideWidget(w) {
-  if (!w) return;
-  w.hidden = true;
-  w.options ||= {};
-  w.options.hidden = true;
-}
 
 /* decimal places a step implies (mirror of nodes_data.step_decimals) */
 function stepDecimals(step) {

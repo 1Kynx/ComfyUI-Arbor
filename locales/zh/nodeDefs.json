@@ -959,7 +959,7 @@
       },
       "pattern": {
         "name": "模式",
-        "tooltip": "输入重复模式（'T F'、'true,false'、'1 0 1'、'TFT'），或接入 BOOLEAN 值 / 布尔数据树（例如表达式 'x > 2'），按分支匹配。"
+        "tooltip": "输入重复模式（'T F'、'true,false'、'1 0 1'、'TFT'），或接入 BOOLEAN 值 / 布尔数据树（例如表达式 'x > 2'），按路径匹配——父分支上的值作用于它的所有子分支。"
       }
     },
     "outputs": {
@@ -1039,7 +1039,7 @@
   },
   "Arbor_CrossReference": {
     "display_name": "交叉组合",
-    "description": "按分支生成 A × B 的所有组合（对应 Grasshopper 的 Cross Reference）。开启分组时：行 = A，列 = B。",
+    "description": "按分支生成 A × B 的所有组合（对应 Grasshopper 的 Cross Reference）：分支先按路径匹配，再按顺序。开启分组时：行 = A，列 = B。",
     "inputs": {
       "A": {
         "name": "A",

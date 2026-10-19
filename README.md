@@ -63,7 +63,8 @@ Flatten, Simplify, Flip Matrix, Shift Paths and Renumber (pick the mode); **Merg
 takes `0`, `-1`, `0, 2`, `1:4`, `2-5` or `::2`, so it covers Sub List; **Sort List** also reverses.
 Searching for any of the Grasshopper names finds the right node.
 
-**Image Slider** — connect any number of images (inputs grow as you connect) of any size.
+**Image Slider** — connect any number of images (inputs grow as you connect) of any size — single
+images, batches or whole image trees; slides from a named branch are labelled with its name.
 *Flip*: drag the scrubber or press ← → to step through them. *Wipe*: A/B split that follows the pointer.
 *Real* keeps relative sizes, *Fit* fills the stage. Double-click opens the full image.
 
@@ -86,24 +87,27 @@ the bar to edit them; step 1 gives whole numbers, 0 is continuous. A single outp
 follow while you drag.
 
 **True / false** — Dispatch's pattern input takes typed text (`T F`), a native BOOLEAN,
-a list of BOOLEANs, or a boolean tree such as Expression `x > 2` (matched branch by branch).
+a list of BOOLEANs, or a boolean tree such as Expression `x > 2` (matched by path: a value on a
+parent branch covers all of its children).
 Index Switch takes a BOOLEAN as its index (False = 0, True = 1).
 
 **Prompt Template** — `a photo of {a}, {b}` filled from trees. *Cross* builds every combination as a
 grid-ready tree (rows = `{a}`, columns = the last variable); *zip* pairs items one by one.
 
 **Expression** — per-item formula like `x * 2 + i` or `upper(x) if len(x) > 2 else x`.
-Names: `x`, `y` (matched longest-list), `i` item index, `b` branch index, `n` branch length.
+Names: `x`, `y` (matched by path — a parent branch goes with all of its children — then in order),
+`i` item index, `b` branch index, `n` branch length, `name` the branch's name.
 A safe evaluator: no attribute access or imports.
 
-**Load Folder / Save Images by Path** — subfolders become branches on the way in; branch paths become
-subfolders (or filename parts) on the way out, with optional names per file.
+**Load Folder / Save Images by Path** — subfolders become branches on the way in, named after the folder;
+branches become subfolders (or filename parts) on the way out — `prefix/0-1/000.png`, or `prefix/0 · Arrival/…`
+for a named branch — with optional names per file. Saved trees load back with their names; `output/…` paths
+read from ComfyUI's output folder.
 
 **Smart Resize** — longest / shortest side, megapixels, fit, fill & crop or scale; snaps to multiples of
 8/16/32/64. Only the fields for the chosen mode are shown.
 
 **Index Switch** — pick input N; unselected inputs are lazy and never execute.
-
 
 ## Languages and help
 

@@ -959,7 +959,7 @@
       },
       "pattern": {
         "name": "pattern",
-        "tooltip": "Typed repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), or connect BOOLEAN values / a boolean tree (e.g. Expression 'x > 2'), matched branch by branch."
+        "tooltip": "Typed repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), or connect BOOLEAN values / a boolean tree (e.g. Expression 'x > 2'), matched by path — a value on a parent branch covers all of its children."
       }
     },
     "outputs": {
@@ -1039,7 +1039,7 @@
   },
   "Arbor_CrossReference": {
     "display_name": "Cross Reference",
-    "description": "Every combination of A × B, branch by branch (Grasshopper's Cross Reference). With group on: rows = A, columns = B.",
+    "description": "Every combination of A × B, branch by branch (Grasshopper's Cross Reference): branches are matched by path, then in order. With group on: rows = A, columns = B.",
     "inputs": {
       "A": {
         "name": "A",

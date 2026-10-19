@@ -197,28 +197,28 @@ class PromptTemplate(IO.ComfyNode):
         used = [v for v in TEMPLATE_VARS if f"{{{v}}}" in text]
         given = {k: to_tree(v) for k, v in (vars or {}).items() if connected(v)}
         lists = {k: [label_of(x) for x in given[k].flat()] for k in used if k in given}
-        names = [k for k in used if lists.get(k)]
+        filled = [k for k in used if lists.get(k)]
 
         def fill(values: dict) -> str:
             return _VAR_RE.sub(lambda m: values.get(m.group(1), m.group(0)), text)
 
-        if not names:
+        if not filled:
             return both(T.DataTree({(0,): [fill({})]}))
         if unwrap(mode) == "zip":
-            n = max(len(lists[k]) for k in names)
-            return both(T.DataTree({(0,): [fill({k: lists[k][min(i, len(lists[k]) - 1)] for k in names})
+            n = max(len(lists[k]) for k in filled)
+            return both(T.DataTree({(0,): [fill({k: lists[k][min(i, len(lists[k]) - 1)] for k in filled})
                                            for i in range(n)]}))
-        total = math.prod(len(lists[k]) for k in names)
+        total = math.prod(len(lists[k]) for k in filled)
         if total > MAX_COMBOS:
             raise ValueError(f"Prompt Template: {total} combinations (max {MAX_COMBOS})")
-        *outer, last = names
-        out, names = {}, {}
+        *outer, last = filled
+        out, row_names = {}, {}
         for idx in itertools.product(*[range(len(lists[k])) for k in outer]):
             vals = {k: lists[k][i] for k, i in zip(outer, idx)}
             out[tuple(idx) or (0,)] = [fill({**vals, last: v}) for v in lists[last]]
             if vals:
-                names[tuple(idx)] = " · ".join(vals.values())  # the row's outer values, for Image Grid
-        return both(T.DataTree(out, names))
+                row_names[tuple(idx)] = " · ".join(vals.values())  # the row's outer values, for Image Grid
+        return both(T.DataTree(out, row_names))
 
 
 # ======================================================================= Expression
@@ -240,8 +240,8 @@ class Expression(IO.ComfyNode):
     @classmethod
     def execute(cls, expression, x=None, y=None) -> IO.NodeOutput:
         code = E.compile_expr(str(unwrap(expression, "")))
-        tx = to_tree(x) if x is not None else T.DataTree({(0,): [None]})
-        ty = to_tree(y) if y is not None else None
+        tx = to_tree(x) if connected(x) else T.DataTree({(0,): [None]})
+        ty = to_tree(y) if connected(y) else None
         out = {}
         for b, (path, items) in enumerate(tx.items()):
             name = tx.label(path, label_of) or ""

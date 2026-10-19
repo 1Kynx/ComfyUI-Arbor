@@ -7,9 +7,11 @@ A tree is an ordered mapping of *paths* to *branches*:
 
 A path is a tuple of non-negative ints, written ``{0;1}``. A branch is a plain
 Python list whose items can be anything ComfyUI passes around (numbers,
-strings, IMAGE tensors, LATENT dicts, ...). A branch may also carry a *name*,
-the value it stands for (XY Lists names each row after its x value), which the
-Panel shows and Image Grid uses as the row label. Trees are immutable by convention:
+strings, IMAGE tensors, LATENT dicts, ...). A branch — or a parent path that
+groups several branches — may also carry a *name*, the value it stands for
+(XY Lists names each row after its x value, a Panel's ``# title`` names a
+scene); ``label()`` joins them ("Mira · lab coat") for Panels, grid rows and
+folder names. Trees are immutable by convention:
 every operation returns a new tree and never mutates its input, because
 ComfyUI caches node outputs and hands the same object to several consumers.
 """
@@ -412,23 +414,24 @@ def sort_list(tree: DataTree, order: str = "ascending") -> DataTree:
 
 
 def cross_reference(a: DataTree, b: DataTree, group: bool = True) -> tuple[DataTree, DataTree]:
-    """Every combination of A and B items, branch-matched (longest list).
+    """Every combination of A and B items, branch by branch.
 
-    With ``group`` each A item gets its own sub-branch, named after it, so the
+    The tree with more branches leads; the other one is matched to it like
+    Expression's y (same path, then the nearest parent, then in order). With
+    ``group`` each A item gets its own sub-branch, named after it, so the
     result is a ready-made grid: rows = A values, columns = B values. The
     branch it came from becomes the parent and keeps its name.
     """
-    pa, pb = a.paths(), b.paths()
-    if not pa or not pb:
+    if not a.branches or not b.branches:
         return DataTree(), DataTree()
-    n = max(len(pa), len(pb))
+    a_leads = a.branch_count >= b.branch_count
+    lead, other = (a, b) if a_leads else (b, a)
     out_a: dict[Path, list] = {}
     out_b: dict[Path, list] = {}
-    names: dict[Path, Any] = dict((a if len(pa) >= len(pb) else b).names)  # the side the paths come from
-    for k in range(n):
-        path = pa[min(k, len(pa) - 1)] if len(pa) >= len(pb) else pb[min(k, len(pb) - 1)]
-        items_a = a.branches[pa[min(k, len(pa) - 1)]]
-        items_b = b.branches[pb[min(k, len(pb) - 1)]]
+    names: dict[Path, Any] = dict(lead.names)  # the paths come from the leading tree
+    for k, (path, own) in enumerate(lead.items()):
+        match = branch_for(other, path, k)
+        items_a, items_b = (own, match) if a_leads else (match, own)
         for i, va in enumerate(items_a):
             key = path + (i,) if group else path
             out_a.setdefault(key, []).extend([va] * len(items_b))

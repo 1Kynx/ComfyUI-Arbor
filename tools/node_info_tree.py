@@ -217,9 +217,9 @@ The same syntax picks frames in **Batch Pick**.
 """))
 
 PATTERN_EN = ("Typed repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), or connect BOOLEAN values / a boolean tree "
-              "(e.g. Expression 'x > 2'), matched branch by branch.")
+              "(e.g. Expression 'x > 2'), matched by path — a value on a parent branch covers all of its children.")
 PATTERN_ZH = ("模式", "输入重复模式（'T F'、'true,false'、'1 0 1'、'TFT'），或接入 BOOLEAN 值 / 布尔数据树"
-              "（例如表达式 'x > 2'），按分支匹配。")
+              "（例如表达式 'x > 2'），按路径匹配——父分支上的值作用于它的所有子分支。")
 
 node("Arbor_Dispatch", en=dict(
     desc="Split items by a true / false pattern: A keeps the true ones, B the false ones — use A alone to cull a list (Grasshopper's Dispatch and Cull Pattern).",
@@ -293,7 +293,7 @@ simple("Arbor_SortList",
        {"order": ("顺序", "ascending 升序 · descending 降序 · reverse 反转（不排序，只把顺序倒过来）。")})
 
 node("Arbor_CrossReference", en=dict(
-    desc="Every combination of A × B, branch by branch (Grasshopper's Cross Reference). With group on: rows = A, columns = B.",
+    desc="Every combination of A × B, branch by branch (Grasshopper's Cross Reference): branches are matched by path, then in order. With group on: rows = A, columns = B.",
     inputs={"A": "First set of values.", "B": "Second set of values.",
             "group": "One branch per A item — the result is grid-ready (rows = A, columns = B)."},
     outputs=["A repeated for every B.", "B cycled for every A."],
@@ -307,7 +307,7 @@ A `3, 5`, B `x, y, z`, group on:
 - With group on, each sub-branch is named after its A value (pictures and other non-text values get their number), and the branch it came from becomes the parent and keeps its name: `Mira · lab coat`, `Arrival · 2`. **Image Grid** labels its rows with these; B works as column labels.
 """), zh=dict(
     name="交叉组合",
-    desc="按分支生成 A × B 的所有组合（对应 Grasshopper 的 Cross Reference）。开启分组时：行 = A，列 = B。",
+    desc="按分支生成 A × B 的所有组合（对应 Grasshopper 的 Cross Reference）：分支先按路径匹配，再按顺序。开启分组时：行 = A，列 = B。",
     inputs={"A": ("A", "第一组取值。"), "B": ("B", "第二组取值。"),
             "group": ("分组", "每个 A 项一个分支——结果可直接做网格（行 = A，列 = B）。")},
     outputs=[("A", "A 按 B 的个数重复。"), ("B", "B 按 A 的个数循环。")],

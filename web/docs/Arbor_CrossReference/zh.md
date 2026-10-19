@@ -1,6 +1,6 @@
 # 交叉组合
 
-按分支生成 A × B 的所有组合（对应 Grasshopper 的 Cross Reference）。开启分组时：行 = A，列 = B。
+按分支生成 A × B 的所有组合（对应 Grasshopper 的 Cross Reference）：分支先按路径匹配，再按顺序。开启分组时：行 = A，列 = B。
 
 ## 输入
 

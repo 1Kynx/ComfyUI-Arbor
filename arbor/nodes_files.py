@@ -95,7 +95,8 @@ class LoadFolder(IO.ComfyNode):
             "Arbor_LoadFolder", "Load Folder", CAT_IMAGE,
             "Load every image in a folder. With subfolders on, each folder becomes a branch — "
             "the folder structure turns straight into a data tree.",
-            [IO.String.Input("folder", default="", tooltip="Absolute path, or relative to ComfyUI's input folder"),
+            [IO.String.Input("folder", default="", tooltip="Absolute path; output/… for ComfyUI's output folder; "
+                                     "any other relative path is in the input folder"),
              IO.String.Input("pattern", default="*.png *.jpg *.jpeg *.webp", tooltip="File patterns separated by spaces"),
              IO.Boolean.Input("subfolders", default=True, tooltip="Each subfolder becomes a branch"),
              IO.Combo.Input("sort", options=["name", "modified"], default="name"),
@@ -171,13 +172,14 @@ class SaveImagesByPath(IO.ComfyNode):
     def define_schema(cls):
         return schema(
             "Arbor_SaveImagesByPath", "Save Images by Path", CAT_IMAGE,
-            "Save an image tree keeping its structure: one subfolder (or filename part) per branch path. "
-            "Optional names give each file a readable name.",
+            "Save an image tree keeping its structure: one subfolder (or filename part) per branch, "
+            "named after the branch when it has a name. Optional names give each file a readable name.",
             [tree_in("images"),
              IO.String.Input("filename_prefix", default="arbor/batch",
                              tooltip="Folder / prefix inside the output folder; supports %date% style vars"),
              IO.Combo.Input("layout", options=["subfolders", "flat"], default="subfolders",
-                            tooltip="subfolders: prefix_0-1/000.png · flat: prefix_0-1_000.png"),
+                            tooltip="subfolders: prefix/0-1/000.png (named: prefix/0-1 · name/000.png) · "
+                                    "flat: prefix_0-1_000.png"),
              tree_in("names", optional=True, tooltip="File names (matched to images item by item)")],
             [tree_out("paths")],
             ["save by path", "save images", "save tree", "export", "save batch"],

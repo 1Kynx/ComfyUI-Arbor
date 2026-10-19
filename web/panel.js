@@ -7,8 +7,8 @@
  * upstream is a cheap data node (see arbor/live.py) the view updates live
  * as you edit — no queueing; otherwise it shows the result of the last run.
  *
- * Unconnected: an editor. In Lines mode each line is an item and an empty
- * line starts a new branch; a gutter shows every line's branch path and
+ * Unconnected: an editor. In Lines mode each line is an item, an empty
+ * line starts a new branch and a "# title" line names it; a gutter shows every line's branch path and
  * item index (coloured by the type it will become). In Text mode the whole
  * text is one item. Long lines wrap; ⤢ opens a large editor. The text and
  * both options live in the node's own hidden widgets, so they are saved
@@ -17,7 +17,7 @@
 
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { injectStyle, el, viewURL, isolatePointer, isolateKeys, markChanged, chain, ICONS, t, tn, onLocaleChange } from "./arbor_common.js";
+import { injectStyle, el, viewURL, isolatePointer, isolateKeys, markChanged, chain, hideWidget, ICONS, t, tn, onLocaleChange } from "./arbor_common.js";
 
 const NODE = "Arbor_Panel";
 const AUTO_COLLAPSE = 24; // start collapsed when the tree has more branches than this
@@ -129,13 +129,6 @@ function analyse(text, multiline, numbers) {
     items++;
   }
   return { lines: out, branches: branch + 1, items };
-}
-
-function hideWidget(w) {
-  if (!w) return;
-  w.hidden = true;
-  w.options ||= {};
-  w.options.hidden = true;
 }
 
 function stopWheelWhenScrollable(elm) {

@@ -204,6 +204,14 @@ export function injectStyle() {
   document.head.appendChild(s);
 }
 
+/* Hide a widget that only stores state (both canvas and Vue nodes respect these flags). */
+export function hideWidget(w) {
+  if (!w) return;
+  w.hidden = true;
+  w.options ||= {};
+  w.options.hidden = true;
+}
+
 export function el(tag, cls, html) {
   const e = document.createElement(tag);
   if (cls) e.className = cls;

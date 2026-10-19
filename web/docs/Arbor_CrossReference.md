@@ -1,6 +1,6 @@
 # Cross Reference
 
-Every combination of A × B, branch by branch (Grasshopper's Cross Reference). With group on: rows = A, columns = B.
+Every combination of A × B, branch by branch (Grasshopper's Cross Reference): branches are matched by path, then in order. With group on: rows = A, columns = B.
 
 ## Inputs
 

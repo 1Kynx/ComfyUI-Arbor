@@ -385,6 +385,15 @@ def test_nested_trees():
     pics = T.DataTree({(0,): [torch.rand(1, 8, 8, 3), torch.rand(1, 8, 8, 3)]}, {(0,): "Arrival"})
     pa, pb = res(run(nodes_list.CrossReference, A=[pics], B=["snow", "ink"], group=True))
     assert [pa.label(p) for p in pa.paths()] == ["Arrival · 1", "Arrival · 2"] and pb.branches[(0, 1)] == ["snow", "ink"]
+    # Cross Reference pairs branches by path too: B's {2} goes with A's {2}, not with A's 2nd branch
+    shots = T.DataTree({(0,): ["s0"], (2,): ["s2"]})
+    edits = T.DataTree({(0,): ["e0"], (1,): ["e1"], (2,): ["e2a", "e2b"]})
+    sa, sb = res(run(nodes_list.CrossReference, A=[shots], B=[edits], group=False))
+    assert sb.branches == {(0,): ["e0"], (1,): ["e1"], (2,): ["e2a", "e2b"]} and sa.branches[(2,)] == ["s2", "s2"]
+    sa, sb = res(run(nodes_list.CrossReference, A=[edits], B=[shots], group=False))
+    assert sb.branches[(1,)] == ["s2"] and sb.branches[(2,)] == ["s2", "s2"], "an unmatched path falls back to order"
+    # an unconnected x that arrives as [None] still gives one constant result
+    assert res(run(nodes_data.Expression, expression="1 + 1", x=[None]))[0] == [2]
     print("nested trees: OK")
 
 

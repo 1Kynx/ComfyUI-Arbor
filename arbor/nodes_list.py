@@ -33,7 +33,8 @@ class Dispatch(IO.ComfyNode):
         pattern = IO.MultiType.Input(
             IO.String.Input("pattern", default="T F",
                             tooltip="Type a repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), "
-                                    "or connect BOOLEAN values / a boolean tree (matched per branch)"),
+                                    "or connect BOOLEAN values / a boolean tree (matched by path: a "
+                                    "parent branch covers all of its children)"),
             types=[IO.Boolean, TREE])
         return _list_node(
             "Arbor_Dispatch", "Dispatch",
@@ -94,8 +95,9 @@ class CrossReference(IO.ComfyNode):
     def define_schema(cls):
         return schema(
             "Arbor_CrossReference", "Cross Reference", CAT_LIST,
-            "Every combination of A × B, branch by branch. With group on, each A value gets its own "
-            "branch, named after it: rows = A, columns = B — ready for Image Grid.",
+            "Every combination of A × B, branch by branch (matched by path, then in order). With group "
+            "on, each A value gets its own sub-branch, named after it: rows = A, columns = B — ready for "
+            "Image Grid.",
             [tree_in("A"), tree_in("B"),
              IO.Boolean.Input("group", default=True, tooltip="One branch per A item")],
             [tree_out("A"), tree_out("B")],
