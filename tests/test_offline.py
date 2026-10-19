@@ -137,7 +137,7 @@ def test_nodes():
     print("tree / list nodes: OK")
 
 
-def test_panel_compare_grid():
+def test_panel_slider_grid():
     img = torch.rand(2, 32, 48, 3)
     tree = T.DataTree({(0, 0): [1, 2.5, "hi"], (0, 1): [img, None, True]})
     out = run(nodes_panel.Panel, data=[tree])
@@ -149,9 +149,23 @@ def test_panel_compare_grid():
     assert res(out)[0] == [tree], "panel passes data through"
     flat = run(nodes_panel.Panel, data=[1, 2, 3]).ui["arbor_panel"][0]
     assert flat["kind"] == "list" and flat["stats"]["items"] == 3
+    assert res(out)[1] is tree, "tree output is the input tree"
 
-    cmp_ = run(nodes_image.ImageCompare,
-               images={"image0": [img], "image1": [torch.rand(1, 64, 64, 3)]}).ui["arbor_compare"][0]
+    # unconnected: typed text, Grasshopper style
+    typed = run(nodes_panel.Panel, text="a cat\n7\n3.5\n\n  \n-2\nnot 1", parse_numbers=True, multiline=False)
+    values, ttree = res(typed)
+    assert ttree.branches == {(0,): ["a cat", 7, 3.5], (1,): [-2, "not 1"]}, ttree.branches
+    assert values == ["a cat", 7, 3.5, -2, "not 1"]
+    assert typed.ui["arbor_panel"][0]["source"] == "text"
+    raw = res(run(nodes_panel.Panel, text="7\n8", parse_numbers=False, multiline=False))[1]
+    assert raw.branches == {(0,): ["7", "8"]}
+    one = res(run(nodes_panel.Panel, text="line 1\n\nline 2", parse_numbers=True, multiline=True))
+    assert one[0] == ["line 1\n\nline 2"]
+    empty = res(run(nodes_panel.Panel, text="", parse_numbers=True, multiline=False))
+    assert empty[0] == [""], "empty panel still emits one item"
+
+    cmp_ = run(nodes_image.ImageSlider,
+               images={"image0": [img], "image1": [torch.rand(1, 64, 64, 3)]}).ui["arbor_slider"][0]
     assert [s["label"] for s in cmp_["slides"]] == ["image0 · 1/2", "image0 · 2/2", "image1"]
     assert cmp_["slides"][2]["w"] == 64
 
@@ -167,7 +181,7 @@ def test_panel_compare_grid():
     plain = res(run(nodes_grid.TreeToGrid, images=[torch.rand(1, 16, 16, 3), torch.rand(3, 16, 16, 3)],
                     fit="original", cell_size=0, gap=0, font_size=12, theme="dark", path_labels=False))[0]
     assert plain.shape[2] == 4 * 16, plain.shape  # one row, batch expanded to columns
-    print("panel / compare / grid: OK")
+    print("panel / slider / grid: OK")
 
 
 def test_registration():
@@ -185,6 +199,6 @@ if __name__ == "__main__":
     test_tree_algebra()
     test_cross_and_rebuild()
     test_nodes()
-    test_panel_compare_grid()
+    test_panel_slider_grid()
     test_registration()
     print("ALL OK")

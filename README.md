@@ -23,17 +23,20 @@ Split Text ───┘   (rows = A)        └─ Tree → List ─► CLIP Tex
 
 | Category | Nodes |
 |---|---|
-| **Arbor/Image** | Image Compare · Tree → Grid |
+| **Arbor/Image** | Image Slider · Tree → Grid |
 | **Arbor/Data** | Panel · Construct Tree · Series · Range · Split Text |
 | **Arbor/Tree** | Tree → List · List → Tree · Graft · Flatten · Simplify · Flip Matrix · Shift Paths · Renumber · Tree Branch · Merge · Entwine · Tree Statistics |
 | **Arbor/List** | List Item · Sub List · Cull Pattern · Dispatch · Partition · Repeat · Reverse List · Sort List · Cross Reference |
 
-**Image Compare** — connect any number of images (inputs grow as you connect) of any size.
+**Image Slider** — connect any number of images (inputs grow as you connect) of any size.
 *Flip*: drag the scrubber or press ← → to step through them. *Wipe*: A/B split that follows the pointer.
 *Real* keeps relative sizes, *Fit* fills the stage. Double-click opens the full image.
 
-**Panel** — connect anything. Trees show collapsible branches with paths and counts; images show thumbnails;
-the copy button exports the whole structure as text. Data passes through unchanged.
+**Panel** — works both ways, like Grasshopper's panel.
+*Connected*: a viewer. Trees show collapsible branches with paths and counts, images show thumbnails,
+the copy button exports the whole structure as text, and the data passes through unchanged.
+*Unconnected*: type data in. Each line is an item, an empty line starts a new branch; `1.0` turns
+number parsing on/off, `¶` makes the whole text one item. Outputs `data` (native list) and `tree`.
 
 Every tree input also accepts plain values or native lists (they become branch `{0}`).
 

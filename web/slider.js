@@ -1,4 +1,4 @@
-/* Arbor · Image Compare
+/* Arbor · Image Slider
  *
  * Flip mode: one image at a time; drag the scrubber under the stage (or use
  *            ← →) to move through every connected image / frame.
@@ -12,9 +12,9 @@
 import { app } from "../../scripts/app.js";
 import { injectStyle, el, viewURL, isolatePointer, chain, showMenu, ICONS } from "./arbor_common.js";
 
-const NODE = "Arbor_ImageCompare";
+const NODE = "Arbor_ImageSlider";
 
-class CompareView {
+class SliderView {
   constructor(node) {
     this.node = node;
     this.slides = [];
@@ -275,16 +275,16 @@ class CompareView {
 }
 
 app.registerExtension({
-  name: "Arbor.ImageCompare",
+  name: "Arbor.ImageSlider",
   async beforeRegisterNodeDef(nodeType, nodeData) {
     if (nodeData?.name !== NODE) return;
     injectStyle();
 
     chain(nodeType.prototype, "onNodeCreated", function () {
       this.properties ||= {};
-      const view = new CompareView(this);
-      this.__arborCompare = view;
-      this.addDOMWidget("arbor_compare", "arbor-compare", view.root, {
+      const view = new SliderView(this);
+      this.__arborSlider = view;
+      this.addDOMWidget("arbor_slider", "arbor-slider", view.root, {
         serialize: false,
         hideOnZoom: false,
         getMinHeight: () => 220,
@@ -294,8 +294,8 @@ app.registerExtension({
     });
 
     chain(nodeType.prototype, "onExecuted", function (output) {
-      const data = output?.arbor_compare?.[0];
-      if (data) this.__arborCompare?.setSlides(data.slides);
+      const data = output?.arbor_slider?.[0];
+      if (data) this.__arborSlider?.setSlides(data.slides);
     });
   },
 });

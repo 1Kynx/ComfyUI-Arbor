@@ -112,6 +112,14 @@ const CSS = `
 .arb-thumb{display:block;max-width:64px;max-height:64px;border-radius:4px;margin:2px 0;flex:0 0 auto;
   border:1px solid var(--arb-line);cursor:zoom-in;}
 .arb-pnl.flat .arb-row{padding-left:8px;}
+.arb-pnl-edit{flex:1 1 auto;min-height:60px;width:100%;resize:none;outline:none;margin:0;
+  border-radius:8px;background:var(--arb-bg);border:1px solid var(--arb-line);color:var(--arb-fg);
+  padding:6px 9px;font:11.5px/1.6 "JetBrains Mono","Cascadia Code",Consolas,monospace;
+  white-space:pre;overflow:auto;tab-size:2;
+  scrollbar-width:thin;scrollbar-color:var(--arb-line) transparent;}
+.arb-pnl-edit:focus{border-color:color-mix(in srgb,var(--arb-accent) 70%,var(--arb-line));}
+.arb-pnl-edit::placeholder{color:var(--arb-sub);opacity:.7;}
+.arb-btn.arb-txt{font:600 10.5px/1 "JetBrains Mono",Consolas,monospace;min-width:26px;}
 .arb-more{padding:4px 8px;color:var(--arb-sub);font-style:italic;}
 `;
 
