@@ -319,23 +319,23 @@
   },
   "Arbor_NumberSlider": {
     "display_name": "Number Slider",
-    "description": "Grasshopper-style number slider: drag to set a value between min and max. decimals = 0 gives whole numbers.",
+    "description": "Grasshopper-style number slider: drag the bar to set a value between min and max, click it to type. A step of 1 gives whole numbers.",
     "inputs": {
       "value": {
         "name": "value",
-        "tooltip": "Current value (set by the slider)."
+        "tooltip": "Current value — set it on the bar."
       },
       "min": {
         "name": "min",
-        "tooltip": "Lower end of the range (click the left number to edit)."
+        "tooltip": "Lower end of the range (click the left number under the bar)."
       },
       "max": {
         "name": "max",
-        "tooltip": "Upper end of the range (click the right number to edit)."
+        "tooltip": "Upper end of the range (click the right number under the bar)."
       },
-      "decimals": {
-        "name": "decimals",
-        "tooltip": "Precision: 0 = whole numbers, 2 = steps of 0.01 (click the step chip to change)."
+      "step": {
+        "name": "step",
+        "tooltip": "Values snap to min + k × step: 1 = whole numbers, 0.05 = steps of 0.05, 0 = continuous. Also sets how many decimals are shown."
       }
     },
     "outputs": {

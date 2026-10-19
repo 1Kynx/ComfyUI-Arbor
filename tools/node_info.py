@@ -337,32 +337,49 @@ a dog
 """))
 
 node("Arbor_NumberSlider", en=dict(
-    desc="Grasshopper-style number slider: drag to set a value between min and max. decimals = 0 gives whole numbers.",
-    inputs={"value": "Current value (set by the slider).", "min": "Lower end of the range (click the left number to edit).",
-            "max": "Upper end of the range (click the right number to edit).",
-            "decimals": "Precision: 0 = whole numbers, 2 = steps of 0.01 (click the step chip to change)."},
+    desc="Grasshopper-style number slider: drag the bar to set a value between min and max, click it to type. A step of 1 gives whole numbers.",
+    inputs={"value": "Current value — set it on the bar.",
+            "min": "Lower end of the range (click the left number under the bar).",
+            "max": "Upper end of the range (click the right number under the bar).",
+            "step": "Values snap to min + k × step: 1 = whole numbers, 0.05 = steps of 0.05, 0 = continuous. "
+                    "Also sets how many decimals are shown."},
     outputs=["The value as FLOAT.", "The value rounded to INT — for steps, seeds, counts."],
     doc="""## How to use
-- **Drag** the track to set the value; hold **Shift** for 10× finer control.
-- **Scroll** over the track or press **← / →** (with Shift: ×10) to step.
-- **Double-click** the big number to type an exact value.
-- Click the **min / max** numbers to change the range, the **step** chip to change precision.
+- **Drag** across the bar — the value follows the pointer. Hold **Shift** while dragging for 10× finer control.
+- **Click** the bar (without dragging) to type a value; Enter confirms, Esc cancels. A value outside the range widens the range.
+- **Scroll** over the bar or press **← / →** to move by one step (Shift: 10 steps).
+- Under the bar: click **min**, **step** or **max** to edit them.
+
+## Examples
+| min · step · max | values |
+|---|---|
+| 0 · 0.05 · 1 | 0, 0.05, 0.10, … 1 |
+| 1 · 1 · 50 | whole numbers — steps, batch sizes |
+| 0 · 0 · 1 | any value (shown with up to 4 decimals) |
 
 ## Tips
 - Connect *value* to any FLOAT widget (cfg, denoise, LoRA strength) or *int* to INT widgets (steps, seed).
 - Live Panels downstream follow the slider while you drag.
 """), zh=dict(
     name="数值滑块",
-    desc="Grasshopper 风格的数值滑块：在最小值和最大值之间拖动取值。小数位 = 0 时为整数。",
-    inputs={"value": ("数值", "当前数值（由滑块设置）。"), "min": ("最小值", "范围下限（点击左侧数字修改）。"),
-            "max": ("最大值", "范围上限（点击右侧数字修改）。"),
-            "decimals": ("小数位", "精度：0 = 整数，2 = 步长 0.01（点击步长按钮切换）。")},
+    desc="Grasshopper 风格的数值滑块：在滑条上拖动，在最小值和最大值之间取值；单击可直接输入。步长为 1 时为整数。",
+    inputs={"value": ("数值", "当前数值——在滑条上设置。"),
+            "min": ("最小值", "范围下限（点击滑条下方左侧的数字修改）。"),
+            "max": ("最大值", "范围上限（点击滑条下方右侧的数字修改）。"),
+            "step": ("步长", "数值对齐到 最小值 + k × 步长：1 = 整数，0.05 = 以 0.05 为间隔，0 = 连续取值。同时决定显示几位小数。")},
     outputs=[("数值", "FLOAT 形式的数值。"), ("整数", "四舍五入为 INT——用于步数、种子、数量。")],
     doc="""## 用法
-- **拖动**滑轨取值；按住 **Shift** 拖动可精细调节（10 倍精度）。
-- 在滑轨上**滚动鼠标**或按 **← / →**（加 Shift ×10）按步长加减。
-- **双击**大号数字直接输入精确值。
-- 点击两端的**最小值 / 最大值**修改范围，点击**步长**按钮切换精度。
+- 在滑条上**拖动**——数值跟随鼠标位置。拖动时按住 **Shift** 可精细调节（10 倍精度）。
+- **单击**滑条（不拖动）直接输入数值；Enter 确认，Esc 取消。输入超出范围的值时，范围会自动扩展。
+- 在滑条上**滚动鼠标**或按 **← / →** 按一个步长加减（按住 Shift 为 10 个步长）。
+- 滑条下方：点击 **最小值**、**步长** 或 **最大值** 即可修改。
+
+## 示例
+| 最小值 · 步长 · 最大值 | 取值 |
+|---|---|
+| 0 · 0.05 · 1 | 0, 0.05, 0.10, … 1 |
+| 1 · 1 · 50 | 整数——步数、批次大小 |
+| 0 · 0 · 1 | 任意值（最多显示 4 位小数） |
 
 ## 提示
 - *数值* 可接任何 FLOAT 参数（cfg、denoise、LoRA 强度），*整数* 接 INT 参数（步数、种子）。

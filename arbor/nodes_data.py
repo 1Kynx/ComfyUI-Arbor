@@ -21,10 +21,22 @@ def _match(tree: T.DataTree, k: int, j: int):
     return items[min(j, len(items) - 1)] if items else None
 
 
-def slider_value(value: float, lo: float, hi: float, decimals: int) -> float:
+def step_decimals(step: float) -> int:
+    """Decimal places a step implies: 1 -> 0, 0.1 -> 1, 0.05 -> 2 (max 6)."""
+    if not step or step <= 0:
+        return 6
+    text = f"{step:.6f}".rstrip("0").rstrip(".")
+    return len(text.split(".")[1]) if "." in text else 0
+
+
+def slider_value(value: float, lo: float, hi: float, step: float) -> float:
+    """Clamp to [lo, hi] and snap to lo + k * step (step 0 = no snapping)."""
     lo, hi = (lo, hi) if lo <= hi else (hi, lo)
     v = min(hi, max(lo, float(value)))
-    return round(v, max(0, int(decimals)))
+    if step and step > 0:
+        v = lo + round((v - lo) / step) * step
+        v = min(hi, max(lo, v))
+    return float(round(v, step_decimals(step)))
 
 
 class NumberSlider(IO.ComfyNode):
@@ -33,21 +45,20 @@ class NumberSlider(IO.ComfyNode):
         big = 1e9
         return IO.Schema(
             node_id="Arbor_NumberSlider", display_name="Number Slider", category=CAT_DATA,
-            description="Grasshopper-style number slider: drag to set a value between min and max. "
-                        "decimals = 0 gives whole numbers. Double-click the value to type it; "
-                        "click min / max to change the range.",
+            description="Grasshopper-style number slider: drag the bar to set a value between min and max, "
+                        "click it to type. A step of 1 gives whole numbers.",
             search_aliases=["slider", "number", "float", "int", "value", "parameter", "range slider"],
             inputs=[
-                IO.Float.Input("value", default=0.5, min=-big, max=big, step=0.001),
-                IO.Float.Input("min", default=0.0, min=-big, max=big, step=0.001),
-                IO.Float.Input("max", default=1.0, min=-big, max=big, step=0.001),
-                IO.Int.Input("decimals", default=2, min=0, max=6),
+                IO.Float.Input("value", default=0.5, min=-big, max=big, step=0.0001, round=False),
+                IO.Float.Input("min", default=0.0, min=-big, max=big, step=0.0001, round=False),
+                IO.Float.Input("max", default=1.0, min=-big, max=big, step=0.0001, round=False),
+                IO.Float.Input("step", default=0.01, min=0.0, max=big, step=0.0001, round=False),
             ],
             outputs=[IO.Float.Output(display_name="value"), IO.Int.Output(display_name="int")])
 
     @classmethod
-    def execute(cls, value, min, max, decimals) -> IO.NodeOutput:
-        v = slider_value(value, min, max, decimals)
+    def execute(cls, value, min, max, step) -> IO.NodeOutput:
+        v = slider_value(value, min, max, step)
         return IO.NodeOutput(v, int(round(v)))
 
 

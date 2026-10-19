@@ -88,25 +88,29 @@ const CSS = `
 .arb-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 /* ------------------------------------------------------------- number slider */
-.arb-num{gap:8px;outline:none;justify-content:center;}
-.arb-num-top{display:flex;align-items:baseline;gap:6px;min-width:0;}
-.arb-num-val{font:600 20px/1.1 "JetBrains Mono","Cascadia Code",Consolas,monospace;
-  letter-spacing:-.01em;cursor:text;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.arb-num:focus-within .arb-num-val{color:var(--arb-accent);}
-.arb-num-step{font:10px/1 "JetBrains Mono",Consolas,monospace;height:20px;}
-.arb-num-row{display:flex;align-items:center;gap:8px;min-width:0;}
-.arb-num-end{font:10.5px/1 "JetBrains Mono",Consolas,monospace;color:var(--arb-sub);cursor:text;
-  padding:3px 4px;border-radius:4px;flex:0 0 auto;max-width:30%;overflow:hidden;text-overflow:ellipsis;}
-.arb-num-end:hover{background:var(--arb-hover);color:var(--arb-fg);}
-.arb-num-track{position:relative;flex:1 1 auto;height:22px;cursor:ew-resize;touch-action:none;}
-.arb-num-track::before{content:"";position:absolute;left:0;right:0;top:10px;height:3px;border-radius:3px;
-  background:var(--arb-line);}
-.arb-num-fill{position:absolute;left:0;top:10px;height:3px;border-radius:3px;background:var(--arb-accent);}
-.arb-num-knob{position:absolute;top:4px;width:14px;height:14px;margin-left:-7px;border-radius:50%;
-  background:var(--arb-fg);box-shadow:0 1px 4px rgba(0,0,0,.4);}
-.arb-num-track:hover .arb-num-knob,.arb-num-track.drag .arb-num-knob{box-shadow:0 0 0 4px var(--arb-accent-soft),0 1px 4px rgba(0,0,0,.4);}
-.arb-num-input{width:100%;min-width:48px;font:inherit;color:var(--arb-fg);background:var(--arb-bg);
-  border:1px solid var(--arb-accent);border-radius:4px;padding:1px 4px;outline:none;}
+.arb-num{gap:4px;justify-content:center;}
+.arb-num-bar{position:relative;flex:0 0 auto;height:30px;border-radius:8px;overflow:hidden;cursor:ew-resize;
+  touch-action:none;user-select:none;outline:none;background:var(--arb-bg);border:1px solid var(--arb-line);
+  transition:border-color .12s;}
+.arb-num-bar:hover{border-color:color-mix(in srgb,var(--arb-fg) 28%,var(--arb-line));}
+.arb-num-bar:focus-visible,.arb-num-bar.drag{border-color:var(--arb-accent);}
+.arb-num-fill{position:absolute;left:0;top:0;bottom:0;pointer-events:none;
+  background:color-mix(in srgb,var(--arb-accent) 34%,transparent);}
+.arb-num-bar:hover .arb-num-fill{background:color-mix(in srgb,var(--arb-accent) 40%,transparent);}
+.arb-num-bar.drag .arb-num-fill{background:color-mix(in srgb,var(--arb-accent) 46%,transparent);}
+.arb-num-val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;
+  font:600 13.5px/1 "JetBrains Mono","Cascadia Code",Consolas,monospace;letter-spacing:-.01em;
+  white-space:nowrap;overflow:hidden;}
+.arb-num-val.editing{pointer-events:auto;padding:3px;}
+.arb-num-foot{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;padding:0 2px;}
+.arb-num-field{font:10.5px/1 "JetBrains Mono","Cascadia Code",Consolas,monospace;color:var(--arb-sub);
+  cursor:text;padding:3px 5px;border-radius:4px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.arb-num-field:hover{background:var(--arb-hover);color:var(--arb-fg);}
+.arb-num-field.editing{padding:0;flex:0 1 90px;}
+.arb-num-step{opacity:.8;}
+.arb-num-input{width:100%;min-width:40px;height:100%;box-sizing:border-box;font:inherit;text-align:center;
+  color:var(--arb-fg);background:var(--arb-bg);border:1px solid var(--arb-accent);border-radius:5px;
+  padding:2px 4px;outline:none;}
 
 /* ------------------------------------------------------------- panel */
 .arb-pnl-body{position:relative;flex:1 1 auto;min-height:60px;overflow:auto;contain:size;border-radius:8px;
@@ -251,10 +255,10 @@ const STRINGS = {
     item_one: "{n} item", item_other: "{n} items",
     depth: "depth {n}", listOf: "List · {items}", value: "Value", emptyValue: "Empty",
     largeGraph: "a large graph", missingLink: "a missing link",
-    valueTip: "Double-click to type a value",
-    precisionTip: "Precision — click to change",
+    barTip: "Drag to set · click to type · Shift = fine · scroll or ← → to step",
+    stepTip: "Click to set the step — 1 gives whole numbers, 0 is continuous",
     minTip: "Click to set the minimum", maxTip: "Click to set the maximum",
-    step: "step {s}",
+    stepIs: "step {s}", stepFree: "no step",
   },
   zh: {
     flip: "切换", wipe: "对比", real: "原比例", fit: "填充",
@@ -287,10 +291,10 @@ const STRINGS = {
     item_one: "{n} 项", item_other: "{n} 项",
     depth: "深度 {n}", listOf: "列表 · {items}", value: "单个值", emptyValue: "空",
     largeGraph: "节点过多的工作流", missingLink: "缺失的连线",
-    valueTip: "双击直接输入数值",
-    precisionTip: "精度 — 点击切换",
+    barTip: "拖动取值 · 单击输入 · 按住 Shift 微调 · 滚轮或 ← → 按步长加减",
+    stepTip: "点击设置步长 — 1 为整数，0 为连续取值",
     minTip: "点击设置最小值", maxTip: "点击设置最大值",
-    step: "步长 {s}",
+    stepIs: "步长 {s}", stepFree: "无步长",
   },
 };
 

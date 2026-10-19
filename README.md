@@ -53,9 +53,10 @@ and a gutter shows every line's branch path and index (coloured by type). **Text
 is one item. **123 / abc** toggles reading values (`7` → INT, `3.5` → FLOAT, `true` → BOOLEAN).
 Long lines wrap; ⤢ opens a large editor; Ctrl+Enter still queues. Outputs `data` (native list) and `tree`.
 
-**Number Slider** — drag between min and max (Shift = fine, scroll or ← → to step). Double-click the
-value to type it, click min / max to change the range, click *step* to change precision.
-Outputs FLOAT and INT; live Panels follow while you drag.
+**Number Slider** — one bar: drag across it to set the value (Shift = fine), click it to type
+(a value outside the range widens the range), scroll or ← → to step. Click *min*, *step* or *max* under
+the bar to edit them; step 1 gives whole numbers, 0 is continuous. Outputs FLOAT and INT; live Panels
+follow while you drag.
 
 **True / false** — pattern inputs (Cull Pattern, Dispatch) take typed text (`T F`), a native BOOLEAN,
 a list of BOOLEANs, or a boolean tree such as Expression `x > 2` (matched branch by branch).

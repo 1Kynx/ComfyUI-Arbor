@@ -347,13 +347,20 @@ def test_v03_booleans_slider_text():
     tt = res(run(nodes_panel.Panel, text="true\nFalse\nTRUE\ntrue-ish", parse_numbers=True, multiline=False))[1]
     assert tt.branches == {(0,): [True, False, True, "true-ish"]}, tt.branches
 
-    # Number Slider clamps, rounds and swaps a reversed range
-    v, i = res(nodes_data.NumberSlider.execute(value=7.3456, min=0.0, max=5.0, decimals=2))
+    # Number Slider clamps, snaps to step and swaps a reversed range
+    v, i = res(nodes_data.NumberSlider.execute(value=7.3456, min=0.0, max=5.0, step=0.01))
     assert (v, i) == (5.0, 5)
-    v, i = res(nodes_data.NumberSlider.execute(value=0.3456, min=1.0, max=0.0, decimals=2))
+    v, i = res(nodes_data.NumberSlider.execute(value=0.3456, min=1.0, max=0.0, step=0.01))
     assert (v, i) == (0.35, 0)
-    v, i = res(nodes_data.NumberSlider.execute(value=2.6, min=0.0, max=10.0, decimals=0))
-    assert (v, i) == (3.0, 3)
+    v, i = res(nodes_data.NumberSlider.execute(value=2.6, min=0.0, max=10.0, step=1.0))
+    assert (v, i) == (3.0, 3) and isinstance(v, float)
+    v, _ = res(nodes_data.NumberSlider.execute(value=0.537, min=0.0, max=1.0, step=0.05))
+    assert v == 0.55
+    v, _ = res(nodes_data.NumberSlider.execute(value=4.0, min=1.0, max=9.0, step=2.0))
+    assert v == 5.0, "snaps to min + k * step"
+    v, _ = res(nodes_data.NumberSlider.execute(value=0.1234567, min=0.0, max=1.0, step=0.0))
+    assert v == 0.123457, "step 0 = continuous"
+    assert [nodes_data.step_decimals(s) for s in (1, 0.1, 0.05, 2.5)] == [0, 1, 2, 1]
 
     # long text reaches the Panel in full up to the limit, and is flagged when cut
     long = "x" * (PANEL_MAX_CHARS + 50)

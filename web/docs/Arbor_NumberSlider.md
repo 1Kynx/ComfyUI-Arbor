@@ -1,17 +1,17 @@
 # Number Slider
 
-Grasshopper-style number slider: drag to set a value between min and max. decimals = 0 gives whole numbers.
+Grasshopper-style number slider: drag the bar to set a value between min and max, click it to type. A step of 1 gives whole numbers.
 
 ## Inputs
 
 - **value** · *FLOAT*  
-  Current value (set by the slider).
+  Current value — set it on the bar.
 - **min** · *FLOAT*  
-  Lower end of the range (click the left number to edit).
+  Lower end of the range (click the left number under the bar).
 - **max** · *FLOAT*  
-  Upper end of the range (click the right number to edit).
-- **decimals** · *INT*  
-  Precision: 0 = whole numbers, 2 = steps of 0.01 (click the step chip to change).
+  Upper end of the range (click the right number under the bar).
+- **step** · *FLOAT*  
+  Values snap to min + k × step: 1 = whole numbers, 0.05 = steps of 0.05, 0 = continuous. Also sets how many decimals are shown.
 
 ## Outputs
 
@@ -21,10 +21,17 @@ Grasshopper-style number slider: drag to set a value between min and max. decima
   The value rounded to INT — for steps, seeds, counts.
 
 ## How to use
-- **Drag** the track to set the value; hold **Shift** for 10× finer control.
-- **Scroll** over the track or press **← / →** (with Shift: ×10) to step.
-- **Double-click** the big number to type an exact value.
-- Click the **min / max** numbers to change the range, the **step** chip to change precision.
+- **Drag** across the bar — the value follows the pointer. Hold **Shift** while dragging for 10× finer control.
+- **Click** the bar (without dragging) to type a value; Enter confirms, Esc cancels. A value outside the range widens the range.
+- **Scroll** over the bar or press **← / →** to move by one step (Shift: 10 steps).
+- Under the bar: click **min**, **step** or **max** to edit them.
+
+## Examples
+| min · step · max | values |
+|---|---|
+| 0 · 0.05 · 1 | 0, 0.05, 0.10, … 1 |
+| 1 · 1 · 50 | whole numbers — steps, batch sizes |
+| 0 · 0 · 1 | any value (shown with up to 4 decimals) |
 
 ## Tips
 - Connect *value* to any FLOAT widget (cfg, denoise, LoRA strength) or *int* to INT widgets (steps, seed).
