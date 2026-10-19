@@ -2,13 +2,17 @@
  *
  * Connected: a viewer. Trees render as collapsible branches ({0;1} N=3)
  * with indexed items; plain values and lists render flat; images show a
- * thumbnail (click to open). When everything upstream is a cheap data node
- * (see arbor/live.py) the view updates live as you edit — no queueing;
- * otherwise it shows the result of the last run.
+ * thumbnail. Long text folds to a few lines (click "more" to unfold), every
+ * item has a copy button, and ⤢ opens a large view. When everything
+ * upstream is a cheap data node (see arbor/live.py) the view updates live
+ * as you edit — no queueing; otherwise it shows the result of the last run.
+ *
  * Unconnected: an editor. In Lines mode each line is an item and an empty
- * line starts a new branch; in Text mode the whole text is one item. The
- * text and both options live in the node's own hidden widgets, so they are
- * saved with the workflow.
+ * line starts a new branch; a gutter shows every line's branch path and
+ * item index (coloured by the type it will become). In Text mode the whole
+ * text is one item. Long lines wrap; ⤢ opens a large editor. The text and
+ * both options live in the node's own hidden widgets, so they are saved
+ * with the workflow.
  */
 
 import { app } from "../../scripts/app.js";
@@ -18,7 +22,10 @@ import { injectStyle, el, viewURL, isolatePointer, chain, ICONS } from "./arbor_
 const NODE = "Arbor_Panel";
 const AUTO_COLLAPSE = 24; // start collapsed when the tree has more branches than this
 const LIVE_MS = 350;
+const FOLD_CHARS = 280;   // fold items longer than this...
+const FOLD_LINES = 4;     // ...or with more lines than this
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const fmtInt = (n) => n.toLocaleString("en-US");
 
 /* ------------------------------------------------------------ live preview */
 
@@ -77,17 +84,44 @@ function liveTick() {
   }
 }
 
-/* ------------------------------------------------------------ editor helpers */
+/* ------------------------------------------------------------ text model */
 
-/* mirror of nodes_panel.parse_text, for the live item count */
-function countText(text, multiline) {
-  if (multiline) return { branches: 1, items: 1 };
-  let branches = 0, items = 0;
-  for (const block of text.replace(/\r\n/g, "\n").split(/\n[ \t]*\n/)) {
-    const n = block.split("\n").filter((l) => l.trim() !== "").length;
-    if (n) { branches++; items += n; }
+const NUM_RE = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
+
+/* type a typed line will become (mirror of nodes_panel.parse_value) */
+function lineType(line, numbers) {
+  if (!numbers) return "str";
+  const t = line.trim();
+  if (/^(true|false)$/i.test(t) && (t === t.toLowerCase() || t === t.toUpperCase() || /^[TF][a-z]+$/.test(t))) return "bool";
+  if (/^[+-]?\d+$/.test(t)) return "int";
+  if (NUM_RE.test(t)) return "float";
+  return "str";
+}
+
+/* per-line gutter info + counts (mirror of nodes_panel.parse_text) */
+function analyse(text, multiline, numbers) {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  if (multiline) {
+    return { lines: lines.map(() => null), branches: text ? 1 : 0, items: text ? 1 : 0 };
   }
-  return { branches, items };
+  const out = [];
+  let branch = -1, idx = 0, open = false, items = 0;
+  for (const line of lines) {
+    if (/^[ \t]*$/.test(line)) { // separator, exactly like the server's \n[ \t]*\n split
+      open = false;
+      out.push(null);
+      continue;
+    }
+    if (line.trim() === "") { // other whitespace: not an item, but no new branch either
+      out.push(null);
+      continue;
+    }
+    if (!open) { branch++; idx = 0; open = true; }
+    out.push({ path: idx === 0 ? `{${branch}}` : "", i: idx, t: lineType(line, numbers) });
+    idx++;
+    items++;
+  }
+  return { lines: out, branches: branch + 1, items };
 }
 
 function hideWidget(w) {
@@ -97,13 +131,202 @@ function hideWidget(w) {
   w.options.hidden = true;
 }
 
-/* ------------------------------------------------------------ view */
+/* keep typing / clipboard inside an editable element; Ctrl/⌘+Enter still queues */
+function isolateKeys(elm) {
+  for (const ev of ["keydown", "keyup", "keypress"]) {
+    elm.addEventListener(ev, (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") return;
+      e.stopPropagation();
+    });
+  }
+  for (const ev of ["paste", "copy", "cut"]) elm.addEventListener(ev, (e) => e.stopPropagation());
+}
+
+function stopWheelWhenScrollable(elm) {
+  elm.addEventListener("wheel", (e) => {
+    if (elm.scrollHeight > elm.clientHeight + 1) e.stopPropagation();
+  }, { passive: true });
+}
+
+async function copyText(text, btn) {
+  try {
+    await navigator.clipboard.writeText(text);
+    btn?.classList.add("on");
+    setTimeout(() => btn?.classList.remove("on"), 700);
+  } catch (e) {
+    console.warn("[Arbor] copy failed", e);
+  }
+}
+
+/* ------------------------------------------------------------ editor */
+
+/* A textarea over a backdrop that mirrors its wrapped lines, so the gutter
+ * labels line up with logical lines even when long lines wrap. */
+class TextEditor {
+  constructor({ get, set, options, onChange }) {
+    this.get = get;
+    this.set = set;
+    this.options = options; // () => ({multiline, numbers})
+    this.onChange = onChange;
+    const root = (this.root = el("div", "arb-ed"));
+    this.back = el("div", "arb-ed-back");
+    this.ta = el("textarea", "arb-ed-ta");
+    this.ta.spellcheck = false;
+    root.append(this.back, this.ta);
+    this.ta.addEventListener("input", () => {
+      this.set(this.ta.value);
+      this.paint();
+      this.onChange?.();
+    });
+    this.ta.addEventListener("scroll", () => { this.back.scrollTop = this.ta.scrollTop; });
+    isolateKeys(this.ta);
+    stopWheelWhenScrollable(this.ta);
+    this.load();
+  }
+
+  load() {
+    const t = this.get() ?? "";
+    if (this.ta.value !== t) this.ta.value = t;
+    this.paint();
+  }
+
+  paint() {
+    const { multiline, numbers } = this.options();
+    this.root.classList.toggle("plain", multiline);
+    this.ta.placeholder = multiline
+      ? "Type text — the whole text is one item"
+      : "Type data — one item per line\n\nAn empty line starts a new branch";
+    const text = this.ta.value;
+    const info = analyse(text, multiline, numbers);
+    const frag = document.createDocumentFragment();
+    text.split("\n").forEach((line, k) => {
+      const row = el("div", "arb-ed-line");
+      row.textContent = line || "​";
+      const g = info.lines[k];
+      if (g) {
+        if (g.path) row.appendChild(el("span", "arb-ed-path")).textContent = g.path;
+        row.appendChild(el("span", `arb-ed-idx t-${g.t}`)).textContent = String(g.i);
+      }
+      frag.appendChild(row);
+    });
+    this.back.replaceChildren(frag);
+    this.back.scrollTop = this.ta.scrollTop;
+    this.info = info;
+  }
+}
+
+/* ------------------------------------------------------------ viewer */
+
+function renderData(body, d, state, opts = {}) {
+  body.replaceChildren();
+  for (const br of d.branches) {
+    const wrap = el("div", "arb-br" + (state.closed.has(br.path) ? " closed" : ""));
+    if (d.kind === "tree") {
+      const hd = el("div", "arb-br-hd");
+      hd.innerHTML = `<span class="arb-caret">▾</span><span class="arb-path"></span><span class="arb-n"></span>`;
+      hd.children[1].textContent = br.path;
+      hd.children[2].textContent = `N=${br.n}`;
+      hd.addEventListener("click", () => {
+        wrap.classList.toggle("closed");
+        if (wrap.classList.contains("closed")) state.closed.add(br.path);
+        else state.closed.delete(br.path);
+      });
+      wrap.appendChild(hd);
+    }
+    const list = el("div", "arb-br-items");
+    br.items.forEach((it, j) => list.appendChild(renderRow(it, j, `${br.path}#${j}`, state, opts)));
+    if (br.items.length < br.n) list.appendChild(el("div", "arb-more", `… ${br.n - br.items.length} more`));
+    if (!br.n) list.appendChild(el("div", "arb-more", "empty"));
+    wrap.appendChild(list);
+    body.appendChild(wrap);
+  }
+  if (d.stats.truncated) body.appendChild(el("div", "arb-more", "Display truncated — copy to get everything"));
+}
+
+function renderRow(it, j, key, state, opts) {
+  const r = el("div", "arb-row");
+  r.appendChild(el("span", "arb-idx", String(j)));
+  const v = el("div", `arb-val t-${it.t}`);
+  if (it.img) {
+    const img = el("img", "arb-thumb");
+    img.src = viewURL(it.img);
+    img.title = it.v;
+    img.addEventListener("click", () => window.open(viewURL(it.img), "_blank"));
+    v.appendChild(img);
+    v.appendChild(el("span", "", "")).textContent = it.v;
+  } else {
+    const text = it.t === "str" && it.v === "" ? '""' : it.v;
+    const lines = text.split("\n").length;
+    const long = !opts.unfold && (text.length > FOLD_CHARS || lines > FOLD_LINES);
+    const body = v.appendChild(el("div", "arb-txt"));
+    body.textContent = text;
+    if (long || it.len) {
+      const open = state.open.has(key);
+      body.classList.toggle("fold", long && !open);
+      const meta = el("div", "arb-fold");
+      const count = it.len ? `${fmtInt(it.len)} chars, cut at ${fmtInt(text.length)}` : `${fmtInt(text.length)} chars`;
+      if (long) {
+        const btn = meta.appendChild(el("button", "arb-link"));
+        btn.textContent = open ? "less" : "more";
+        btn.addEventListener("click", () => {
+          if (state.open.has(key)) state.open.delete(key);
+          else state.open.add(key);
+          const nowOpen = state.open.has(key);
+          body.classList.toggle("fold", !nowOpen);
+          btn.textContent = nowOpen ? "less" : "more";
+        });
+      }
+      meta.appendChild(el("span", "", "")).textContent = (lines > 1 ? `${lines} lines · ` : "") + count;
+      v.appendChild(meta);
+    }
+  }
+  r.appendChild(v);
+  if (!it.img) {
+    const cp = el("button", "arb-row-copy", ICONS.copy);
+    cp.title = "Copy this item";
+    cp.addEventListener("click", (e) => { e.stopPropagation(); copyText(it.v, cp); });
+    r.appendChild(cp);
+  }
+  return r;
+}
+
+/* ------------------------------------------------------------ large view */
+
+function openModal(title, buildBody, onClose) {
+  const overlay = el("div", "arb arb-modal-wrap");
+  const box = overlay.appendChild(el("div", "arb-modal"));
+  const hd = box.appendChild(el("div", "arb-bar arb-modal-hd"));
+  hd.appendChild(el("span", "arb-modal-title")).textContent = title;
+  const extra = hd.appendChild(el("span", "arb-sub"));
+  hd.appendChild(el("span", "arb-sp"));
+  const close = hd.appendChild(el("button", "arb-btn", "Done"));
+  const body = box.appendChild(el("div", "arb-modal-body"));
+  const done = () => {
+    overlay.remove();
+    window.removeEventListener("keydown", onKey, true);
+    onClose?.();
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); done(); }
+  };
+  close.addEventListener("click", done);
+  overlay.addEventListener("pointerdown", (e) => { if (e.target === overlay) done(); });
+  for (const ev of ["pointerdown", "mousedown", "wheel", "dblclick"]) {
+    box.addEventListener(ev, (e) => e.stopPropagation(), { passive: true });
+  }
+  window.addEventListener("keydown", onKey, true);
+  document.body.appendChild(overlay);
+  buildBody(body, extra);
+  return done;
+}
+
+/* ------------------------------------------------------------ panel */
 
 class PanelView {
   constructor(node) {
     this.node = node;
     this.data = null;
-    this.closed = new Set();
+    this.state = { closed: new Set(), open: new Set() };
     this.live = false;       // current data came from the live preview
     this.blockedBy = null;   // upstream node that prevents live preview
     this.liveError = null;
@@ -118,6 +341,10 @@ class PanelView {
 
   get connected() {
     return this.node.inputs?.find((i) => i.name === "data")?.link != null;
+  }
+
+  get opts() {
+    return { multiline: !!this.w("multiline")?.value, numbers: !!this.w("parse_numbers")?.value };
   }
 
   build() {
@@ -140,37 +367,33 @@ class PanelView {
     this.toggleBtn = el("button", "arb-btn", ICONS.collapse);
     this.toggleBtn.title = "Collapse / expand all branches";
     this.toggleBtn.addEventListener("click", () => this.toggleAll());
+    this.bigBtn = el("button", "arb-btn", ICONS.expand4);
+    this.bigBtn.title = "Open large view";
+    this.bigBtn.addEventListener("click", () => this.openLarge());
     this.copyBtn = el("button", "arb-btn", ICONS.copy);
-    this.copyBtn.title = "Copy as text";
-    this.copyBtn.addEventListener("click", () => this.copy());
+    this.copyBtn.title = "Copy everything as text";
+    this.copyBtn.addEventListener("click", () => {
+      const text = this.connected ? this.data?.text : this.w("text")?.value;
+      if (text != null) copyText(text, this.copyBtn);
+    });
     bar.append(this.dot, this.stats, el("span", "arb-sp"), this.modeSeg, this.typeBtn,
-      this.toggleBtn, this.copyBtn);
+      this.toggleBtn, this.bigBtn, this.copyBtn);
 
     this.body = el("div", "arb-pnl-body");
-    // wheel scrolls the list instead of zooming the canvas while it can scroll
-    this.body.addEventListener("wheel", (e) => {
-      const b = this.body;
-      if (b.scrollHeight > b.clientHeight + 1) e.stopPropagation();
-    }, { passive: true });
+    stopWheelWhenScrollable(this.body);
 
-    this.editor = el("textarea", "arb-pnl-edit");
-    this.editor.spellcheck = false;
-    this.editor.addEventListener("input", () => {
-      const w = this.w("text");
-      if (w) w.value = this.editor.value;
-      this.node.graph?.setDirtyCanvas?.(true, false);
-      this.renderStats();
+    this.editor = new TextEditor({
+      get: () => this.w("text")?.value ?? "",
+      set: (t) => {
+        const w = this.w("text");
+        if (w) w.value = t;
+        this.node.graph?.setDirtyCanvas?.(true, false);
+      },
+      options: () => this.opts,
+      onChange: () => this.renderStats(),
     });
-    // keep typing / clipboard inside the editor (no canvas shortcuts, no node paste)
-    for (const ev of ["keydown", "keyup", "keypress", "paste", "copy", "cut"]) {
-      this.editor.addEventListener(ev, (e) => e.stopPropagation());
-    }
-    this.editor.addEventListener("wheel", (e) => {
-      const t = this.editor;
-      if (t.scrollHeight > t.clientHeight + 1) e.stopPropagation();
-    }, { passive: true });
 
-    root.append(bar, this.body, this.editor);
+    root.append(bar, this.body, this.editor.root);
     isolatePointer(root);
   }
 
@@ -185,8 +408,7 @@ class PanelView {
   /* pull widget state into the DOM (after create / load) */
   sync() {
     for (const n of ["text", "parse_numbers", "multiline"]) hideWidget(this.w(n));
-    const t = this.w("text")?.value ?? "";
-    if (this.editor.value !== t) this.editor.value = t;
+    this.editor.load();
     this.update();
   }
 
@@ -196,7 +418,7 @@ class PanelView {
     this.live = live;
     this.liveError = null;
     if (first && data.kind === "tree" && data.branches.length > AUTO_COLLAPSE) {
-      data.branches.forEach((b) => this.closed.add(b.path));
+      data.branches.forEach((b) => this.state.closed.add(b.path));
     }
     this.update();
   }
@@ -248,10 +470,9 @@ class PanelView {
 
   update() {
     const viewing = this.connected;
-    const multiline = !!this.w("multiline")?.value;
-    const numbers = !!this.w("parse_numbers")?.value;
+    const { multiline, numbers } = this.opts;
     this.root.classList.toggle("editing", !viewing);
-    this.editor.style.display = viewing ? "none" : "";
+    this.editor.root.style.display = viewing ? "none" : "";
     this.body.style.display = viewing ? "" : "none";
 
     this.modeSeg.style.display = viewing ? "none" : "";
@@ -260,21 +481,19 @@ class PanelView {
     this.typeBtn.textContent = numbers ? "123" : "abc";
     this.typeBtn.classList.toggle("on", numbers);
     this.typeBtn.title = numbers
-      ? "Numbers on: 7 → INT, 3.5 → FLOAT. Click to keep every line as text"
-      : "Numbers off: every line stays text. Click to read numbers";
-    this.editor.placeholder = multiline
-      ? "Type text — the whole text is one item"
-      : "Type data — one item per line\n\nAn empty line starts a new branch";
+      ? "Typed values on: 7 → INT, 3.5 → FLOAT, true → BOOLEAN. Click to keep every line as text"
+      : "Typed values off: every line stays text. Click to read numbers and true/false";
 
     this.toggleBtn.style.display = viewing && this.data?.kind === "tree" && !this.liveError ? "" : "none";
     this.dot.style.display = viewing && this.live && !this.liveError ? "" : "none";
     if (viewing) this.render();
+    else this.editor.paint();
     this.renderStats();
   }
 
   renderStats() {
     if (!this.connected) {
-      const c = countText(this.editor.value, !!this.w("multiline")?.value);
+      const c = this.editor.info || analyse(this.w("text")?.value ?? "", this.opts.multiline, this.opts.numbers);
       this.stats.textContent = c.items
         ? `${plural(c.branches, "branch", "branches")} · ${plural(c.items, "item", "items")}`
         : "";
@@ -285,10 +504,7 @@ class PanelView {
       this.stats.textContent = "";
       return;
     }
-    const s = d.stats;
-    this.stats.textContent = d.kind === "tree"
-      ? `${plural(s.branches, "branch", "branches")} · ${plural(s.items, "item", "items")} · depth ${s.depth}`
-      : d.kind === "list" ? `List · ${plural(s.items, "item", "items")}` : s.items ? "Value" : "Empty";
+    this.stats.textContent = statsText(d);
   }
 
   render() {
@@ -296,16 +512,13 @@ class PanelView {
     const body = this.body;
     body.replaceChildren();
     if (this.liveError) {
-      const e = el("div", "arb-err");
-      e.textContent = this.liveError;
-      body.appendChild(e);
+      body.appendChild(el("div", "arb-err")).textContent = this.liveError;
       return;
     }
     if (!d || d.source !== "input") {
-      const msg = this.blockedBy
+      body.appendChild(el("div", "arb-empty")).textContent = this.blockedBy
         ? `Run to inspect\n${this.blockedBy} can't preview live`
         : "Run to inspect the input";
-      body.appendChild(el("div", "arb-empty")).textContent = msg;
       return;
     }
     this.root.classList.toggle("flat", d.kind !== "tree");
@@ -313,69 +526,56 @@ class PanelView {
       body.appendChild(el("div", "arb-empty", "No data"));
       return;
     }
-    for (const br of d.branches) {
-      const wrap = el("div", "arb-br" + (this.closed.has(br.path) ? " closed" : ""));
-      if (d.kind === "tree") {
-        const hd = el("div", "arb-br-hd");
-        hd.innerHTML = `<span class="arb-caret">▾</span><span class="arb-path"></span><span class="arb-n"></span>`;
-        hd.children[1].textContent = br.path;
-        hd.children[2].textContent = `N=${br.n}`;
-        hd.addEventListener("click", () => {
-          wrap.classList.toggle("closed");
-          if (wrap.classList.contains("closed")) this.closed.add(br.path);
-          else this.closed.delete(br.path);
-        });
-        wrap.appendChild(hd);
-      }
-      const list = el("div", "arb-br-items");
-      br.items.forEach((it, j) => list.appendChild(this.row(it, j)));
-      if (br.items.length < br.n) list.appendChild(el("div", "arb-more", `… ${br.n - br.items.length} more`));
-      if (!br.n) list.appendChild(el("div", "arb-more", "empty"));
-      wrap.appendChild(list);
-      body.appendChild(wrap);
-    }
-    if (d.stats.truncated) body.appendChild(el("div", "arb-more", "Display truncated — copy to get everything"));
-  }
-
-  row(it, j) {
-    const r = el("div", "arb-row");
-    r.appendChild(el("span", "arb-idx", String(j)));
-    const v = el("span", `arb-val t-${it.t}`);
-    if (it.img) {
-      const img = el("img", "arb-thumb");
-      img.src = viewURL(it.img);
-      img.title = it.v;
-      img.addEventListener("click", () => window.open(viewURL(it.img), "_blank"));
-      v.appendChild(img);
-      v.appendChild(el("span", "", ""));
-      v.lastChild.textContent = it.v;
-    } else {
-      v.textContent = it.t === "str" && it.v === "" ? '""' : it.v;
-    }
-    r.appendChild(v);
-    return r;
+    renderData(body, d, this.state);
   }
 
   toggleAll() {
     const d = this.data;
     if (!d) return;
-    const allClosed = d.branches.every((b) => this.closed.has(b.path));
-    this.closed.clear();
-    if (!allClosed) d.branches.forEach((b) => this.closed.add(b.path));
+    const allClosed = d.branches.every((b) => this.state.closed.has(b.path));
+    this.state.closed.clear();
+    if (!allClosed) d.branches.forEach((b) => this.state.closed.add(b.path));
     this.render();
   }
 
-  async copy() {
-    const text = this.connected ? this.data?.text : this.editor.value;
-    if (text == null) return;
-    try {
-      await navigator.clipboard.writeText(text);
-      this.copyBtn.classList.add("on");
-      setTimeout(() => this.copyBtn.classList.remove("on"), 700);
-    } catch (e) {
-      console.warn("[Arbor] copy failed", e);
+  openLarge() {
+    const title = this.node.title || "Panel";
+    if (!this.connected) {
+      openModal(title, (body, extra) => {
+        const big = new TextEditor({
+          get: () => this.w("text")?.value ?? "",
+          set: (t) => {
+            const w = this.w("text");
+            if (w) w.value = t;
+            this.node.graph?.setDirtyCanvas?.(true, false);
+          },
+          options: () => this.opts,
+          onChange: () => {
+            const c = big.info;
+            extra.textContent = `${plural(c.branches, "branch", "branches")} · ${plural(c.items, "item", "items")}`;
+          },
+        });
+        big.root.classList.add("big");
+        body.appendChild(big.root);
+        big.onChange();
+        setTimeout(() => big.ta.focus(), 0);
+      }, () => { this.editor.load(); this.renderStats(); });
+      return;
     }
+    if (!this.data || this.data.source !== "input") return;
+    openModal(title, (body, extra) => {
+      extra.textContent = statsText(this.data);
+      const list = body.appendChild(el("div", "arb-pnl-body big"));
+      renderData(list, this.data, this.state, { unfold: true });
+    }, () => this.render());
   }
+}
+
+function statsText(d) {
+  const s = d.stats;
+  return d.kind === "tree"
+    ? `${plural(s.branches, "branch", "branches")} · ${plural(s.items, "item", "items")} · depth ${s.depth}`
+    : d.kind === "list" ? `List · ${plural(s.items, "item", "items")}` : s.items ? "Value" : "Empty";
 }
 
 app.registerExtension({

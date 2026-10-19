@@ -15,6 +15,7 @@ from .tree import DataTree, format_path
 
 PANEL_MAX_ITEMS = 2000
 PANEL_MAX_THUMBS = 64
+PANEL_MAX_CHARS = 20000
 THUMB_PX = 160
 
 
@@ -132,7 +133,9 @@ def panel_payload(value) -> dict:
             if shown >= PANEL_MAX_ITEMS:
                 continue
             shown += 1
-            row = {"t": t, "v": text if len(text) <= 4000 else text[:4000] + "…"}
+            row = {"t": t, "v": text if len(text) <= PANEL_MAX_CHARS else text[:PANEL_MAX_CHARS]}
+            if len(text) > PANEL_MAX_CHARS:
+                row["len"] = len(text)  # front end marks it as cut
             if t == "image" and thumbs < PANEL_MAX_THUMBS:
                 row["img"] = save_temp(to_pil(v[0]), "panel", THUMB_PX)
                 thumbs += 1

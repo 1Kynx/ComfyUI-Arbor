@@ -24,7 +24,7 @@ Split Text ───┘   (rows = A)        └─ Tree → List ─► CLIP Tex
 | Category | Nodes |
 |---|---|
 | **Arbor/Image** | Image Slider · Tree → Grid · Load Folder as Tree · Save by Path · Smart Resize · Batch Pick |
-| **Arbor/Data** | Panel · Construct Tree · Series · Range · Split Text · Prompt Template · Expression · Random |
+| **Arbor/Data** | Panel · Number Slider · Construct Tree · Series · Range · Split Text · Prompt Template · Expression · Random |
 | **Arbor/Tree** | Tree → List · List → Tree · Graft · Flatten · Simplify · Flip Matrix · Shift Paths · Renumber · Tree Branch · Merge · Entwine · Tree Statistics |
 | **Arbor/List** | List Item · Sub List · Cull Pattern · Dispatch · Partition · Repeat · Reverse List · Sort List · Cross Reference |
 | **Arbor/Util** | Index Switch |
@@ -35,13 +35,23 @@ Split Text ───┘   (rows = A)        └─ Tree → List ─► CLIP Tex
 
 **Panel** — works both ways, like Grasshopper's panel.
 *Connected*: a viewer. Trees show collapsible branches with paths and counts, images show thumbnails,
-the copy button exports the whole structure as text, and the data passes through unchanged.
+long text folds to four lines (*more* unfolds it), every item has its own copy button, and ⤢ opens a
+large view. Data passes through unchanged.
 When everything upstream is a lightweight data node (Arbor data/tree/list nodes, core primitives,
 string and math nodes) the view updates **live** as you edit — no run needed (green dot).
 Anything heavier upstream (samplers, loaders, …) never runs on its own; the Panel then shows the last run.
-*Unconnected*: type data in. **Lines** mode: each line is an item, an empty line starts a new branch;
-**Text** mode: the whole text is one item. **123 / abc** toggles reading numbers (`7` → INT, `3.5` → FLOAT).
-Outputs `data` (native list) and `tree`.
+*Unconnected*: type data in. **Lines** mode: each line is an item, an empty line starts a new branch,
+and a gutter shows every line's branch path and index (coloured by type). **Text** mode: the whole text
+is one item. **123 / abc** toggles reading values (`7` → INT, `3.5` → FLOAT, `true` → BOOLEAN).
+Long lines wrap; ⤢ opens a large editor; Ctrl+Enter still queues. Outputs `data` (native list) and `tree`.
+
+**Number Slider** — drag between min and max (Shift = fine, scroll or ← → to step). Double-click the
+value to type it, click min / max to change the range, click *step* to change precision.
+Outputs FLOAT and INT; live Panels follow while you drag.
+
+**True / false** — pattern inputs (Cull Pattern, Dispatch) take typed text (`T F`), a native BOOLEAN,
+a list of BOOLEANs, or a boolean tree such as Expression `x > 2` (matched branch by branch).
+Index Switch takes a BOOLEAN as its index (False = 0, True = 1).
 
 **Prompt Template** — `a photo of {a}, {b}` filled from trees. *Cross* builds every combination as a
 grid-ready tree (rows = `{a}`, columns = the last variable); *zip* pairs items one by one.

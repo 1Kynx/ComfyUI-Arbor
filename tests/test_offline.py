@@ -315,6 +315,55 @@ def test_v02_nodes():
     print("v0.2 nodes: OK")
 
 
+def test_v03_booleans_slider_text():
+    from arbor_pkg.arbor import nodes_data, nodes_util
+    from arbor_pkg.arbor.preview import PANEL_MAX_CHARS
+
+    t = T.DataTree({(0,): [1, 2, 3, 4], (1,): [5, 6]})
+    # typed text still works
+    assert res(run(nodes_list.CullPattern, tree=[t], pattern="T F"))[0].branches == {(0,): [1, 3], (1,): [5]}
+    # a single native BOOLEAN
+    assert res(run(nodes_list.CullPattern, tree=[t], pattern=[False]))[0].branches == {(0,): [], (1,): []}
+    # a native list of BOOLEANs repeats like a typed pattern
+    assert res(run(nodes_list.CullPattern, tree=[t], pattern=[True, True, False]))[0].branches == {
+        (0,): [1, 2, 4], (1,): [5, 6]}
+    # a boolean tree is matched branch by branch (e.g. from Expression "x > 2")
+    mask = res(run(nodes_data.Expression, expression="x > 2", x=[t]))[0]
+    a, b = res(run(nodes_list.Dispatch, tree=[t], pattern=[mask]))
+    assert a.branches == {(0,): [3, 4], (1,): [5, 6]} and b.branches == {(0,): [1, 2], (1,): []}
+    assert T.to_bool("TRUE") and not T.to_bool(0) and not T.to_bool("off")
+    try:
+        T.to_bool("maybe")
+        raise AssertionError("non-boolean text must fail")
+    except ValueError:
+        pass
+    sch = nodes_list.CullPattern.define_schema()
+    pat = [i for i in sch.inputs if i.id == "pattern"][0]
+    assert "BOOLEAN" in pat.get_io_type() and "STRING" in pat.get_io_type()
+    # Index Switch takes a BOOLEAN as index
+    assert res(nodes_util.IndexSwitch.execute(True, {"input0": "off", "input1": "on"}))[0] == "on"
+
+    # Panel typed true / false
+    tt = res(run(nodes_panel.Panel, text="true\nFalse\nTRUE\ntrue-ish", parse_numbers=True, multiline=False))[1]
+    assert tt.branches == {(0,): [True, False, True, "true-ish"]}, tt.branches
+
+    # Number Slider clamps, rounds and swaps a reversed range
+    v, i = res(nodes_data.NumberSlider.execute(value=7.3456, min=0.0, max=5.0, decimals=2))
+    assert (v, i) == (5.0, 5)
+    v, i = res(nodes_data.NumberSlider.execute(value=0.3456, min=1.0, max=0.0, decimals=2))
+    assert (v, i) == (0.35, 0)
+    v, i = res(nodes_data.NumberSlider.execute(value=2.6, min=0.0, max=10.0, decimals=0))
+    assert (v, i) == (3.0, 3)
+
+    # long text reaches the Panel in full up to the limit, and is flagged when cut
+    long = "x" * (PANEL_MAX_CHARS + 50)
+    p = run(nodes_panel.Panel, data=["short", long]).ui["arbor_panel"][0]
+    rows = p["branches"][0]["items"]
+    assert rows[0]["v"] == "short" and "len" not in rows[0]
+    assert len(rows[1]["v"]) == PANEL_MAX_CHARS and rows[1]["len"] == PANEL_MAX_CHARS + 50
+    print("v0.3 booleans / slider / long text: OK")
+
+
 def test_registration():
     ids = [n.define_schema().node_id for n in pkg.NODES]
     assert len(ids) == len(set(ids)), "duplicate node ids"
@@ -333,5 +382,6 @@ if __name__ == "__main__":
     test_panel_slider_grid()
     test_live_preview()
     test_v02_nodes()
+    test_v03_booleans_slider_text()
     test_registration()
     print("ALL OK")

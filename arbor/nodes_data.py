@@ -1,4 +1,4 @@
-"""Data generators and per-item math: Prompt Template, Expression, Random."""
+"""Data generators and per-item math: Number Slider, Prompt Template, Expression, Random."""
 
 import itertools
 import random
@@ -19,6 +19,36 @@ def _match(tree: T.DataTree, k: int, j: int):
     paths = tree.paths()
     items = tree.branches[paths[min(k, len(paths) - 1)]]
     return items[min(j, len(items) - 1)] if items else None
+
+
+def slider_value(value: float, lo: float, hi: float, decimals: int) -> float:
+    lo, hi = (lo, hi) if lo <= hi else (hi, lo)
+    v = min(hi, max(lo, float(value)))
+    return round(v, max(0, int(decimals)))
+
+
+class NumberSlider(IO.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        big = 1e9
+        return IO.Schema(
+            node_id="Arbor_NumberSlider", display_name="Number Slider", category=CAT_DATA,
+            description="Grasshopper-style number slider: drag to set a value between min and max. "
+                        "decimals = 0 gives whole numbers. Double-click the value to type it; "
+                        "click min / max to change the range.",
+            search_aliases=["slider", "number", "float", "int", "value", "parameter", "range slider"],
+            inputs=[
+                IO.Float.Input("value", default=0.5, min=-big, max=big, step=0.001),
+                IO.Float.Input("min", default=0.0, min=-big, max=big, step=0.001),
+                IO.Float.Input("max", default=1.0, min=-big, max=big, step=0.001),
+                IO.Int.Input("decimals", default=2, min=0, max=6),
+            ],
+            outputs=[IO.Float.Output(display_name="value"), IO.Int.Output(display_name="int")])
+
+    @classmethod
+    def execute(cls, value, min, max, decimals) -> IO.NodeOutput:
+        v = slider_value(value, min, max, decimals)
+        return IO.NodeOutput(v, int(round(v)))
 
 
 class PromptTemplate(IO.ComfyNode):
@@ -145,4 +175,4 @@ class RandomPick(IO.ComfyNode):
         return IO.NodeOutput(t.map_branches(run))
 
 
-NODES = [PromptTemplate, Expression, RandomPick]
+NODES = [NumberSlider, PromptTemplate, Expression, RandomPick]

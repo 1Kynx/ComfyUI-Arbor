@@ -10,6 +10,10 @@ _FLOAT = re.compile(r"[+-]?(\d+\.\d*|\.\d+|\d+)([eE][+-]?\d+)?")
 
 def parse_value(s: str):
     t = s.strip()
+    if t in ("true", "True", "TRUE"):
+        return True
+    if t in ("false", "False", "FALSE"):
+        return False
     if _INT.fullmatch(t):
         return int(t)
     if _FLOAT.fullmatch(t):
@@ -50,7 +54,7 @@ class Panel(IO.ComfyNode):
                 IO.String.Input("text", multiline=True, default="",
                                 tooltip="Typed data, used when nothing is connected"),
                 IO.Boolean.Input("parse_numbers", default=True,
-                                 tooltip="Lines that look like numbers become INT / FLOAT"),
+                                 tooltip="Lines like 7 / 3.5 / true become INT / FLOAT / BOOLEAN"),
                 IO.Boolean.Input("multiline", default=False,
                                  tooltip="Whole text is one item instead of one item per line"),
             ],

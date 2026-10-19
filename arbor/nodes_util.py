@@ -19,8 +19,11 @@ class IndexSwitch(IO.ComfyNode):
                         "Unselected branches are not executed at all.",
             search_aliases=["switch", "select", "stream filter", "choose", "multiplexer", "any switch"],
             hidden=[IO.Hidden.prompt, IO.Hidden.unique_id],
-            inputs=[IO.Int.Input("index", default=0, min=-1000, max=1000,
-                                 tooltip="0 = first connected input; negative counts from the end"),
+            inputs=[IO.MultiType.Input(
+                        IO.Int.Input("index", default=0, min=-1000, max=1000,
+                                     tooltip="0 = first connected input; negative counts from the end. "
+                                             "A BOOLEAN works too: False = 0, True = 1"),
+                        types=[IO.Boolean]),
                     IO.Autogrow.Input("inputs", template=slot)],
             outputs=[IO.AnyType.Output(display_name="output"), IO.Int.Output(display_name="count")])
 
@@ -46,12 +49,14 @@ class IndexSwitch(IO.ComfyNode):
 
     @classmethod
     def check_lazy_status(cls, index, inputs=None):
+        index = int(index)  # BOOLEAN -> 0 / 1
         names = cls._connected(inputs)
         value, full_key = inputs[names[index % len(names)]]
         return [full_key] if value is None else []
 
     @classmethod
     def execute(cls, index, inputs=None) -> IO.NodeOutput:
+        index = int(index)
         names = cls._connected(inputs)
         return IO.NodeOutput(inputs[names[index % len(names)]], len(names))
 

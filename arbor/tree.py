@@ -227,6 +227,31 @@ def get_branch(tree: DataTree, path: Path | None = None, index: int | None = Non
 
 # ---------------------------------------------------------------- list ops
 
+_TRUTHY = {"t", "true", "1", "y", "yes", "on"}
+_FALSY = {"f", "false", "0", "n", "no", "off", ""}
+
+
+def to_bool(v) -> bool:
+    """Native BOOLEAN, numbers (0 = False) and 'true'/'false'-style text."""
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, (int, float)):
+        return v != 0
+    if isinstance(v, str):
+        t = v.strip().lower()
+        if t in _TRUTHY:
+            return True
+        if t in _FALSY:
+            return False
+        raise ValueError(f"{v!r} is not true/false")
+    if v is None:
+        return False
+    try:  # single-element tensors and the like
+        return bool(v)
+    except Exception:
+        raise ValueError(f"{type(v).__name__} is not true/false") from None
+
+
 def parse_pattern(text: str) -> list[bool]:
     """'T F', 'true,false', '1 0 1', 'TFT' -> [True, False, ...]"""
     s = str(text).strip().lower()
@@ -235,17 +260,31 @@ def parse_pattern(text: str) -> list[bool]:
     tokens = [t for t in re.split(r"[\s,;|]+", s) if t]
     if len(tokens) == 1 and len(tokens[0]) > 1 and set(tokens[0]) <= set("tf10"):
         tokens = list(tokens[0])
-    truthy = {"t", "true", "1", "y", "yes"}
-    falsy = {"f", "false", "0", "n", "no"}
-    out = []
-    for t in tokens:
-        if t in truthy:
-            out.append(True)
-        elif t in falsy:
-            out.append(False)
-        else:
-            raise ValueError(f"Pattern token {t!r} is not true/false")
-    return out
+    try:
+        return [to_bool(t) for t in tokens]
+    except ValueError as e:
+        raise ValueError(f"Pattern: {e}") from None
+
+
+def resolve_pattern(value) -> "list[bool] | DataTree":
+    """A pattern socket value: typed text, native BOOLEAN(s), or a tree of booleans.
+
+    Typed text -> one repeating list. Booleans / trees -> a tree of bools that
+    is matched branch by branch (longest list), like Grasshopper.
+    """
+    items = value if isinstance(value, list) else [value]
+    if len(items) == 1 and isinstance(items[0], str):
+        return parse_pattern(items[0])
+    t = to_tree(items)
+    return t.map_items(to_bool)
+
+
+def _branch_pattern(pattern, k: int) -> list[bool]:
+    if isinstance(pattern, DataTree):
+        rows = list(pattern.branches.values())
+        row = rows[min(k, len(rows) - 1)] if rows else []
+        return row or [True]
+    return pattern or [True]
 
 
 def list_item(tree: DataTree, index: int, wrap: bool = True) -> DataTree:
@@ -259,14 +298,18 @@ def list_item(tree: DataTree, index: int, wrap: bool = True) -> DataTree:
     return tree.map_branches(pick)
 
 
-def cull_pattern(tree: DataTree, pattern: list[bool]) -> DataTree:
-    return tree.map_branches(lambda _, items: [v for j, v in enumerate(items) if pattern[j % len(pattern)]])
+def dispatch(tree: DataTree, pattern) -> tuple[DataTree, DataTree]:
+    """Split by a repeating pattern (list) or a per-branch boolean tree."""
+    a, b = {}, {}
+    for k, (path, items) in enumerate(tree.items()):
+        pat = _branch_pattern(pattern, k)
+        a[path] = [v for j, v in enumerate(items) if pat[j % len(pat)]]
+        b[path] = [v for j, v in enumerate(items) if not pat[j % len(pat)]]
+    return DataTree(a), DataTree(b)
 
 
-def dispatch(tree: DataTree, pattern: list[bool]) -> tuple[DataTree, DataTree]:
-    a = tree.map_branches(lambda _, items: [v for j, v in enumerate(items) if pattern[j % len(pattern)]])
-    b = tree.map_branches(lambda _, items: [v for j, v in enumerate(items) if not pattern[j % len(pattern)]])
-    return a, b
+def cull_pattern(tree: DataTree, pattern) -> DataTree:
+    return dispatch(tree, pattern)[0]
 
 
 def partition(tree: DataTree, size: int) -> DataTree:

@@ -1,7 +1,7 @@
 """Per-branch list operations. Each one runs independently on every branch."""
 
 from . import tree as T
-from .common import IO, CAT_LIST, tree_in, tree_out, to_tree, unwrap
+from .common import IO, TREE, CAT_LIST, tree_in, tree_out, to_tree, unwrap
 
 
 def _schema(node_id, name, desc, inputs, outputs, aliases=()):
@@ -11,8 +11,11 @@ def _schema(node_id, name, desc, inputs, outputs, aliases=()):
 
 
 def _pattern_input():
-    return IO.String.Input("pattern", default="T F",
-                           tooltip="Repeating true/false pattern: 'T F', 'true,false', '1 0 1' or 'TFT'")
+    return IO.MultiType.Input(
+        IO.String.Input("pattern", default="T F",
+                        tooltip="Type a repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), "
+                                "or connect BOOLEAN values / a boolean tree (matched per branch)"),
+        types=[IO.Boolean, TREE])
 
 
 class ListItem(IO.ComfyNode):
@@ -53,7 +56,7 @@ class CullPattern(IO.ComfyNode):
 
     @classmethod
     def execute(cls, tree, pattern) -> IO.NodeOutput:
-        return IO.NodeOutput(T.cull_pattern(to_tree(tree), T.parse_pattern(unwrap(pattern))))
+        return IO.NodeOutput(T.cull_pattern(to_tree(tree), T.resolve_pattern(pattern)))
 
 
 class Dispatch(IO.ComfyNode):
@@ -65,7 +68,7 @@ class Dispatch(IO.ComfyNode):
 
     @classmethod
     def execute(cls, tree, pattern) -> IO.NodeOutput:
-        a, b = T.dispatch(to_tree(tree), T.parse_pattern(unwrap(pattern)))
+        a, b = T.dispatch(to_tree(tree), T.resolve_pattern(pattern))
         return IO.NodeOutput(a, b)
 
 
