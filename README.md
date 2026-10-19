@@ -10,14 +10,22 @@ Built on the v3 node schema; the custom widgets work in both the classic canvas 
 ComfyUI natively only has flat lists. A data tree keeps *structure*: every item lives on a path like `{0;2}`,
 so "6 images" can stay "3 rows × 2 columns" all the way to your comparison sheet.
 
+### XY plot in five nodes
+
 ```
-Series (cfg) ─┐                     ┌─ Tree → List ─► KSampler.cfg ─┐
-              ├─ Cross Reference ──┤                                ├─► VAE Decode ─► List → Tree ─► Tree → Grid
-Split Text ───┘   (rows = A)        └─ Tree → List ─► CLIP Text ────┘        (shape = A)       (rows × cols)
+Panel (cfg: 3 5 7) ──x─┐                ┌─ x ──► KSampler.cfg ─┐
+                       ├─ XY Lists ─────┤                       ├─► VAE Decode ─► List → Tree ─► Tree → Grid
+Panel (prompts) ────y──┘                ├─ y ──► CLIP Text ─────┘          ▲ shape        ▲ row / col labels
+                                        └─ shape ──────────────────────────┘
 ```
 
-`Tree → List` hands a native list to ordinary nodes (they run once per item);
-`List → Tree` pours the results back into the original branches.
+**XY Lists** turns parameter values into every combination as aligned native lists — ordinary nodes run once
+per combination — plus the grid **shape**. **List → Tree** pours the results back into rows × columns and
+**Tree → Grid** draws the sheet (row labels = the x Panel, column labels = the shape).
+Open *Templates → ComfyUI-Arbor → arbor_xy_sampler* and pick your checkpoint.
+
+For finer control use the building blocks: `Tree → List` hands any tree to ordinary nodes,
+`List → Tree` collects the results, `Cross Reference` builds combinations per branch.
 
 ## Nodes
 
@@ -25,7 +33,7 @@ Split Text ───┘   (rows = A)        └─ Tree → List ─► CLIP Tex
 |---|---|
 | **Arbor/Image** | Image Slider · Tree → Grid · Load Folder as Tree · Save by Path · Smart Resize · Batch Pick |
 | **Arbor/Data** | Panel · Number Slider · Construct Tree · Series · Range · Split Text · Prompt Template · Expression · Random |
-| **Arbor/Tree** | Tree → List · List → Tree · Graft · Flatten · Simplify · Flip Matrix · Shift Paths · Renumber · Tree Branch · Merge · Entwine · Tree Statistics |
+| **Arbor/Tree** | XY Lists · Tree → List · List → Tree · Graft · Flatten · Simplify · Flip Matrix · Shift Paths · Renumber · Tree Branch · Merge · Entwine · Tree Statistics |
 | **Arbor/List** | List Item · Sub List · Cull Pattern · Dispatch · Partition · Repeat · Reverse List · Sort List · Cross Reference |
 | **Arbor/Util** | Index Switch |
 
@@ -73,7 +81,7 @@ Every tree input also accepts plain values or native lists (they become branch `
 ## Install
 
 Clone into `ComfyUI/custom_nodes/` and restart. No extra dependencies.
-An example workflow ships in `example_workflows/` (Templates → ComfyUI-Arbor).
+Example workflows ship in `example_workflows/` (Templates → ComfyUI-Arbor): `arbor_xy_sampler` (a real XY plot — pick your checkpoint) and `arbor_xy_demo` (no model needed).
 
 ## Tests
 

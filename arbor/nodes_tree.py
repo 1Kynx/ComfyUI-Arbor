@@ -132,6 +132,71 @@ class TreeToList(IO.ComfyNode):
         return IO.NodeOutput(items, len(items))
 
 
+MAX_COMBOS = 10000
+
+
+class XYLists(IO.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return IO.Schema(
+            node_id="Arbor_XYLists", display_name="XY Lists", category=CAT_TREE,
+            description="One step from parameter values to a batch run: every combination of x, y "
+                        "(and z) as aligned native lists — wire x, y, z straight into ordinary nodes "
+                        "(they run once per combination) — plus the grid shape for List → Tree. "
+                        "Rows = x, columns = y (with z: rows = x × y, columns = z).",
+            search_aliases=["xy plot", "xyz plot", "grid search", "parameter sweep", "combinations",
+                            "cartesian", "batch combinations"],
+            is_input_list=True,
+            inputs=[
+                tree_in("x", tooltip="Values for rows: a tree, a list or a single value"),
+                tree_in("y", optional=True, tooltip="Values for columns"),
+                tree_in("z", optional=True, tooltip="Optional third parameter (columns; rows become x × y)"),
+                IO.Combo.Input("mode", options=["cross", "zip"], default="cross",
+                               tooltip="cross: every combination · zip: item by item (longest list)"),
+            ],
+            outputs=[
+                IO.AnyType.Output(display_name="x", is_output_list=True),
+                IO.AnyType.Output(display_name="y", is_output_list=True),
+                IO.AnyType.Output(display_name="z", is_output_list=True),
+                tree_out("shape", tooltip="Grid layout of the runs: connect to List → Tree's shape. "
+                                          "Its items are the column values, so it also works as col_labels"),
+                IO.Int.Output(display_name="count"),
+            ])
+
+    @classmethod
+    def execute(cls, x, mode, y=None, z=None) -> IO.NodeOutput:
+        xs = to_tree(x).flat()
+        ys = to_tree(y).flat() if connected(y) else []
+        zs = to_tree(z).flat() if connected(z) else []
+        if not xs:
+            raise ValueError("XY Lists: x is empty")
+        if connected(y) and not ys or connected(z) and not zs:
+            raise ValueError("XY Lists: y or z is connected but empty")
+        ox, oy, oz, shape = [], [], [], {}
+
+        if unwrap(mode) == "zip":
+            n = max(len(xs), len(ys), len(zs))
+            pick = lambda vals, i: vals[min(i, len(vals) - 1)] if vals else None
+            for i in range(n):
+                ox.append(pick(xs, i)), oy.append(pick(ys, i)), oz.append(pick(zs, i))
+            shape[(0,)] = list(ox)  # one row, labelled by x
+        else:
+            total = len(xs) * max(1, len(ys)) * max(1, len(zs))
+            if total > MAX_COMBOS:
+                raise ValueError(f"XY Lists: {total} combinations (max {MAX_COMBOS})")
+            for i, xv in enumerate(xs):
+                for j, yv in enumerate(ys or [None]):
+                    for zv in zs or [None]:
+                        ox.append(xv), oy.append(yv), oz.append(zv)
+                    if zs:
+                        shape[(i, j)] = list(zs)
+                if not zs:
+                    shape[(i,)] = list(ys) if ys else [xv]
+            if not ys and not zs:  # a single parameter is one row
+                shape = {(0,): list(xs)}
+        return IO.NodeOutput(ox, oy, oz, T.DataTree(shape), len(ox))
+
+
 class ListToTree(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
@@ -264,6 +329,6 @@ class TreeInfo(IO.ComfyNode):
 
 
 NODES = [ConstructTree, NumberSeries, NumberRange, SplitText,
-         TreeToList, ListToTree,
+         XYLists, TreeToList, ListToTree,
          Graft, Flatten, Simplify, FlipMatrix, ShiftPaths, Renumber,
          TreeBranch, MergeTrees, Entwine, TreeInfo]

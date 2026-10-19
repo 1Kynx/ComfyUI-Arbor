@@ -393,6 +393,30 @@ def test_review_fixes():
     print("review fixes: OK")
 
 
+def test_xy_lists():
+    cfg = T.DataTree({(0,): [4, 7]})
+    prompts = T.DataTree({(0,): ["cat", "dog", "fox"]})
+    x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[cfg], y=[prompts], mode="cross"))
+    assert n == 6 and x == [4, 4, 4, 7, 7, 7] and y == ["cat", "dog", "fox"] * 2 and z == [None] * 6
+    assert shape.branches == {(0,): ["cat", "dog", "fox"], (1,): ["cat", "dog", "fox"]}
+    assert nodes_tree.XYLists.define_schema().outputs[0].is_output_list
+    # results of the batch run pour back into the grid, and labels come straight from the inputs
+    back = T.rebuild([f"img{k}" for k in range(n)], shape)
+    assert back.branches[(1,)] == ["img3", "img4", "img5"]
+    assert nodes_grid.row_labels_for([cfg], 2) == ["4", "7"]
+    assert nodes_grid.col_labels_for([shape], 3) == ["cat", "dog", "fox"], "shape doubles as col labels"
+    # z: rows = x × y, columns = z
+    x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[cfg], y=[1, 2], z=["a", "b", "c"], mode="cross"))
+    assert n == 12 and shape.paths() == [(0, 0), (0, 1), (1, 0), (1, 1)] and z[:3] == ["a", "b", "c"]
+    # single parameter: one row
+    x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[cfg], mode="cross"))
+    assert x == [4, 7] and shape.branches == {(0,): [4, 7]}
+    # zip
+    x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[cfg], y=[prompts], mode="zip"))
+    assert x == [4, 7, 7] and y == ["cat", "dog", "fox"] and shape.branches == {(0,): [4, 7, 7]}
+    print("xy lists: OK")
+
+
 def test_registration():
     ids = [n.define_schema().node_id for n in pkg.NODES]
     assert len(ids) == len(set(ids)), "duplicate node ids"
@@ -413,5 +437,6 @@ if __name__ == "__main__":
     test_v02_nodes()
     test_v03_booleans_slider_text()
     test_review_fixes()
+    test_xy_lists()
     test_registration()
     print("ALL OK")
