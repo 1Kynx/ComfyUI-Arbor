@@ -17,7 +17,7 @@
 
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { injectStyle, el, viewURL, isolatePointer, chain, ICONS } from "./arbor_common.js";
+import { injectStyle, el, viewURL, isolatePointer, isolateKeys, markChanged, chain, ICONS } from "./arbor_common.js";
 
 const NODE = "Arbor_Panel";
 const AUTO_COLLAPSE = 24; // start collapsed when the tree has more branches than this
@@ -129,17 +129,6 @@ function hideWidget(w) {
   w.hidden = true;
   w.options ||= {};
   w.options.hidden = true;
-}
-
-/* keep typing / clipboard inside an editable element; Ctrl/⌘+Enter still queues */
-function isolateKeys(elm) {
-  for (const ev of ["keydown", "keyup", "keypress"]) {
-    elm.addEventListener(ev, (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") return;
-      e.stopPropagation();
-    });
-  }
-  for (const ev of ["paste", "copy", "cut"]) elm.addEventListener(ev, (e) => e.stopPropagation());
 }
 
 function stopWheelWhenScrollable(elm) {
@@ -387,7 +376,7 @@ class PanelView {
       set: (t) => {
         const w = this.w("text");
         if (w) w.value = t;
-        this.node.graph?.setDirtyCanvas?.(true, false);
+        markChanged(this.node);
       },
       options: () => this.opts,
       onChange: () => this.renderStats(),
@@ -401,7 +390,7 @@ class PanelView {
     const w = this.w(name);
     if (!w || w.value === value) return;
     w.value = value;
-    this.node.graph?.setDirtyCanvas?.(true, false);
+    markChanged(this.node);
     this.update();
   }
 
@@ -547,7 +536,7 @@ class PanelView {
           set: (t) => {
             const w = this.w("text");
             if (w) w.value = t;
-            this.node.graph?.setDirtyCanvas?.(true, false);
+            markChanged(this.node);
           },
           options: () => this.opts,
           onChange: () => {

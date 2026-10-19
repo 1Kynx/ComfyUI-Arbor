@@ -11,7 +11,7 @@
  */
 
 import { app } from "../../scripts/app.js";
-import { injectStyle, el, isolatePointer, chain } from "./arbor_common.js";
+import { injectStyle, el, isolatePointer, isolateKeys, markChanged, chain } from "./arbor_common.js";
 
 const NODE = "Arbor_NumberSlider";
 const MAX_DECIMALS = 4;
@@ -139,7 +139,7 @@ class SliderView {
     const v = Number(Math.min(hi, Math.max(lo, raw)).toFixed(d));
     const wv = this.w("value");
     if (wv && wv.value !== v) wv.value = v;
-    this.node.graph?.setDirtyCanvas?.(true, false);
+    markChanged(this.node);
     this.render();
   }
 
@@ -161,9 +161,8 @@ class SliderView {
       if (ok && input.value.trim() !== "" && Number.isFinite(n)) this.write({ [name]: n });
       else this.render();
     };
-    for (const ev of ["keyup", "keypress", "paste", "copy", "cut"]) input.addEventListener(ev, (e) => e.stopPropagation());
+    isolateKeys(input);
     input.addEventListener("keydown", (e) => {
-      e.stopPropagation();
       if (e.key === "Enter") commit(true);
       if (e.key === "Escape") commit(false);
     });

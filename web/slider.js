@@ -10,7 +10,7 @@
  */
 
 import { app } from "../../scripts/app.js";
-import { injectStyle, el, viewURL, isolatePointer, chain, showMenu, ICONS } from "./arbor_common.js";
+import { injectStyle, el, viewURL, isolatePointer, markChanged, chain, showMenu, ICONS } from "./arbor_common.js";
 
 const NODE = "Arbor_ImageSlider";
 
@@ -45,6 +45,7 @@ class SliderView {
     this.scaleBtn.addEventListener("click", () => {
       this.scale = this.scale === "real" ? "fit" : "real";
       this.node.properties.arbor_scale = this.scale;
+      markChanged(this.node);
       this.render();
     });
     this.openBtn = el("button", "arb-btn", ICONS.open);
@@ -124,6 +125,7 @@ class SliderView {
   setMode(m) {
     this.mode = m;
     this.node.properties.arbor_mode = m;
+    markChanged(this.node);
     if (m === "wipe" && this.index === this.a && this.slides.length > 1) {
       this.index = (this.a + 1) % this.slides.length;
     }

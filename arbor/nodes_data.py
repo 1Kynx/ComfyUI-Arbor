@@ -6,7 +6,7 @@ import re
 
 from . import expr as E
 from . import tree as T
-from .common import IO, CAT_DATA, tree_in, tree_out, to_tree, unwrap
+from .common import IO, CAT_DATA, connected, tree_in, tree_out, to_tree, unwrap
 from .preview import label_of
 
 TEMPLATE_VARS = ["a", "b", "c", "d", "e", "f"]
@@ -74,7 +74,7 @@ class PromptTemplate(IO.ComfyNode):
     def execute(cls, template, mode, vars=None) -> IO.NodeOutput:
         text = str(unwrap(template, ""))
         used = [v for v in TEMPLATE_VARS if f"{{{v}}}" in text]
-        given = {k: to_tree(v) for k, v in (vars or {}).items() if v is not None and v != [None]}
+        given = {k: to_tree(v) for k, v in (vars or {}).items() if connected(v)}
         lists = {k: [label_of(x) for x in given[k].flat()] for k in used if k in given}
         lists = {k: v for k, v in lists.items() if v}
         names = [k for k in used if k in lists]

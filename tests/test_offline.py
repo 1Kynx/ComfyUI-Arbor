@@ -364,6 +364,35 @@ def test_v03_booleans_slider_text():
     print("v0.3 booleans / slider / long text: OK")
 
 
+def test_review_fixes():
+    from arbor_pkg.arbor import nodes_data
+    t = T.DataTree({(0,): [1, 2]})
+    # the trailing empty Autogrow slot arrives as [None] in a real run
+    m = res(run(nodes_tree.MergeTrees, trees={"tree0": [t], "tree1": [5], "tree2": [None]}))[0]
+    assert m.branches == {(0,): [1, 2, 5]}, m.branches
+    e = res(run(nodes_tree.Entwine, trees={"tree0": [t], "tree1": [t], "tree2": [None]}))[0]
+    assert e.paths() == [(0, 0), (1, 0)], e.paths()
+    pt = res(run(nodes_data.PromptTemplate, template="{a}-{b}", mode="cross",
+                 vars={"a": ["x"], "b": [None], "c": [None]}))[0]
+    assert pt.branches == {(0,): ["x-{b}"]}, pt.branches
+
+    # grid labels straight from Cross Reference outputs
+    a = T.DataTree({(0,): [256, 384, 512]})
+    b = T.DataTree({(0,): ["red", "blue"]})
+    ca, cb = T.cross_reference(a, b)
+    assert nodes_grid.row_labels_for([ca], 3) == ["256", "384", "512"]
+    assert nodes_grid.col_labels_for([cb], 2) == ["red", "blue"]
+    assert nodes_grid.row_labels_for([a], 3) == ["256", "384", "512"], "plain list still works"
+    assert nodes_grid.col_labels_for([b], 2) == ["red", "blue"]
+    imgs = T.rebuild([torch.rand(1, 8, 8, 3) for _ in range(6)], ca)
+    g1 = res(run(nodes_grid.TreeToGrid, images=[imgs], row_labels=[ca], col_labels=[cb], fit="fit",
+                 cell_size=0, gap=2, font_size=10, theme="light", path_labels=False))[0]
+    g2 = res(run(nodes_grid.TreeToGrid, images=[imgs], row_labels=[a], col_labels=[b], fit="fit",
+                 cell_size=0, gap=2, font_size=10, theme="light", path_labels=False))[0]
+    assert torch.equal(g1, g2), "cross-reference labels render exactly like the originals"
+    print("review fixes: OK")
+
+
 def test_registration():
     ids = [n.define_schema().node_id for n in pkg.NODES]
     assert len(ids) == len(set(ids)), "duplicate node ids"
@@ -383,5 +412,6 @@ if __name__ == "__main__":
     test_live_preview()
     test_v02_nodes()
     test_v03_booleans_slider_text()
+    test_review_fixes()
     test_registration()
     print("ALL OK")

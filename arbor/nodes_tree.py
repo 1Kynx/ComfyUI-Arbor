@@ -9,7 +9,7 @@ read through ``unwrap``.
 import re
 
 from . import tree as T
-from .common import IO, TREE, CAT_TREE, CAT_DATA, tree_in, tree_out, to_tree, unwrap
+from .common import IO, TREE, CAT_TREE, CAT_DATA, connected, tree_in, tree_out, to_tree, unwrap
 
 
 def _schema(node_id, display_name, category, description, inputs, outputs, aliases=()):
@@ -150,7 +150,7 @@ class ListToTree(IO.ComfyNode):
         values = list if isinstance(list, type([])) else [list]
         if unwrap(split_batch):
             values = [f for v in values for f in T.split_batch(v)]
-        if shape is None or not shape:
+        if not connected(shape):
             return IO.NodeOutput(T.DataTree({(0,): values}))
         return IO.NodeOutput(T.rebuild(values, to_tree(shape)))
 
@@ -228,7 +228,7 @@ class MergeTrees(IO.ComfyNode):
 
     @classmethod
     def execute(cls, trees: IO.Autogrow.Type) -> IO.NodeOutput:
-        return IO.NodeOutput(T.merge([to_tree(v) for v in trees.values() if v is not None]))
+        return IO.NodeOutput(T.merge([to_tree(v) for v in trees.values() if connected(v)]))
 
 
 class Entwine(IO.ComfyNode):
@@ -242,7 +242,7 @@ class Entwine(IO.ComfyNode):
 
     @classmethod
     def execute(cls, trees: IO.Autogrow.Type) -> IO.NodeOutput:
-        return IO.NodeOutput(T.entwine([to_tree(v) for v in trees.values() if v is not None]))
+        return IO.NodeOutput(T.entwine([to_tree(v) for v in trees.values() if connected(v)]))
 
 
 class TreeInfo(IO.ComfyNode):

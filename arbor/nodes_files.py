@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import fnmatch
+import hashlib
 import json
 import os
 import re
@@ -99,7 +100,11 @@ class LoadFolder(IO.ComfyNode):
             groups = scan_folder(resolve_folder(folder), pattern, subfolders, sort, limit)
         except Exception as e:
             return str(e)
-        return [(p, os.path.getmtime(p), os.path.getsize(p)) for v in groups.values() for p in v]
+        h = hashlib.sha1()
+        for files in groups.values():
+            for p in files:
+                h.update(f"{p}|{os.path.getmtime(p)}|{os.path.getsize(p)};".encode("utf-8", "replace"))
+        return h.hexdigest()
 
     @classmethod
     def execute(cls, folder, pattern, subfolders, sort, limit) -> IO.NodeOutput:

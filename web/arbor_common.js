@@ -5,6 +5,7 @@
  * ComfyUI's theme variables so light and dark palettes both work.
  */
 
+import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 
 const STYLE_ID = "arbor-style";
@@ -212,6 +213,36 @@ export function isolatePointer(element) {
   for (const ev of ["pointerdown", "mousedown", "dblclick"]) {
     element.addEventListener(ev, (e) => e.stopPropagation());
   }
+}
+
+/* Tell ComfyUI the workflow changed (unsaved marker, undo history) after an
+ * edit made from our own DOM, which its keyboard / mouse tracking can't see. */
+let changeTimer = 0;
+export function markChanged(node) {
+  node?.graph?.setDirtyCanvas?.(true, false);
+  clearTimeout(changeTimer);
+  changeTimer = setTimeout(() => {
+    try {
+      const ct = app.extensionManager?.workflow?.activeWorkflow?.changeTracker;
+      (ct?.captureCanvasState ?? ct?.checkState)?.call(ct);
+    } catch {}
+  }, 300);
+}
+
+/* Keep typing inside an editable element: plain keys and text-editing
+ * shortcuts stay local, every other Ctrl/⌘/Alt shortcut (save, queue, ...)
+ * still reaches ComfyUI. */
+const EDIT_KEYS = new Set(["a", "c", "v", "x", "z", "y", "arrowleft", "arrowright", "arrowup",
+  "arrowdown", "home", "end", "backspace", "delete"]);
+export function isolateKeys(elm) {
+  for (const ev of ["keydown", "keyup", "keypress"]) {
+    elm.addEventListener(ev, (e) => {
+      const mod = e.ctrlKey || e.metaKey || e.altKey;
+      if (mod && !EDIT_KEYS.has(String(e.key).toLowerCase())) return;
+      e.stopPropagation();
+    });
+  }
+  for (const ev of ["paste", "copy", "cut"]) elm.addEventListener(ev, (e) => e.stopPropagation());
 }
 
 /* Chain a prototype callback, keeping whatever was there. */

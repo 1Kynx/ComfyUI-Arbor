@@ -69,6 +69,31 @@ def _labels(value) -> list[str] | None:
     return [label_of(v) for v in to_tree(value).flat()]
 
 
+def row_labels_for(value, n_rows: int) -> list[str] | None:
+    """One label per row. A tree with one branch per row (e.g. Cross Reference's
+    A output, where every item of a branch repeats the row value) gives the
+    first item of each branch; anything else is read flat."""
+    if value is None:
+        return None
+    t = to_tree(value)
+    if t.branch_count == n_rows > 1 and all(t.branches.values()):
+        return [label_of(items[0]) for items in t.branches.values()]
+    return _labels(t)
+
+
+def col_labels_for(value, n_cols: int) -> list[str] | None:
+    """One label per column. A tree whose branches each hold a full row of
+    column values (e.g. Cross Reference's B output) gives its first branch."""
+    if value is None:
+        return None
+    t = to_tree(value)
+    if t.branch_count > 1:
+        first = next(iter(t.branches.values()))
+        if len(first) == n_cols:
+            return [label_of(v) for v in first]
+    return _labels(t)
+
+
 def _frames(items) -> list[Image.Image | None]:
     out = []
     for v in items:
@@ -161,8 +186,12 @@ class TreeToGrid(IO.ComfyNode):
             is_input_list=True,
             inputs=[
                 tree_in("images", tooltip="Image tree (or a plain image list = one row)"),
-                tree_in("row_labels", optional=True, tooltip="One label per row (any values)"),
-                tree_in("col_labels", optional=True, tooltip="One label per column (any values)"),
+                tree_in("row_labels", optional=True,
+                        tooltip="One label per row — a list, or a tree with one branch per row "
+                                "(Cross Reference A works directly)"),
+                tree_in("col_labels", optional=True,
+                        tooltip="One label per column — a list, or a tree whose branches hold the "
+                                "column values (Cross Reference B works directly)"),
                 IO.Combo.Input("fit", options=["fit", "original", "stretch"], default="fit",
                                tooltip="How images of different sizes fill a cell"),
                 IO.Int.Input("cell_size", default=0, min=0, max=8192, step=8,
@@ -178,7 +207,12 @@ class TreeToGrid(IO.ComfyNode):
     @classmethod
     def execute(cls, images, row_labels=None, col_labels=None, fit="fit", cell_size=0, gap=8,
                 font_size=24, theme="light", path_labels=False) -> IO.NodeOutput:
-        sheet = build_grid(images, _labels(row_labels), _labels(col_labels), unwrap(fit),
+        tree = to_tree(images)
+        n_rows = tree.branch_count
+        n_cols = max((sum(v.shape[0] if is_image(v) else 1 for v in items) for items in tree.branches.values()),
+                     default=0)
+        sheet = build_grid(tree, row_labels_for(row_labels, n_rows), col_labels_for(col_labels, n_cols),
+                           unwrap(fit),
                            unwrap(cell_size), unwrap(gap), unwrap(font_size), unwrap(theme),
                            unwrap(path_labels))
         arr = np.asarray(sheet, dtype=np.float32) / 255.0
