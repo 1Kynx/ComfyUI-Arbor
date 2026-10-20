@@ -179,10 +179,26 @@ def simplify(tree: DataTree) -> DataTree:
 
 
 def flip_matrix(tree: DataTree) -> DataTree:
-    """Rows become columns: item j of every branch goes to branch {j}."""
+    """Rows become columns: item j of every branch goes to branch j.
+
+    Like Grasshopper, the rows are the branches whose paths differ at one
+    index; that index becomes the column number and the rest of the path is
+    kept ({0;0}, {0;1} -> {0;0}, {0;1}, {0;2}, …). Items missing from short
+    rows are left out. Trees that are not a simple grid (paths of different
+    lengths, or differing at several indices) fall back to {0}, {1}, ….
+    """
+    paths = tree.paths()
     rows = list(tree.branches.values())
     width = max((len(r) for r in rows), default=0)
-    return DataTree({(j,): [r[j] for r in rows if j < len(r)] for j in range(width)})
+    lengths = {len(p) for p in paths}
+    varying = [i for i in range(min(lengths, default=0)) if len({p[i] for p in paths}) > 1]
+    if len(lengths) == 1 and len(varying) <= 1:
+        locus = varying[0] if varying else len(paths[0]) - 1
+        template = paths[0]
+        path_of = lambda j: template[:locus] + (j,) + template[locus + 1:]
+    else:
+        path_of = lambda j: (j,)
+    return DataTree({path_of(j): [r[j] for r in rows if j < len(r)] for j in range(width)})
 
 
 def shift_paths(tree: DataTree, offset: int) -> DataTree:
@@ -234,27 +250,54 @@ def renumber(tree: DataTree) -> DataTree:
     return DataTree({(i,): tree.branches[p] for i, p in enumerate(paths)}, names)
 
 
-def branch_for(tree: DataTree, path: Path | None, k: int) -> list | None:
-    """The branch of ``tree`` that goes with branch ``k`` (at ``path``) of another tree.
+# ---------------------------------------------------------------- data matching
+#
+# Grasshopper's rules, which every Arbor node that combines trees follows:
+#   - branches are paired by ORDER, never by path; a tree with fewer branches
+#     repeats its last branch (longest list on branches);
+#   - items inside paired branches are paired longest-list: the shorter list
+#     repeats its last item;
+#   - output paths come from the master input — the one with the longest paths
+#     (the first one on a tie) — and when it runs out of branches its last path
+#     goes on by counting up the last index.
 
-    The same path first, then the nearest parent — so {0} "Mira's description"
-    goes with every {0;i} of Mira's outfits — and otherwise longest-list order:
-    branch k, repeating the last branch.
-    """
+def branch_for(tree: DataTree, k: int) -> list | None:
+    """Branch k of ``tree`` in order, repeating the last branch."""
     if not tree.branches:
         return None
-    if path is not None:
-        for n in range(len(path), 0, -1):
-            if path[:n] in tree.branches:
-                return tree.branches[path[:n]]
     rows = list(tree.branches.values())
     return rows[min(k, len(rows) - 1)]
 
 
-def match_item(tree: DataTree, k: int, j: int, path: Path | None = None):
-    """Item j of the matching branch (see branch_for), repeating the last item."""
-    items = branch_for(tree, path, k)
+def match_item(tree: DataTree, k: int, j: int):
+    """Item j of branch k (both longest-list)."""
+    items = branch_for(tree, k)
     return items[min(j, len(items) - 1)] if items else None
+
+
+def master_of(trees: list[DataTree | None]) -> DataTree | None:
+    """The input whose paths the output takes: the longest paths win, the first one on a tie."""
+    live = [t for t in trees if t is not None and t.branches]
+    return max(live, key=lambda t: t.depth) if live else None   # max() keeps the first of equals
+
+
+def match_branches(*trees: DataTree | None) -> tuple[list[tuple[Path, list]], DataTree | None]:
+    """Pair the branches of several trees the Grasshopper way.
+
+    Returns ``[(output path, [branch of each tree or None]), ...]`` — one entry
+    per branch of the tree with the most branches — and the master tree.
+    ``None`` stands for an unconnected input and stays ``None``.
+    """
+    master = master_of(list(trees))
+    if master is None:
+        return [], None
+    count = max(t.branch_count for t in trees if t is not None)
+    mp = master.paths()
+    out = []
+    for k in range(count):
+        path = mp[k] if k < len(mp) else mp[-1][:-1] + (mp[-1][-1] + k - len(mp) + 1,)
+        out.append((path, [branch_for(t, k) if t is not None else None for t in trees]))
+    return out, master
 
 
 def get_branch(tree: DataTree, path: Path | None = None, index: int | None = None) -> DataTree:
@@ -324,9 +367,9 @@ def resolve_pattern(value) -> "list[bool] | DataTree":
     return t.map_items(to_bool)
 
 
-def _branch_pattern(pattern, k: int, path: Path) -> list[bool]:
+def _branch_pattern(pattern, k: int) -> list[bool]:
     if isinstance(pattern, DataTree):
-        return branch_for(pattern, path, k) or [True]
+        return branch_for(pattern, k) or [True]
     return pattern or [True]
 
 
@@ -368,10 +411,10 @@ def list_items(tree: DataTree, spec, wrap: bool = True) -> DataTree:
 
 
 def dispatch(tree: DataTree, pattern) -> tuple[DataTree, DataTree]:
-    """Split by a repeating pattern (list) or a per-branch boolean tree."""
+    """Split by a repeating pattern (list) or a boolean tree, whose branches pair with the list's in order."""
     a, b = {}, {}
     for k, (path, items) in enumerate(tree.items()):
-        pat = _branch_pattern(pattern, k, path)
+        pat = _branch_pattern(pattern, k)
         a[path] = [v for j, v in enumerate(items) if pat[j % len(pat)]]
         b[path] = [v for j, v in enumerate(items) if not pat[j % len(pat)]]
     return DataTree(a, tree.names), DataTree(b, tree.names)
@@ -414,24 +457,22 @@ def sort_list(tree: DataTree, order: str = "ascending") -> DataTree:
 
 
 def cross_reference(a: DataTree, b: DataTree, group: bool = True) -> tuple[DataTree, DataTree]:
-    """Every combination of A and B items, branch by branch.
+    """Every combination of A and B items, branch by branch (Grasshopper's Cross Reference).
 
-    The tree with more branches leads; the other one is matched to it like
-    Expression's y (same path, then the nearest parent, then in order). With
-    ``group`` each A item gets its own sub-branch, named after it, so the
-    result is a ready-made grid: rows = A values, columns = B values. The
-    branch it came from becomes the parent and keeps its name.
+    Branches pair in order and the output takes the master's paths (see
+    match_branches). Without ``group`` the combinations stay in the branch,
+    like Grasshopper; with it each A item gets its own sub-branch, named after
+    it — the same as grafting A first — so the result is a ready-made grid:
+    rows = A values, columns = B values. The branch becomes the parent and
+    keeps its name.
     """
     if not a.branches or not b.branches:
         return DataTree(), DataTree()
-    a_leads = a.branch_count >= b.branch_count
-    lead, other = (a, b) if a_leads else (b, a)
+    pairs, master = match_branches(a, b)
     out_a: dict[Path, list] = {}
     out_b: dict[Path, list] = {}
-    names: dict[Path, Any] = dict(lead.names)  # the paths come from the leading tree
-    for k, (path, own) in enumerate(lead.items()):
-        match = branch_for(other, path, k)
-        items_a, items_b = (own, match) if a_leads else (match, own)
+    names: dict[Path, Any] = dict(master.names)
+    for path, (items_a, items_b) in pairs:
         for i, va in enumerate(items_a):
             key = path + (i,) if group else path
             out_a.setdefault(key, []).extend([va] * len(items_b))

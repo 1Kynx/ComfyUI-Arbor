@@ -24,7 +24,9 @@ class ListItem(IO.ComfyNode):
 
     @classmethod
     def execute(cls, tree, index, wrap) -> IO.NodeOutput:
-        return IO.NodeOutput(T.list_items(to_tree(tree), unwrap(index), unwrap(wrap)))
+        values = index if isinstance(index, list) else [index]
+        spec = ", ".join(str(v) for v in values if v is not None)  # a connected list: every index
+        return IO.NodeOutput(T.list_items(to_tree(tree), spec, unwrap(wrap)))
 
 
 class Dispatch(IO.ComfyNode):
@@ -33,8 +35,8 @@ class Dispatch(IO.ComfyNode):
         pattern = IO.MultiType.Input(
             IO.String.Input("pattern", default="T F",
                             tooltip="Type a repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), "
-                                    "or connect BOOLEAN values / a boolean tree (matched by path: a "
-                                    "parent branch covers all of its children)"),
+                                    "or connect BOOLEAN values / a boolean tree (its branches pair with "
+                                    "the list's in order)"),
             types=[IO.Boolean, TREE])
         return _list_node(
             "Arbor_Dispatch", "Dispatch",
@@ -95,11 +97,13 @@ class CrossReference(IO.ComfyNode):
     def define_schema(cls):
         return schema(
             "Arbor_CrossReference", "Cross Reference", CAT_LIST,
-            "Every combination of A × B, branch by branch (matched by path, then in order). With group "
-            "on, each A value gets its own sub-branch, named after it: rows = A, columns = B — ready for "
-            "Image Grid.",
+            "Every combination of A × B, branch by branch (branches in order, like Grasshopper). With "
+            "group on, each A value gets its own sub-branch, named after it — like grafting A first: "
+            "rows = A, columns = B, ready for Image Grid.",
             [tree_in("A"), tree_in("B"),
-             IO.Boolean.Input("group", default=True, tooltip="One branch per A item")],
+             IO.Boolean.Input("group", default=False,
+                              tooltip="On: one sub-branch per A item (= graft A first). Off: Grasshopper's "
+                                      "plain Cross Reference, all combinations in the branch")],
             [tree_out("A"), tree_out("B")],
             ["cartesian", "combinations", "xy", "product", "permutation"])
 

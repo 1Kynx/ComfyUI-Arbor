@@ -1,22 +1,22 @@
 # Expression
 
-Evaluate a formula for every item of x (y matched by path, then longest-list), like Grasshopper's Expression.
+Evaluate a formula for every item, like Grasshopper's Expression: x and y are matched branch by branch in order and item by item (longest list).
 
 ## Inputs
 
 - **expression** · *STRING*  
   Python-style formula, e.g. x * 2 + 1, x > 3, upper(x), x if i % 2 else -x.
 - **x** · *any, optional*  
-  Main input — the result has the same tree layout. Leave empty for a single constant result.
+  First value — a tree, a list or a single value. Leave both empty for a single constant result.
 - **y** · *any, optional*  
-  Optional second value. Matched by path: the same branch, or the nearest parent — a y on {0} goes with every {0;…} of x — otherwise branch by branch in order; item by item, the last item repeats.
+  Optional second value, matched to x branch by branch in order and item by item; whichever is shorter repeats its last branch / item.
 
 ## Outputs
 
 - **data** · *any ×N*  
   Every result as plain data.
 - **tree** · *TREE*  
-  Results in x's tree layout. Comparisons give booleans — ready for Dispatch.
+  Results as a tree, with the paths of the input whose paths are longest (x on a tie). Comparisons give booleans — ready for Dispatch.
 
 ## Names
 | name | meaning |
@@ -28,9 +28,12 @@ Evaluate a formula for every item of x (y matched by path, then longest-list), l
 | `name` | the branch's name (`Mira`, `Mira · lab coat`), or empty |
 | `pi`, `e` | constants |
 
-## Parent branches
-x = outfits on `{0;0}`, `{0;1}`, `{1;0}`; y = one description per character on `{0}`, `{1}`.
-`y + " wearing " + x` gives every outfit its own character's description — the parent `{0}` goes with all of `{0;…}`. Template: *arbor_qwen_character_sheet*.
+## Data matching (as in Grasshopper)
+- Branches pair **in order**, not by path: x's 1st branch with y's 1st, 2nd with 2nd…; the input with fewer branches repeats its last one.
+- Items pair **longest-list**: the shorter list repeats its last item, so a single y works with every x.
+- The result takes the paths of the input with the **longest paths** (x on a tie); if that input runs out of branches, its last path counts on (`{0;1;0}`, `{0;1;1}`, …).
+
+So combine data where the branches line up: one description per character with the outfits per character (same branches, same order) — then go deeper. Template: *arbor_qwen_character_sheet*.
 
 ## Functions
 `abs min max round int float str bool len sum sqrt sin cos tan atan2 floor ceil log exp clamp(v, lo, hi) lerp(a, b, t) upper lower strip replace(s, a, b) join(sep, …)`

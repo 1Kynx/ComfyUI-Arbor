@@ -228,9 +228,9 @@ class Expression(IO.ComfyNode):
     def define_schema(cls):
         return schema(
             "Arbor_Expression", "Expression", CAT_DATA,
-            "Evaluate an expression for every item of x (y matched by path — a parent branch of y goes "
-            "with all of its children in x — otherwise longest-list). Names: x, y, i (item index), "
-            "b (branch index), n (branch length), name (the branch's name, e.g. a scene title). "
+            "Evaluate an expression for every item, matching x and y like Grasshopper: branches in "
+            "order, items longest-list, paths from the input with the longest paths. Names: x, y, "
+            "i (item index), b (branch index), n (branch length), name (the branch's name, e.g. a scene title). "
             "Functions: abs min max round int float str sqrt sin cos floor ceil log exp "
             "clamp lerp upper lower strip replace join len sum.",
             [IO.String.Input("expression", default="x * 2"), tree_in("x", optional=True), tree_in("y", optional=True)],
@@ -240,15 +240,20 @@ class Expression(IO.ComfyNode):
     @classmethod
     def execute(cls, expression, x=None, y=None) -> IO.NodeOutput:
         code = E.compile_expr(str(unwrap(expression, "")))
-        tx = to_tree(x) if connected(x) else T.DataTree({(0,): [None]})
+        tx = to_tree(x) if connected(x) else None
         ty = to_tree(y) if connected(y) else None
+        if tx is None and ty is None:
+            tx = T.DataTree({(0,): [None]})  # nothing connected: one constant result
+        pairs, master = T.match_branches(tx, ty)
         out = {}
-        for b, (path, items) in enumerate(tx.items()):
-            name = tx.label(path, label_of) or ""
-            out[path] = [E.evaluate(code, {"x": v, "y": T.match_item(ty, b, j, path) if ty is not None else None,
-                                           "i": j, "b": b, "n": len(items), "name": name})
-                         for j, v in enumerate(items)]
-        return both(T.DataTree(out, tx.names))
+        for b, (path, (bx, by)) in enumerate(pairs):
+            lengths = [len(v) for v in (bx, by) if v is not None]
+            n = 0 if 0 in lengths else max(lengths)  # longest list; an empty branch gives nothing
+            pick = lambda items, j: items[min(j, len(items) - 1)] if items else None
+            name = master.label(path, label_of) or ""
+            out[path] = [E.evaluate(code, {"x": pick(bx, j), "y": pick(by, j), "i": j, "b": b, "n": n, "name": name})
+                         for j in range(n)]
+        return both(T.DataTree(out, master.names))
 
 
 # ======================================================================= Random

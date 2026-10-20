@@ -37,8 +37,10 @@ connected flattens a tree and outputs its shape, and **Construct Tree** (or **Im
 
 Branches can hold branches — `{scene;shot}`, `{character;outfit}` — and the operations understand it:
 
-- **Parents pair with their children.** Expression and Dispatch match a second tree by path: a value on
-  `{0}` (Mira's description, a scene's sound) goes with every `{0;…}` (her outfits, the scene's shots).
+- **Data matching is Grasshopper's.** When a node combines trees (Expression, Dispatch, Cross Reference),
+  branches pair in order — the tree with fewer branches repeats its last one — items pair longest-list,
+  and the result takes the paths of the input with the longest paths. So combine data at the level where
+  the branches line up (one description per character with that character's outfits), then go deeper.
 - **Names ride along.** A branch can carry a name (`# Arrival` in a Panel, a folder in Load Folder,
   an x value in XY Lists). After Graft or Cross Reference it names the group, labels read `Mira · lab coat`,
   Shift Paths −1 folds back to `Mira`, and grids, Panels, sliders and saved folders show them.
@@ -87,16 +89,16 @@ the bar to edit them; step 1 gives whole numbers, 0 is continuous. A single outp
 follow while you drag.
 
 **True / false** — Dispatch's pattern input takes typed text (`T F`), a native BOOLEAN,
-a list of BOOLEANs, or a boolean tree such as Expression `x > 2` (matched by path: a value on a
-parent branch covers all of its children).
+a list of BOOLEANs, or a boolean tree such as Expression `x > 2` (its branches pair with the list's
+in order, like Grasshopper).
 Index Switch takes a BOOLEAN as its index (False = 0, True = 1).
 
 **Prompt Template** — `a photo of {a}, {b}` filled from trees. *Cross* builds every combination as a
 grid-ready tree (rows = `{a}`, columns = the last variable); *zip* pairs items one by one.
 
 **Expression** — per-item formula like `x * 2 + i` or `upper(x) if len(x) > 2 else x`.
-Names: `x`, `y` (matched by path — a parent branch goes with all of its children — then in order),
-`i` item index, `b` branch index, `n` branch length, `name` the branch's name.
+Names: `x`, `y` (matched like Grasshopper: branches in order, items longest-list), `i` item index,
+`b` branch index, `n` branch length, `name` the branch's name.
 A safe evaluator: no attribute access or imports.
 
 **Load Folder / Save Images by Path** — subfolders become branches on the way in, named after the folder;
@@ -135,9 +137,9 @@ input or output is undocumented.
 |---|---|---|
 | `arbor_qwen_storyboard` | A **Panel** storyboard (`# scene` lines, one shot per line) → **Expression** adds the style → **XY Lists** flattens it for the sampler → **Image Grid** with one row per scene; **Construct Tree** + **Save Images by Path** write one folder per scene. Start here — the next three use its output. | 6 images, 30 s |
 | `arbor_qwen_edit_by_scene` | Pictures × instructions as one tree: **Load Folder** gives the frames per scene, a **Panel** gives each scene its *own* edits (2 / 1 / 2). **Cross Reference** pairs them per shot, two **XY Lists** flatten both side by side for the edit model, **Construct Tree** + **Merge** put each original in front of its edits. | 10 edits, 75 s |
-| `arbor_h3_storyboard_video` | Keyframes (images), a motion line per shot and a sound line per scene (text) drive MiniMax H3 image-to-video **with audio**. The sound line reaches every shot of its scene by path; **Expression** `name` files each clip under its scene; **Batch Pick** + **Construct Tree** make a contact sheet per scene. | 6 clips, 110 s |
+| `arbor_h3_storyboard_video` | Keyframes (images), a motion line per shot and a sound line per scene (text) drive MiniMax H3 image-to-video **with audio**. Motion and sound are both one branch per scene, so the scene's sound line repeats for each of its shots (longest list); **Expression** `name` files each clip under its scene; **Batch Pick** + **Construct Tree** make a contact sheet per scene. | 6 clips, 110 s |
 | `arbor_folder_review` | No model: **Load Folder** reads the folders back as a named tree; contact sheet, **List Item** picks, **Reshape Tree** (flip matrix) compares shot by shot, **Image Slider** flips through. | — |
-| `arbor_qwen_character_sheet` | Three uneven levels — character → outfit → pose (Mira 3 outfits, Theo 2). **List Item** splits description from outfits per branch, **Cross Reference** nests the poses, **Expression** pairs each outfit with its *parent's* description, **Reshape Tree** *shift paths −1* folds outfits back into one row per character. | 15 images, 65 s |
+| `arbor_qwen_character_sheet` | Three uneven levels — character → outfit → pose (Mira 3 outfits, Theo 2). **List Item** splits description from outfits per branch, **Cross Reference** nests the poses and hands every outfit its character's description, **Expression** pairs them branch by branch (Grasshopper's matching), **Reshape Tree** *shift paths −1* folds outfits back into one row per character. | 15 images, 65 s |
 
 **Grids and sweeps:**
 

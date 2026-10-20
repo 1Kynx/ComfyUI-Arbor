@@ -460,12 +460,12 @@ Template `a photo of {a}, {b} style`, a = `cat, dog`, b = `oil, ink`:
 """))
 
 node("Arbor_Expression", en=dict(
-    desc="Evaluate a formula for every item of x (y matched by path, then longest-list), like Grasshopper's Expression.",
+    desc="Evaluate a formula for every item, like Grasshopper's Expression: x and y are matched branch by branch in order and item by item (longest list).",
     inputs={"expression": "Python-style formula, e.g. x * 2 + 1, x > 3, upper(x), x if i % 2 else -x.",
-            "x": "Main input — the result has the same tree layout. Leave empty for a single constant result.",
-            "y": "Optional second value. Matched by path: the same branch, or the nearest parent — a y on {0} goes with every {0;…} of x — otherwise branch by branch in order; item by item, the last item repeats."},
+            "x": "First value — a tree, a list or a single value. Leave both empty for a single constant result.",
+            "y": "Optional second value, matched to x branch by branch in order and item by item; whichever is shorter repeats its last branch / item."},
     outputs=["Every result as plain data.",
-             "Results in x's tree layout. Comparisons give booleans — ready for Dispatch."],
+             "Results as a tree, with the paths of the input whose paths are longest (x on a tie). Comparisons give booleans — ready for Dispatch."],
     doc="""## Names
 | name | meaning |
 |---|---|
@@ -476,9 +476,12 @@ node("Arbor_Expression", en=dict(
 | `name` | the branch's name (`Mira`, `Mira · lab coat`), or empty |
 | `pi`, `e` | constants |
 
-## Parent branches
-x = outfits on `{0;0}`, `{0;1}`, `{1;0}`; y = one description per character on `{0}`, `{1}`.
-`y + " wearing " + x` gives every outfit its own character's description — the parent `{0}` goes with all of `{0;…}`. Template: *arbor_qwen_character_sheet*.
+## Data matching (as in Grasshopper)
+- Branches pair **in order**, not by path: x's 1st branch with y's 1st, 2nd with 2nd…; the input with fewer branches repeats its last one.
+- Items pair **longest-list**: the shorter list repeats its last item, so a single y works with every x.
+- The result takes the paths of the input with the **longest paths** (x on a tie); if that input runs out of branches, its last path counts on (`{0;1;0}`, `{0;1;1}`, …).
+
+So combine data where the branches line up: one description per character with the outfits per character (same branches, same order) — then go deeper. Template: *arbor_qwen_character_sheet*.
 
 ## Functions
 `abs min max round int float str bool len sum sqrt sin cos tan atan2 floor ceil log exp clamp(v, lo, hi) lerp(a, b, t) upper lower strip replace(s, a, b) join(sep, …)`
@@ -495,12 +498,12 @@ x = outfits on `{0;0}`, `{0;1}`, `{1;0}`; y = one description per character on `
 Attribute access, imports, lambdas and comprehensions are rejected, and results that would be huge (e.g. `9 ** 9 ** 9`) stop with an error.
 """), zh=dict(
     name="表达式",
-    desc="对 x 的每一项计算公式（y 先按路径匹配，再按最长列表），对应 Grasshopper 的 Expression。",
+    desc="对每一项计算公式，对应 Grasshopper 的 Expression：x 和 y 按分支顺序、按项（最长列表）配对。",
     inputs={"expression": ("表达式", "Python 风格的公式，例如 x * 2 + 1、x > 3、upper(x)、x if i % 2 else -x。"),
-            "x": ("x", "主输入——结果与它的数据树结构相同。不接则只计算一个常量结果。"),
-            "y": ("y", "可选的第二个值。按路径匹配：同一分支，或最近的父分支——y 在 {0} 上就对应 x 的所有 {0;…}——否则按分支顺序；逐项对应，不够时重复最后一项。")},
+            "x": ("x", "第一个值——数据树、列表或单个值。x、y 都不接时只计算一个常量结果。"),
+            "y": ("y", "可选的第二个值，与 x 按分支顺序、逐项配对；短的一方重复最后一个分支 / 最后一项。")},
     outputs=[("数据", "所有计算结果（普通数据）。"),
-             ("数据树", "计算结果，结构与 x 相同。比较运算得到布尔值——可直接接「分流」。")],
+             ("数据树", "计算结果（数据树），沿用路径最长的输入的路径（一样长时用 x）。比较运算得到布尔值——可直接接「分流」。")],
     doc="""## 可用名称
 | 名称 | 含义 |
 |---|---|
@@ -511,9 +514,12 @@ Attribute access, imports, lambdas and comprehensions are rejected, and results 
 | `name` | 分支名（`Mira`、`Mira · lab coat`），没有则为空 |
 | `pi`、`e` | 常数 |
 
-## 父分支
-x = 服装，在 `{0;0}`、`{0;1}`、`{1;0}` 上；y = 每个角色一条描述，在 `{0}`、`{1}` 上。
-`y + " wearing " + x` 让每套服装都配上自己角色的描述——父分支 `{0}` 对应所有 `{0;…}`。模板：*arbor_qwen_character_sheet*。
+## 数据匹配（与 Grasshopper 相同）
+- 分支 **按顺序** 配对，不看路径：x 的第 1 个分支配 y 的第 1 个，第 2 个配第 2 个……；分支少的一方重复最后一个分支。
+- 项按 **最长列表** 配对：短的一方重复最后一项，所以单个 y 可以配所有 x。
+- 结果沿用 **路径最长** 的那个输入的路径（一样长时用 x）；它的分支不够时，最后一条路径的末位继续往上数（`{0;1;0}`、`{0;1;1}`……）。
+
+所以要在分支对得上的那一层组合数据：每个角色一条描述，配每个角色的服装（分支相同、顺序相同），然后再往下一层。模板：*arbor_qwen_character_sheet*。
 
 ## 函数
 `abs min max round int float str bool len sum sqrt sin cos tan atan2 floor ceil log exp clamp(v, lo, hi) lerp(a, b, t) upper lower strip replace(s, a, b) join(sep, …)`

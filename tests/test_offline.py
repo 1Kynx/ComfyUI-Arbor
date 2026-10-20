@@ -346,38 +346,80 @@ def test_list_nodes():
 
 # ====================================================================== nested trees
 
+def test_grasshopper_matching():
+    """Combining trees follows Grasshopper: branches in order, items longest-list, paths from the master."""
+    expr = lambda e, **kw: res(run(nodes_data.Expression, expression=e, **kw))[1]
+    # David Rutten's example: B has the longest paths, so it is the master; its paths run out and grow
+    a = T.DataTree({(0, 0): [1], (0, 1): [2], (0, 2): [3]})
+    b = T.DataTree({(0, 1, 0): [10]})
+    assert expr("x + y", x=[a], y=[b]).branches == {(0, 1, 0): [11], (0, 1, 1): [12], (0, 1, 2): [13]}
+    # branches pair by order, not by path: x's {2} meets y's {1}; the output keeps x's paths and grows past them
+    x = T.DataTree({(0,): [1], (2,): [2]})
+    y = T.DataTree({(0,): [10], (1,): [20], (2,): [30]})
+    assert expr("x + y", x=[x], y=[y]).branches == {(0,): [11], (2,): [22], (3,): [32]}
+    # items longest-list over both inputs, whichever is longer
+    assert expr("x + y", x=[5], y=[10, 20, 30]).branches == {(0,): [15, 25, 35]}
+    assert expr("x + y", x=[T.DataTree({(0,): [1, 2, 3]})], y=[100]).branches == {(0,): [101, 102, 103]}
+    # an empty branch gives an empty result branch
+    assert expr("x", x=[T.DataTree({(0,): [], (1,): [7]})], y=[1]).branches == {(0,): [], (1,): [7]}
+    # an unconnected x (also [None]) leaves y to drive; nothing connected gives one constant
+    assert expr("y * 2", x=[None], y=[T.DataTree({(0,): [1], (1,): [2]})]).branches == {(0,): [2], (1,): [4]}
+    assert res(run(nodes_data.Expression, expression="1 + 1", x=[None]))[0] == [2]
+    # Dispatch: a boolean tree pairs with the list's branches in order, the last one repeating
+    rows = T.DataTree({(0, 0): [1, 2], (0, 1): [3, 4], (1, 0): [5]})
+    keep, drop = res(run(nodes_list.Dispatch, tree=[rows], pattern=[T.DataTree({(0,): [True], (1,): [False]})]))
+    assert keep.branches == {(0, 0): [1, 2], (0, 1): [], (1, 0): []} and drop.item_count == 3
+    # Cross Reference: plain by default (all combinations in the branch), branches in order
+    plain = res(run(nodes_list.CrossReference, A=["a", "b"], B=["x", "y", "z"], group=False))
+    assert plain[0].branches == {(0,): ["a", "a", "a", "b", "b", "b"]} and plain[1].branches == {(0,): ["x", "y", "z"] * 2}
+    shots = T.DataTree({(0,): ["s0"], (2,): ["s2"]})
+    edits = T.DataTree({(0,): ["e0"], (1,): ["e1"], (2,): ["e2a", "e2b"]})
+    sa, sb = res(run(nodes_list.CrossReference, A=[shots], B=[edits], group=False))
+    assert sb.branches == {(0,): ["e0"], (2,): ["e1"], (3,): ["e2a", "e2b"]} and sa.branches[(3,)] == ["s2", "s2"]
+    # group = graft A first: each A item its own sub-branch
+    grouped = res(run(nodes_list.CrossReference, A=["a", "b"], B=["x", "y"], group=True))[1]
+    assert grouped.branches == {(0, 0): ["x", "y"], (0, 1): ["x", "y"]}
+    # Flip Matrix keeps the path prefix, like Grasshopper
+    flip = lambda t: res(run(nodes_tree.ReshapeTree, tree=[t], mode={"mode": ["flip matrix"]}))[0].branches
+    assert flip(T.DataTree({(0, 0): ["a", "b"], (0, 1): ["c", "d"]})) == {(0, 0): ["a", "c"], (0, 1): ["b", "d"]}
+    assert flip(T.DataTree({(2, 5): ["a", "b"]})) == {(2, 0): ["a"], (2, 1): ["b"]}
+    assert flip(T.DataTree({(0,): [1, 2], (1,): [3]})) == {(0,): [1, 3], (1,): [2]}
+    # List Item: a connected list of indices picks all of them
+    assert res(run(nodes_list.ListItem, tree=["a", "b", "c"], index=[0, 2], wrap=True))[0].branches == {(0,): ["a", "c"]}
+    print("grasshopper matching: OK")
+
+
 def test_nested_trees():
-    """character -> outfit -> pose: parents name their groups and pair with their children."""
+    """character -> outfit -> pose, built the Grasshopper way: combine at the level where branches line up."""
     chars = res(run(nodes_panel.Panel, text="# Mira\nbotanist\nraincoat\nlab coat\n\n# Theo\nbaker\njacket",
                     parse_numbers=False, multiline=False))[1]
     first = lambda spec: res(run(nodes_list.ListItem, tree=[chars], index=spec, wrap=True))[0]
     desc, outfits = first("0"), first("1:")
     assert outfits.branches == {(0,): ["raincoat", "lab coat"], (1,): ["jacket"]} and outfits.names == chars.names
-    ca, cb = res(run(nodes_list.CrossReference, A=[outfits], B=["front", "side"], group=True))
+    # one description and a list of outfits per character: branches in the same order, the description repeats
+    who = res(run(nodes_data.Expression, expression='y + " in " + x', x=[outfits], y=[desc]))[1]
+    assert who.branches == {(0,): ["botanist in raincoat", "botanist in lab coat"], (1,): ["baker in jacket"]}
+    assert who.names == chars.names
+    ca, cb = res(run(nodes_list.CrossReference, A=[who], B=["front", "side"], group=True))
     assert ca.paths() == [(0, 0), (0, 1), (1, 0)]
-    assert ca.label((0, 1)) == "Mira · lab coat", "the parent keeps its name, the sub-branch is named after A"
-    # {0} Mira's description goes with every {0;i} of Mira's outfits — matched by path, not by index
-    who = res(run(nodes_data.Expression, expression='y + " in " + x', x=[ca], y=[desc]))[1]
-    assert who.branches[(1, 0)] == ["baker in jacket"] * 2, who.branches
-    full = res(run(nodes_data.Expression, expression='x + ", " + y', x=[who], y=[cb]))[1]
+    assert ca.label((0, 1)) == "Mira · botanist in lab coat", "the parent keeps its name, the sub-branch is named after A"
+    full = res(run(nodes_data.Expression, expression='x + ", " + y', x=[ca], y=[cb]))[1]
     assert full.branches[(0, 1)] == ["botanist in lab coat, front", "botanist in lab coat, side"]
     # flatten for the sampler, then put the results back and regroup per character
     x, *_, shape, n = res(run(nodes_tree.XYLists, x=[full], mode="cross"))
-    assert n == 6 and shape.label((0, 0)) == "Mira · raincoat"
+    assert n == 6 and shape.label((0, 0)) == "Mira · botanist in raincoat"
     imgs = res(run(nodes_tree.ConstructTree, data=[f"img{k}" for k in range(n)], path="{0}", split_batch=False,
                    shape=[shape]))[0]
     per_char = res(run(nodes_tree.ReshapeTree, tree=[imgs], mode={"mode": ["shift paths"], "offset": [-1]}))[0]
     assert per_char.branches == {(0,): ["img0", "img1", "img2", "img3"], (1,): ["img4", "img5"]}
     assert per_char.names == {(0,): "Mira", (1,): "Theo"}, "shifting back up lands on the named parents"
+    # outfit names as row labels: a flat list, one per row
+    assert grid.row_labels_for([outfits], 3) == ["raincoat", "lab coat", "jacket"]
+    assert grid.row_labels_for([desc], 2) == ["Mira", "Theo"], "a tree with one branch per row gives its names"
     # graft / entwine / renumber carry names too
     assert T.graft(chars).label((1, 0)) == "Theo"
     assert T.entwine([outfits, outfits]).label((1, 0)) == "Mira"
-    assert T.renumber(ca).names[(1,)] == "Mira · lab coat"
-    # a boolean tree on the parent masks all of its children (Dispatch)
-    keep, _ = res(run(nodes_list.Dispatch, tree=[ca], pattern=[T.DataTree({(0,): [True], (1,): [False]})]))
-    assert keep.item_count == 4 and keep.branches[(1, 0)] == []
-    # Image Grid rows read "Mira · raincoat"; row labels from another tree use its branch names
-    assert grid.row_labels_for([desc], 2) == ["Mira", "Theo"]
+    assert T.renumber(ca).names[(1,)] == "Mira · botanist in lab coat"
     # Expression knows the branch name: per-shot file names from the structure
     files = res(run(nodes_data.Expression, expression='name + "/shot_" + str(i + 1)', x=[outfits]))[0]
     assert files == ["Mira/shot_1", "Mira/shot_2", "Theo/shot_1"], files
@@ -385,15 +427,6 @@ def test_nested_trees():
     pics = T.DataTree({(0,): [torch.rand(1, 8, 8, 3), torch.rand(1, 8, 8, 3)]}, {(0,): "Arrival"})
     pa, pb = res(run(nodes_list.CrossReference, A=[pics], B=["snow", "ink"], group=True))
     assert [pa.label(p) for p in pa.paths()] == ["Arrival · 1", "Arrival · 2"] and pb.branches[(0, 1)] == ["snow", "ink"]
-    # Cross Reference pairs branches by path too: B's {2} goes with A's {2}, not with A's 2nd branch
-    shots = T.DataTree({(0,): ["s0"], (2,): ["s2"]})
-    edits = T.DataTree({(0,): ["e0"], (1,): ["e1"], (2,): ["e2a", "e2b"]})
-    sa, sb = res(run(nodes_list.CrossReference, A=[shots], B=[edits], group=False))
-    assert sb.branches == {(0,): ["e0"], (1,): ["e1"], (2,): ["e2a", "e2b"]} and sa.branches[(2,)] == ["s2", "s2"]
-    sa, sb = res(run(nodes_list.CrossReference, A=[edits], B=[shots], group=False))
-    assert sb.branches[(1,)] == ["s2"] and sb.branches[(2,)] == ["s2", "s2"], "an unmatched path falls back to order"
-    # an unconnected x that arrives as [None] still gives one constant result
-    assert res(run(nodes_data.Expression, expression="1 + 1", x=[None]))[0] == [2]
     print("nested trees: OK")
 
 
@@ -553,6 +586,11 @@ def test_files():
             again = res(run(nodes_files.SaveImagesByPath, images=[imgs], filename_prefix="xy/run",
                             layout="flat"))[0]
             assert os.path.basename(again.branches[(0,)][0]) == "run_0 · src_000.png"
+            # a long name cut at a space must not leave a trailing space (Windows drops it from folder names)
+            long_name = T.DataTree({(0,): [imgs.branches[(1,)][0]]}, {(0,): "word " * 30})
+            cut = res(run(nodes_files.SaveImagesByPath, images=[long_name], filename_prefix="xy/long",
+                          layout="subfolders"))[0]
+            assert os.path.exists(cut.branches[(0,)][0]) and not os.path.basename(os.path.dirname(cut.branches[(0,)][0])).endswith(" ")
             assert nodes_files.folder_label("2 · Night market") == "Night market"
             assert nodes_files.folder_label("2024 photos") == "2024 photos", "only the saved tag is dropped"
         finally:
@@ -660,7 +698,7 @@ def test_registration():
 
 if __name__ == "__main__":
     for test in [test_tree_algebra, test_cross_and_rebuild, test_data_nodes, test_number_slider, test_panel,
-                 test_tree_nodes, test_list_nodes, test_nested_trees, test_xy_lists, test_image_grid, test_image_nodes, test_files,
+                 test_tree_nodes, test_list_nodes, test_grasshopper_matching, test_nested_trees, test_xy_lists, test_image_grid, test_image_nodes, test_files,
                  test_live_preview, test_docs_and_locales, test_example_workflows, test_registration]:
         test()
     print("ALL OK")

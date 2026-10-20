@@ -475,7 +475,7 @@
   },
   "Arbor_Expression": {
     "display_name": "Expression",
-    "description": "Evaluate a formula for every item of x (y matched by path, then longest-list), like Grasshopper's Expression.",
+    "description": "Evaluate a formula for every item, like Grasshopper's Expression: x and y are matched branch by branch in order and item by item (longest list).",
     "inputs": {
       "expression": {
         "name": "expression",
@@ -483,11 +483,11 @@
       },
       "x": {
         "name": "x",
-        "tooltip": "Main input — the result has the same tree layout. Leave empty for a single constant result."
+        "tooltip": "First value — a tree, a list or a single value. Leave both empty for a single constant result."
       },
       "y": {
         "name": "y",
-        "tooltip": "Optional second value. Matched by path: the same branch, or the nearest parent — a y on {0} goes with every {0;…} of x — otherwise branch by branch in order; item by item, the last item repeats."
+        "tooltip": "Optional second value, matched to x branch by branch in order and item by item; whichever is shorter repeats its last branch / item."
       }
     },
     "outputs": {
@@ -497,7 +497,7 @@
       },
       "1": {
         "name": "tree",
-        "tooltip": "Results in x's tree layout. Comparisons give booleans — ready for Dispatch."
+        "tooltip": "Results as a tree, with the paths of the input whose paths are longest (x on a tie). Comparisons give booleans — ready for Dispatch."
       }
     }
   },
@@ -959,7 +959,7 @@
       },
       "pattern": {
         "name": "pattern",
-        "tooltip": "Typed repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), or connect BOOLEAN values / a boolean tree (e.g. Expression 'x > 2'), matched by path — a value on a parent branch covers all of its children."
+        "tooltip": "Typed repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), or connect BOOLEAN values / a boolean tree (e.g. Expression 'x > 2'), whose branches pair with the list's in order, like Grasshopper."
       }
     },
     "outputs": {
@@ -1039,7 +1039,7 @@
   },
   "Arbor_CrossReference": {
     "display_name": "Cross Reference",
-    "description": "Every combination of A × B, branch by branch (Grasshopper's Cross Reference): branches are matched by path, then in order. With group on: rows = A, columns = B.",
+    "description": "Every combination of A × B, branch by branch, like Grasshopper's Cross Reference: branches pair in order (the shorter tree repeats its last branch) and the result takes the paths of the input with the longest paths. With group on: rows = A, columns = B.",
     "inputs": {
       "A": {
         "name": "A",
@@ -1051,7 +1051,7 @@
       },
       "group": {
         "name": "group",
-        "tooltip": "One branch per A item — the result is grid-ready (rows = A, columns = B)."
+        "tooltip": "Off (default): Grasshopper's Cross Reference — all combinations stay in the branch. On: one sub-branch per A item, the same as grafting A first — grid-ready (rows = A, columns = B)."
       }
     },
     "outputs": {

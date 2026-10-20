@@ -24,7 +24,7 @@ Change how items are grouped into branches — Grasshopper's Graft, Flatten, Sim
 | graft | `{0}: a, b, c` → `{0;0}: a · {0;1}: b · {0;2}: c` |
 | flatten | `{0}: a, b · {1}: c` → `{0}: a, b, c` |
 | simplify | `{0;0;1}: a · {0;0;2}: b` → `{1}: a · {2}: b` |
-| flip matrix | `{0}: a, b · {1}: c, d` → `{0}: a, c · {1}: b, d` |
+| flip matrix | `{0}: a, b · {1}: c, d` → `{0}: a, c · {1}: b, d` · `{0;0}`, `{0;1}` → `{0;0}`, `{0;1}`, … (the prefix stays, like Grasshopper) |
 | shift paths (−1) | `{0;0}: a · {0;1}: b · {1;0}: c` → `{0}: a, b · {1}: c` |
 | renumber | `{0;3}: a · {2;1}: b` → `{0}: a · {1}: b` |
 

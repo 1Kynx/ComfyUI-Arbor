@@ -475,7 +475,7 @@
   },
   "Arbor_Expression": {
     "display_name": "表达式",
-    "description": "对 x 的每一项计算公式（y 先按路径匹配，再按最长列表），对应 Grasshopper 的 Expression。",
+    "description": "对每一项计算公式，对应 Grasshopper 的 Expression：x 和 y 按分支顺序、按项（最长列表）配对。",
     "inputs": {
       "expression": {
         "name": "表达式",
@@ -483,11 +483,11 @@
       },
       "x": {
         "name": "x",
-        "tooltip": "主输入——结果与它的数据树结构相同。不接则只计算一个常量结果。"
+        "tooltip": "第一个值——数据树、列表或单个值。x、y 都不接时只计算一个常量结果。"
       },
       "y": {
         "name": "y",
-        "tooltip": "可选的第二个值。按路径匹配：同一分支，或最近的父分支——y 在 {0} 上就对应 x 的所有 {0;…}——否则按分支顺序；逐项对应，不够时重复最后一项。"
+        "tooltip": "可选的第二个值，与 x 按分支顺序、逐项配对；短的一方重复最后一个分支 / 最后一项。"
       }
     },
     "outputs": {
@@ -497,7 +497,7 @@
       },
       "1": {
         "name": "数据树",
-        "tooltip": "计算结果，结构与 x 相同。比较运算得到布尔值——可直接接「分流」。"
+        "tooltip": "计算结果（数据树），沿用路径最长的输入的路径（一样长时用 x）。比较运算得到布尔值——可直接接「分流」。"
       }
     }
   },
@@ -959,7 +959,7 @@
       },
       "pattern": {
         "name": "模式",
-        "tooltip": "输入重复模式（'T F'、'true,false'、'1 0 1'、'TFT'），或接入 BOOLEAN 值 / 布尔数据树（例如表达式 'x > 2'），按路径匹配——父分支上的值作用于它的所有子分支。"
+        "tooltip": "输入重复模式（'T F'、'true,false'、'1 0 1'、'TFT'），或接入 BOOLEAN 值 / 布尔数据树（例如表达式 'x > 2'），其分支与列表的分支按顺序配对，与 Grasshopper 相同。"
       }
     },
     "outputs": {
@@ -1039,7 +1039,7 @@
   },
   "Arbor_CrossReference": {
     "display_name": "交叉组合",
-    "description": "按分支生成 A × B 的所有组合（对应 Grasshopper 的 Cross Reference）：分支先按路径匹配，再按顺序。开启分组时：行 = A，列 = B。",
+    "description": "按分支生成 A × B 的所有组合，对应 Grasshopper 的 Cross Reference：分支按顺序配对（短的一方重复最后一个分支），结果沿用路径最长的输入的路径。开启分组时：行 = A，列 = B。",
     "inputs": {
       "A": {
         "name": "A",
@@ -1051,7 +1051,7 @@
       },
       "group": {
         "name": "分组",
-        "tooltip": "每个 A 项一个分支——结果可直接做网格（行 = A，列 = B）。"
+        "tooltip": "关闭（默认）：与 Grasshopper 的 Cross Reference 相同，所有组合留在原分支里。开启：每个 A 项一个子分支，等于先对 A 升树——结果可直接做网格（行 = A，列 = B）。"
       }
     },
     "outputs": {

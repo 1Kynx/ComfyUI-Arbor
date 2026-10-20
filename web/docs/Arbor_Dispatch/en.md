@@ -7,7 +7,7 @@ Split items by a true / false pattern: A keeps the true ones, B the false ones �
 - **tree** · *any*  
   A data tree, or any value / list (becomes branch {0}).
 - **pattern** · *STRING / BOOLEAN / TREE*  
-  Typed repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), or connect BOOLEAN values / a boolean tree (e.g. Expression 'x > 2'), matched by path — a value on a parent branch covers all of its children.
+  Typed repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), or connect BOOLEAN values / a boolean tree (e.g. Expression 'x > 2'), whose branches pair with the list's in order, like Grasshopper.
 
 ## Outputs
 

@@ -88,7 +88,7 @@ node("Arbor_ReshapeTree", en=dict(
 | graft | `{0}: a, b, c` → `{0;0}: a · {0;1}: b · {0;2}: c` |
 | flatten | `{0}: a, b · {1}: c` → `{0}: a, b, c` |
 | simplify | `{0;0;1}: a · {0;0;2}: b` → `{1}: a · {2}: b` |
-| flip matrix | `{0}: a, b · {1}: c, d` → `{0}: a, c · {1}: b, d` |
+| flip matrix | `{0}: a, b · {1}: c, d` → `{0}: a, c · {1}: b, d` · `{0;0}`, `{0;1}` → `{0;0}`, `{0;1}`, … (the prefix stays, like Grasshopper) |
 | shift paths (−1) | `{0;0}: a · {0;1}: b · {1;0}: c` → `{0}: a, b · {1}: c` |
 | renumber | `{0;3}: a · {2;1}: b` → `{0}: a · {1}: b` |
 
@@ -111,7 +111,7 @@ node("Arbor_ReshapeTree", en=dict(
 | graft 升树 | `{0}: a, b, c` → `{0;0}: a · {0;1}: b · {0;2}: c` |
 | flatten 拍平 | `{0}: a, b · {1}: c` → `{0}: a, b, c` |
 | simplify 简化 | `{0;0;1}: a · {0;0;2}: b` → `{1}: a · {2}: b` |
-| flip matrix 翻转矩阵 | `{0}: a, b · {1}: c, d` → `{0}: a, c · {1}: b, d` |
+| flip matrix 翻转矩阵 | `{0}: a, b · {1}: c, d` → `{0}: a, c · {1}: b, d` · `{0;0}`、`{0;1}` → `{0;0}`、`{0;1}`……（前缀保留，与 Grasshopper 相同） |
 | shift paths 移动路径（−1） | `{0;0}: a · {0;1}: b · {1;0}: c` → `{0}: a, b · {1}: c` |
 | renumber 重新编号 | `{0;3}: a · {2;1}: b` → `{0}: a · {1}: b` |
 
@@ -217,9 +217,9 @@ The same syntax picks frames in **Batch Pick**.
 """))
 
 PATTERN_EN = ("Typed repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), or connect BOOLEAN values / a boolean tree "
-              "(e.g. Expression 'x > 2'), matched by path — a value on a parent branch covers all of its children.")
+              "(e.g. Expression 'x > 2'), whose branches pair with the list's in order, like Grasshopper.")
 PATTERN_ZH = ("模式", "输入重复模式（'T F'、'true,false'、'1 0 1'、'TFT'），或接入 BOOLEAN 值 / 布尔数据树"
-              "（例如表达式 'x > 2'），按路径匹配——父分支上的值作用于它的所有子分支。")
+              "（例如表达式 'x > 2'），其分支与列表的分支按顺序配对，与 Grasshopper 相同。")
 
 node("Arbor_Dispatch", en=dict(
     desc="Split items by a true / false pattern: A keeps the true ones, B the false ones — use A alone to cull a list (Grasshopper's Dispatch and Cull Pattern).",
@@ -293,28 +293,28 @@ simple("Arbor_SortList",
        {"order": ("顺序", "ascending 升序 · descending 降序 · reverse 反转（不排序，只把顺序倒过来）。")})
 
 node("Arbor_CrossReference", en=dict(
-    desc="Every combination of A × B, branch by branch (Grasshopper's Cross Reference): branches are matched by path, then in order. With group on: rows = A, columns = B.",
+    desc="Every combination of A × B, branch by branch, like Grasshopper's Cross Reference: branches pair in order (the shorter tree repeats its last branch) and the result takes the paths of the input with the longest paths. With group on: rows = A, columns = B.",
     inputs={"A": "First set of values.", "B": "Second set of values.",
-            "group": "One branch per A item — the result is grid-ready (rows = A, columns = B)."},
+            "group": "Off (default): Grasshopper's Cross Reference — all combinations stay in the branch. On: one sub-branch per A item, the same as grafting A first — grid-ready (rows = A, columns = B)."},
     outputs=["A repeated for every B.", "B cycled for every A."],
     doc="""## Example
-A `3, 5`, B `x, y, z`, group on:
-- A → `{0;0}: 3, 3, 3 · {0;1}: 5, 5, 5`
-- B → `{0;0}: x, y, z · {0;1}: x, y, z`
+A `3, 5`, B `x, y, z`:
+- group off → A `{0}: 3, 3, 3, 5, 5, 5` · B `{0}: x, y, z, x, y, z`
+- group on → A `{0;0}: 3, 3, 3 · {0;1}: 5, 5, 5` · B `{0;0}: x, y, z · {0;1}: x, y, z`
 
 ## Tips
 - For an XY plot, **XY Lists** does this and the flattening in one node.
 - With group on, each sub-branch is named after its A value (pictures and other non-text values get their number), and the branch it came from becomes the parent and keeps its name: `Mira · lab coat`, `Arrival · 2`. **Image Grid** labels its rows with these; B works as column labels.
 """), zh=dict(
     name="交叉组合",
-    desc="按分支生成 A × B 的所有组合（对应 Grasshopper 的 Cross Reference）：分支先按路径匹配，再按顺序。开启分组时：行 = A，列 = B。",
+    desc="按分支生成 A × B 的所有组合，对应 Grasshopper 的 Cross Reference：分支按顺序配对（短的一方重复最后一个分支），结果沿用路径最长的输入的路径。开启分组时：行 = A，列 = B。",
     inputs={"A": ("A", "第一组取值。"), "B": ("B", "第二组取值。"),
-            "group": ("分组", "每个 A 项一个分支——结果可直接做网格（行 = A，列 = B）。")},
+            "group": ("分组", "关闭（默认）：与 Grasshopper 的 Cross Reference 相同，所有组合留在原分支里。开启：每个 A 项一个子分支，等于先对 A 升树——结果可直接做网格（行 = A，列 = B）。")},
     outputs=[("A", "A 按 B 的个数重复。"), ("B", "B 按 A 的个数循环。")],
     doc="""## 示例
-A `3, 5`，B `x, y, z`，开启分组：
-- A → `{0;0}: 3, 3, 3 · {0;1}: 5, 5, 5`
-- B → `{0;0}: x, y, z · {0;1}: x, y, z`
+A `3, 5`，B `x, y, z`：
+- 关闭分组 → A `{0}: 3, 3, 3, 5, 5, 5` · B `{0}: x, y, z, x, y, z`
+- 开启分组 → A `{0;0}: 3, 3, 3 · {0;1}: 5, 5, 5` · B `{0;0}: x, y, z · {0;1}: x, y, z`
 
 ## 提示
 - 做 XY 对比图时，**XY 组合列表** 一个节点就能完成组合和展开。

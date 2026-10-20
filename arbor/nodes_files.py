@@ -140,7 +140,9 @@ _BAD = re.compile(r'[\\/:*?"<>|\x00-\x1f]+')
 
 
 def _safe(name: str, limit: int = 80) -> str:
-    return _BAD.sub("_", str(name)).strip(" .")[:limit] or "_"
+    """A file / folder name: no path characters, at most ``limit`` long, and — cut first, then
+    trimmed — never ending in a space or dot, which Windows silently drops."""
+    return _BAD.sub("_", str(name))[:limit].strip(" .") or "_"
 
 
 def _unique(path: str) -> str:
@@ -207,7 +209,7 @@ class SaveImagesByPath(IO.ComfyNode):
             frames = [v[f] for v in items if is_image(v) for f in range(v.shape[0])]
             row = []
             for j, frame in enumerate(frames):
-                label = T.match_item(name_tree, b, j, path) if name_tree else None
+                label = T.match_item(name_tree, b, j) if name_tree else None
                 stem = _safe(label_of(label)) if label is not None else f"{j:03d}"
                 target = _unique(os.path.join(folder, f"{filename}_{tag}_{stem}.png") if flat
                                  else os.path.join(folder, filename, tag, f"{stem}.png"))
