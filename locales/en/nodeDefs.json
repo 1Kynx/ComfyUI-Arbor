@@ -1,75 +1,75 @@
 {
   "Arbor_ImageSlider": {
-    "display_name": "Image Slider",
-    "description": "Compare any number of images of any size: drag the slider to flip through them, or switch to Wipe for a before / after split.",
+    "display_name": "Compare Viewer",
+    "description": "Compare images, videos and audio of any size: flip through them with the slider, or wipe A against B. Videos and audio play in sync and keep their place when you switch, so an A/B comparison stays on the same moment.",
     "inputs": {
       "images": {
         "name": "images",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image0": {
         "name": "image0",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image1": {
         "name": "image1",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image2": {
         "name": "image2",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image3": {
         "name": "image3",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image4": {
         "name": "image4",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image5": {
         "name": "image5",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image6": {
         "name": "image6",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image7": {
         "name": "image7",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image8": {
         "name": "image8",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image9": {
         "name": "image9",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image10": {
         "name": "image10",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image11": {
         "name": "image11",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image12": {
         "name": "image12",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image13": {
         "name": "image13",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image14": {
         "name": "image14",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       },
       "images_image15": {
         "name": "image15",
-        "tooltip": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+        "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
       }
     }
   },
@@ -122,6 +122,66 @@
       "0": {
         "name": "image",
         "tooltip": "The comparison sheet as one image."
+      }
+    }
+  },
+  "Arbor_VideoGrid": {
+    "display_name": "Video Grid",
+    "description": "Image Grid for video: each branch is a row, each clip a column, all playing in sync in one labelled video.",
+    "inputs": {
+      "videos": {
+        "name": "videos",
+        "tooltip": "A video tree — or the plain videos of a batch run, together with shape. An image batch counts as one clip (its frames played at the grid's frame rate)."
+      },
+      "shape": {
+        "name": "shape",
+        "tooltip": "XY Lists' shape: pours plain videos into rows × columns and labels them (rows by x, columns by y)."
+      },
+      "row_labels": {
+        "name": "row_labels",
+        "tooltip": "One label per row — a list, or a tree with one branch per row. Not needed when the tree or shape names its rows."
+      },
+      "col_labels": {
+        "name": "col_labels",
+        "tooltip": "One label per column — overrides the labels taken from shape."
+      },
+      "fit": {
+        "name": "fit",
+        "tooltip": "How clips of different sizes fill a cell: fit (scale to fit), original (no scaling), stretch."
+      },
+      "cell_size": {
+        "name": "cell_size",
+        "tooltip": "Longest side of a cell in pixels; 0 = the largest clip's size. Keep it modest — the grid video is width × height of all cells."
+      },
+      "gap": {
+        "name": "gap",
+        "tooltip": "Space between cells and around the grid, in pixels."
+      },
+      "font_size": {
+        "name": "font_size",
+        "tooltip": "Label font size. Chinese labels render with a CJK font when one is installed."
+      },
+      "theme": {
+        "name": "theme",
+        "tooltip": "Light or dark background."
+      },
+      "path_labels": {
+        "name": "path_labels",
+        "tooltip": "Label rows with their branch path when there are no row labels or row names."
+      },
+      "fps": {
+        "name": "fps",
+        "tooltip": "Frame rate of the grid video; 0 = the highest frame rate among the clips. Every clip keeps its own speed."
+      },
+      "audio": {
+        "name": "audio",
+        "tooltip": "none: a silent grid · mix: every clip's sound mixed together (loudness kept below clipping)."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "video",
+        "tooltip": "The grid as one VIDEO (H.264 MP4 in the temp folder) — save it with Save by Path or Save Video, or compare it in the Compare Viewer."
       }
     }
   },
@@ -249,7 +309,7 @@
     "outputs": {
       "0": {
         "name": "files",
-        "tooltip": "The pictures / videos / audio as a tree, one branch per folder, named after it — Image Grid labels its rows with the names, the Panel and Image Slider show them."
+        "tooltip": "The pictures / videos / audio as a tree, one branch per folder, named after it — Image Grid labels its rows with the names, the Panel and Compare Viewer show them."
       },
       "1": {
         "name": "names",
@@ -683,7 +743,7 @@
       },
       "names": {
         "name": "names",
-        "tooltip": "One name per line, for the branches in input order. The names label Image Grid rows, Panel branches and Image Slider slides, and name the folders of Save by Path. In one-list mode the first line names the list."
+        "tooltip": "One name per line, for the branches in input order. The names label Image Grid rows, Panel branches and Compare Viewer slides, and name the folders of Save by Path. In one-list mode the first line names the list."
       },
       "split_batch": {
         "name": "split_batch",

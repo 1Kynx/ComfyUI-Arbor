@@ -24,34 +24,43 @@ def node(node_id, en, zh):
 # =============================================================== Image
 
 node("Arbor_ImageSlider", en=dict(
-    desc="Compare any number of images of any size: drag the slider to flip through them, or switch to Wipe for a before / after split.",
-    inputs={"images": "Images to compare — an image, a batch or an image tree. Every input grows a new slot; batches are split into one slide per frame (max 64 slides). Frames of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."},
+    name="Compare Viewer",
+    desc="Compare images, videos and audio of any size: flip through them with the slider, or wipe A against B. Videos and audio play in sync and keep their place when you switch, so an A/B comparison stays on the same moment.",
+    inputs={"images": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."},
     outputs=[],
     doc="""## How to use
-- Connect one or more images. A batch counts as several slides.
-- **Flip** shows one image at a time — drag the slider under the stage or press **← / →**.
-- **Wipe** splits **A** (picked from the chip in the toolbar) against **B** (the slider); the divider follows the mouse.
-- **Real** keeps relative sizes (a 512 px image looks half as big as a 1024 px one); **Fit** scales every image to fill the stage.
-- Double-click the stage (or the ↗ button) to open the full-size image in a new tab.
+- Connect one or more inputs: pictures, videos (e.g. Load Folder with kind *videos*, Create Video) or audio. They can be mixed.
+- **Flip** shows one slide at a time — drag the slider under the stage or press **← / →**.
+- **Wipe** puts **A** (picked from the chip in the toolbar) against **B** (the slider). Two pictures or videos are split by a divider that follows the mouse; when either is audio they are stacked, A on top, and you hear the half under the mouse.
+- Videos and audio share one **play / seek / loop** bar (Space plays and pauses). Switching slides keeps the current time — flip back and forth to hear or see the same moment in each version. Shorter clips hold their last frame.
+- Audio shows its waveform; click it to jump.
+- **Real** keeps relative sizes (a 512 px image looks half as big as a 1024 px one); **Fit** scales every picture to fill the stage.
+- Double-click the stage (or the ↗ button) to open the current file in a new tab.
 
 ## Tips
 - Feed it a native list (e.g. the per-item results of an XY run): it receives the whole list at once instead of running per item.
-- The chosen mode and scale are saved with the workflow.
+- Videos already in ComfyUI's output / input folder play straight from there; others are written to the temp folder first.
+- In Wipe you hear one side at a time: the one that shows more of the stage (side by side) or the half under the mouse (stacked). The speaker button mutes everything.
+- The chosen mode, scale and loop are saved with the workflow.
 """), zh=dict(
-    name="图像滑块对比",
-    desc="对比任意数量、任意尺寸的图片：拖动滑条逐张切换，或切到「对比」模式左右分屏比较。",
-    inputs={"images": ("图像", "要对比的图片——单张、批次或图像数据树。每连一个就会多出一个输入口；批次会拆成每帧一页（最多 64 页）。有名字的分支（加载的文件夹、分镜的场景）用名字标注。")},
+    name="对比查看器",
+    desc="对比任意尺寸的图片、视频和音频：拖动滑条逐个切换，或用「对比」模式把 A 和 B 放在一起比较。视频和音频同步播放，切换时保持在同一时刻。",
+    inputs={"images": ("输入", "要对比的内容——图片、视频或音频：单个、批次、列表或数据树都可以。每连一个就会多出一个输入口；图片批次每帧一页，音频批次每段一页（最多 64 页）。有名字的分支（加载的文件夹、分镜的场景）用名字标注。")},
     outputs=[],
     doc="""## 用法
-- 接入一张或多张图片，一个批次会算作多页。
-- **切换**：一次显示一张，拖动画面下方的滑条或按 **← / →** 切换。
-- **对比**：用工具栏里的胶囊选择 **A**，滑条选择 **B**，分割线跟随鼠标移动。
+- 接入一个或多个输入：图片、视频（例如「加载文件夹」类型选 *videos*、「创建视频」）或音频，可以混合。
+- **切换**：一次显示一页，拖动画面下方的滑条或按 **← / →** 切换。
+- **对比**：用工具栏里的胶囊选择 **A**，滑条选择 **B**。两个都是图片或视频时左右分屏，分割线跟随鼠标；只要有一个是音频就上下排列，A 在上，听到的是鼠标所在的那一半。
+- 视频和音频共用一条 **播放 / 定位 / 循环** 控制条（空格键播放、暂停）。切换页面时保持当前时间——来回切换就能对比同一时刻的不同版本。较短的片段停在最后一帧。
+- 音频显示波形，点击波形可以跳转。
 - **原比例**：保持图片之间的相对大小（512 像素的图看起来是 1024 的一半）；**填充**：每张图都铺满画面。
-- 双击画面（或点 ↗ 按钮）在新标签页打开原图。
+- 双击画面（或点 ↗ 按钮）在新标签页打开当前文件。
 
 ## 提示
 - 可以直接接原生列表（例如 XY 批量运行的逐项结果），节点会一次收下整个列表，而不是逐项运行。
-- 选择的模式和缩放方式会随工作流保存。
+- 已在 ComfyUI 的 output / input 文件夹里的视频直接播放原文件；其它视频先写到临时文件夹。
+- 对比模式下一次只听一侧：左右分屏时听占画面更多的一侧，上下排列时听鼠标所在的那一半。喇叭按钮可以全部静音。
+- 选择的模式、缩放方式和循环开关会随工作流保存。
 """))
 
 node("Arbor_SmartResize", en=dict(
@@ -189,6 +198,63 @@ node("Arbor_ImageGrid", en=dict(
 - 整张图用「保存图像」保存；想把每张单独存下来，用 **按路径保存**。
 """))
 
+node("Arbor_VideoGrid", en=dict(
+    desc="Image Grid for video: each branch is a row, each clip a column, all playing in sync in one labelled video.",
+    inputs={"videos": "A video tree — or the plain videos of a batch run, together with shape. An image batch counts as one clip (its frames played at the grid's frame rate).",
+            "shape": "XY Lists' shape: pours plain videos into rows × columns and labels them (rows by x, columns by y).",
+            "row_labels": "One label per row — a list, or a tree with one branch per row. Not needed when the tree or shape names its rows.",
+            "col_labels": "One label per column — overrides the labels taken from shape.",
+            "fit": "How clips of different sizes fill a cell: fit (scale to fit), original (no scaling), stretch.",
+            "cell_size": "Longest side of a cell in pixels; 0 = the largest clip's size. Keep it modest — the grid video is width × height of all cells.",
+            "gap": "Space between cells and around the grid, in pixels.",
+            "font_size": "Label font size. Chinese labels render with a CJK font when one is installed.",
+            "theme": "Light or dark background.",
+            "path_labels": "Label rows with their branch path when there are no row labels or row names.",
+            "fps": "Frame rate of the grid video; 0 = the highest frame rate among the clips. Every clip keeps its own speed.",
+            "audio": "none: a silent grid · mix: every clip's sound mixed together (loudness kept below clipping)."},
+    outputs=["The grid as one VIDEO (H.264 MP4 in the temp folder) — save it with Save by Path or Save Video, or compare it in the Compare Viewer."],
+    doc="""## How to use
+- **From a tree**: connect any video tree, e.g. *arbor_h3_storyboard_video*'s clips through **Construct Tree** (one row per scene), or **Load Folder** with kind *videos* (one row per folder).
+- **After a batch run**: connect the plain videos to *videos* and **XY Lists'** *shape* to *shape* — rows and columns are laid out and labelled like **Image Grid**.
+- The node shows the grid video when it runs; it also works on its own, nothing needs to follow it.
+
+## Timing
+- All clips start together. Each plays at its own frame rate; shorter clips hold their last frame until the longest one ends.
+- Clips are decoded straight at cell size, frame by frame, so long or large videos do not need much memory.
+
+## Tips
+- Use **Reshape Tree** (*flip matrix*) first to swap rows and columns.
+- For a single pair, the **Compare Viewer** is quicker: it plays both in sync with a wipe divider.
+"""), zh=dict(
+    name="视频网格",
+    desc="视频版的图像网格：每个分支一行，每段视频一列，全部同步播放，合成为一段带标注的视频。",
+    inputs={"videos": ("视频", "视频数据树——或批量运行得到的普通视频（配合结构使用）。图片批次算作一段视频（按网格帧率播放）。"),
+            "shape": ("结构", "XY 组合列表的结构：把普通视频排成行 × 列并标注（行是 x，列是 y）。"),
+            "row_labels": ("行标签", "每行一个标签——列表，或每行一个分支的数据树。数据树或结构自带行名时不用接。"),
+            "col_labels": ("列标签", "每列一个标签——会覆盖从结构得到的列标签。"),
+            "fit": ("适配", "不同尺寸的视频如何填充格子：fit 缩放适配、original 原尺寸、stretch 拉伸。"),
+            "cell_size": ("格子尺寸", "格子长边像素；0 = 最大视频的尺寸。别设太大——网格视频的尺寸是所有格子加起来。"),
+            "gap": ("间距", "格子之间以及四周的留白像素。"),
+            "font_size": ("字号", "标签字号。系统装有中日韩字体时，中文标签会正常显示。"),
+            "theme": ("主题", "浅色或深色背景。"),
+            "path_labels": ("路径作行标签", "既没有行标签也没有行名时，用分支路径作为行标签。"),
+            "fps": ("帧率", "网格视频的帧率；0 = 各段视频中最高的帧率。每段视频保持自己的播放速度。"),
+            "audio": ("音频", "none：无声 · mix：把所有视频的声音混在一起（自动压低音量避免爆音）。")},
+    outputs=[("视频", "合成后的网格视频（VIDEO，临时文件夹里的 H.264 MP4）——用「按路径保存」或「保存视频」保存，也可以接「对比查看器」。")],
+    doc="""## 用法
+- **来自数据树**：接任意视频数据树，例如 *arbor_h3_storyboard_video* 里经 **构建数据树** 整理好的视频（每个场景一行），或「加载文件夹」类型选 *videos*（每个文件夹一行）。
+- **批量运行之后**：普通视频接 *视频*，**XY 组合列表** 的 *结构* 接 *结构*——和 **图像网格** 一样自动排好行列并标注。
+- 运行后节点上直接显示网格视频；节点可以单独运行，后面不必再接别的节点。
+
+## 时间
+- 所有视频同时开始，各自按自己的帧率播放；较短的视频停在最后一帧，直到最长的一段结束。
+- 视频按格子尺寸逐帧解码，长视频或大尺寸视频也不会占用太多内存。
+
+## 提示
+- 想交换行列，先接 **重组数据树**（*翻转矩阵*）。
+- 只对比两段时，**对比查看器** 更方便：同步播放，还能左右拖动分割线。
+"""))
+
 node("Arbor_LoadFolder", en=dict(
     desc="Load every picture, video or audio file in a folder; with subfolders on, each folder becomes a branch, named after it — the folder structure turns straight into a data tree.",
     inputs={"folder": "An absolute path; output/… for ComfyUI's output folder; any other relative path is inside the input folder.",
@@ -197,7 +263,7 @@ node("Arbor_LoadFolder", en=dict(
             "subfolders": "On: each subfolder (and the folder itself, if it has matching files) becomes a branch. Off: only this folder.",
             "sort": "name = natural order (img2 before img10); modified = oldest first.",
             "limit": "Maximum number of files in total; 0 = all. Pictures and audio are held in memory, so limit large folders."},
-    outputs=["The pictures / videos / audio as a tree, one branch per folder, named after it — Image Grid labels its rows with the names, the Panel and Image Slider show them.",
+    outputs=["The pictures / videos / audio as a tree, one branch per folder, named after it — Image Grid labels its rows with the names, the Panel and Compare Viewer show them.",
              "File names without extension, same layout — handy as labels or for Save by Path.",
              "Folder names as plain data, one per branch.", "Total number of files."],
     doc="""## Example
@@ -224,7 +290,7 @@ Folders saved by **Save by Path** from named branches (`0 · Arrival`, `1 · The
             "subfolders": ("子文件夹", "开启：每个子文件夹（以及本文件夹，如果里面有匹配的文件）各成一个分支。关闭：只读本文件夹。"),
             "sort": ("排序", "name = 自然排序（img2 排在 img10 前）；modified = 按修改时间从旧到新。"),
             "limit": ("数量上限", "最多加载的文件总数；0 = 全部。图片和音频会载入内存，大文件夹请设上限。")},
-    outputs=[("文件", "图片 / 视频 / 音频组成的数据树，每个文件夹一个分支，并以文件夹命名——图像网格用名字标注行，面板和图像滑块也会显示。"),
+    outputs=[("文件", "图片 / 视频 / 音频组成的数据树，每个文件夹一个分支，并以文件夹命名——图像网格用名字标注行，面板和对比查看器也会显示。"),
              ("文件名", "不带扩展名的文件名，结构相同——可作标签或给「按路径保存」用。"),
              ("文件夹", "文件夹名（普通数据），每个分支一个。"), ("数量", "文件总数。")],
     doc="""## 示例
@@ -570,7 +636,7 @@ node("Arbor_Collect", en=dict(
     desc="Gather any values — pictures, masks, latents, audio, video, text — into data: one branch per input, named, or all in one list.",
     inputs={"inputs": "Anything. Every connection adds a slot. A list fills its branch with all its items; a tree keeps its own branches under {i;…}.",
             "mode": "branch per input: input 1 → {0}, input 2 → {1}, … (only connected slots count) · one list: everything in {0}, like ComfyUI's Create List.",
-            "names": "One name per line, for the branches in input order. The names label Image Grid rows, Panel branches and Image Slider slides, and name the folders of Save by Path. In one-list mode the first line names the list.",
+            "names": "One name per line, for the branches in input order. The names label Image Grid rows, Panel branches and Compare Viewer slides, and name the folders of Save by Path. In one-list mode the first line names the list.",
             "split_batch": "Split IMAGE / MASK / LATENT batches into one item per frame."},
     outputs=["Every collected item as plain data — ordinary nodes run once per item.",
              "The collected items as a tree, one named branch per input."],
@@ -593,7 +659,7 @@ Connect one batch of reference pictures per scene, turn on *split_batch*, write 
     desc="把任意数据——图片、蒙版、latent、音频、视频、文字——收集成数据：每个输入一个有名字的分支，或全部放进一个列表。",
     inputs={"inputs": ("输入", "任意数据。每连一个就多出一个输入口。列表的所有项都放进它的分支；数据树保留自己的分支，放在 {i;…} 下。"),
             "mode": ("模式", "branch per input 每个输入一个分支：第 1 个输入 → {0}，第 2 个 → {1}……（只算已连接的输入口）· one list 一个列表：全部放进 {0}，同 ComfyUI 的 Create List。"),
-            "names": ("名字", "一行一个名字，按输入顺序给分支命名。名字会成为图像网格的行标签、面板的分支名、图像滑块的页名，以及「按路径保存」的文件夹名。一个列表模式下，第一行给这个列表命名。"),
+            "names": ("名字", "一行一个名字，按输入顺序给分支命名。名字会成为图像网格的行标签、面板的分支名、对比查看器的页名，以及「按路径保存」的文件夹名。一个列表模式下，第一行给这个列表命名。"),
             "split_batch": ("拆分批次", "把 IMAGE / MASK / LATENT 批次拆成每帧一项。")},
     outputs=[("数据", "收集到的所有项（普通数据）——普通节点逐项运行。"),
              ("数据树", "收集到的项（数据树），每个输入一个有名字的分支。")],

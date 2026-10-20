@@ -54,16 +54,28 @@ const CSS = `
     linear-gradient(45deg,transparent 75%,var(--arb-hover) 75%),
     linear-gradient(-45deg,transparent 75%,var(--arb-hover) 75%);
   background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0;}
-.arb-cmp-stage img{position:absolute;max-width:none;user-select:none;-webkit-user-drag:none;
-  pointer-events:none;image-rendering:auto;}
+.arb-cmp-stage img,.arb-cmp-stage video,.arb-cmp-stage canvas{position:absolute;max-width:none;user-select:none;
+  -webkit-user-drag:none;pointer-events:none;image-rendering:auto;}
+.arb-cmp-stage video{object-fit:fill;background:#000;}
 .arb-cmp-stage.wipe{cursor:ew-resize;}
 .arb-cmp-div{position:absolute;top:0;bottom:0;width:0;border-left:1.5px solid #fff;
   box-shadow:0 0 0 .5px rgba(0,0,0,.4);pointer-events:none;}
+.arb-cmp-div.h{top:50%;left:0;right:0;bottom:auto;height:0;width:auto;border-left:0;
+  border-top:1.5px solid var(--arb-line);box-shadow:none;}
+.arb-cmp-div.h::after{display:none;}
 .arb-cmp-div::after{content:"";position:absolute;top:50%;left:-7px;width:12px;height:12px;
   margin-top:-7px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.45);}
 .arb-cmp-tag{position:absolute;top:6px;padding:1px 6px;border-radius:4px;font-size:10px;
   background:rgba(0,0,0,.55);color:#fff;pointer-events:none;max-width:45%;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.arb-tp{display:flex;align-items:center;gap:6px;flex:0 0 auto;height:24px;}
+.arb-tp-rail{position:relative;flex:1 1 auto;height:18px;cursor:pointer;touch-action:none;user-select:none;}
+.arb-tp-line{position:absolute;left:0;right:0;top:8px;height:3px;border-radius:2px;background:var(--arb-line);}
+.arb-tp-fill{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--arb-accent);}
+.arb-tp-knob{position:absolute;top:3px;width:12px;height:12px;margin-left:-6px;border-radius:50%;
+  background:var(--arb-fg);box-shadow:0 1px 4px rgba(0,0,0,.4);}
+.arb-tp-time{font:10.5px/1 "JetBrains Mono","Cascadia Code",Consolas,monospace;color:var(--arb-sub);
+  white-space:nowrap;flex:0 0 auto;}
 .arb-scrub{position:relative;flex:0 0 auto;height:26px;cursor:pointer;touch-action:none;
   user-select:none;}
 .arb-scrub-rail{position:absolute;left:8px;right:8px;top:12px;height:2px;border-radius:2px;
@@ -240,10 +252,12 @@ export function isolatePointer(element) {
 const STRINGS = {
   en: {
     flip: "Flip", wipe: "Wipe", real: "Real", fit: "Fit",
-    chooseA: "Choose image A",
+    chooseA: "Choose A",
     scaleTip: "Real: keep relative sizes · Fit: fill the stage",
-    openTip: "Open the current image in a new tab",
-    sliderEmpty: "Connect images and run to compare",
+    openTip: "Open the current file in a new tab",
+    sliderEmpty: "Connect images, videos or audio and run to compare",
+    playTip: "Play (Space)", pauseTip: "Pause (Space)", loopTip: "Loop",
+    muteTip: "Sound on / off — in Wipe you hear the side that shows more, or the half under the pointer",
     live: "Live — updates as you edit, no need to run",
     lines: "Lines", text: "Text",
     linesTip: "Each line is an item · an empty line starts a new branch",
@@ -277,10 +291,12 @@ const STRINGS = {
   },
   zh: {
     flip: "切换", wipe: "对比", real: "原比例", fit: "填充",
-    chooseA: "选择图像 A",
+    chooseA: "选择 A",
     scaleTip: "原比例：保持图片之间的相对大小 · 填充：每张图铺满画面",
-    openTip: "在新标签页打开当前图片",
-    sliderEmpty: "接入图片并运行后即可对比",
+    openTip: "在新标签页打开当前文件",
+    sliderEmpty: "接入图片、视频或音频并运行后即可对比",
+    playTip: "播放（空格）", pauseTip: "暂停（空格）", loopTip: "循环播放",
+    muteTip: "声音开 / 关——对比模式下听到占画面更多的一侧，或鼠标所在的那一半",
     live: "实时 — 编辑时自动更新，无需运行",
     lines: "逐行", text: "整段",
     linesTip: "每行是一项 · 空一行开始新分支",
@@ -418,5 +434,10 @@ export const ICONS = {
   collapse: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 6l4 4 4-4"/></svg>`,
   expand: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M6 4l4 4-4 4"/></svg>`,
   expand4: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9"/></svg>`,
+  play: `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M5 3.2v9.6a.6.6 0 0 0 .9.5l7.4-4.8a.6.6 0 0 0 0-1L5.9 2.7a.6.6 0 0 0-.9.5z"/></svg>`,
+  pause: `<svg viewBox="0 0 16 16" fill="currentColor"><rect x="4" y="3" width="3" height="10" rx=".8"/><rect x="9" y="3" width="3" height="10" rx=".8"/></svg>`,
+  loop: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 7.5v-1a2 2 0 0 1 2-2h8M11 2.5l2 2-2 2M13 8.5v1a2 2 0 0 1-2 2H3M5 13.5l-2-2 2-2"/></svg>`,
+  sound: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 6v4H5l3.5 3V3L5 6z"/><path d="M11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.8a6 6 0 0 1 0 8.4"/></svg>`,
+  muted: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 6v4H5l3.5 3V3L5 6z"/><path d="M11 6l3.5 4M14.5 6L11 10"/></svg>`,
   open: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M9 2.5h4.5V7M13.5 2.5 7.5 8.5M12 9.5v3a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h3"/></svg>`,
 };

@@ -138,22 +138,38 @@ def grid_size(tree: DataTree) -> tuple[int, int]:
     return rows, cols
 
 
-def build_grid(tree: DataTree, row_labels=None, col_labels=None, fit="fit", cell_size=0, gap=8,
-               font_size=24, theme="light", path_labels=False) -> Image.Image:
-    rows = [(p, _frames(items)) for p, items in tree.items()]
-    rows = [r for r in rows if r[1]]
-    imgs = [im for _, r in rows for im in r if im is not None]
-    if not imgs:
-        raise ValueError("Image Grid: no images to lay out")
+class Sheet:
+    """A labelled grid: the background (labels drawn) and where each cell sits."""
 
-    cols = max(len(r) for _, r in rows)
-    cw = max(im.width for im in imgs)
-    ch = max(im.height for im in imgs)
+    def __init__(self, image: Image.Image, left: int, top: int, cw: int, ch: int, gap: int):
+        self.image, self.left, self.top, self.cw, self.ch, self.gap = image, left, top, cw, ch, gap
+
+    def cell(self, i: int, j: int) -> tuple[int, int]:
+        """Top-left corner of row i, column j."""
+        return self.left + self.gap + j * (self.cw + self.gap), self.top + self.gap + i * (self.ch + self.gap)
+
+    def place(self, i: int, j: int, w: int, h: int) -> tuple[int, int]:
+        """Top-left corner of a w×h picture centred in its cell."""
+        x0, y0 = self.cell(i, j)
+        return x0 + (self.cw - w) // 2, y0 + (self.ch - h) // 2
+
+
+def layout_sheet(sizes: list[list[tuple[int, int] | None]], row_labels=None, col_labels=None, cell_size=0,
+                 gap=8, font_size=24, theme="light", path_labels=False, paths=(), what="Image Grid",
+                 even=False) -> Sheet:
+    """Lay out rows of pictures of the given (w, h) sizes (None = empty cell) and draw the labels.
+    `even` rounds the sheet to even sides (video encoders need them)."""
+    found = [wh for row in sizes for wh in row if wh]
+    if not found:
+        raise ValueError(f"{what}: nothing to lay out")
+    cols = max(len(r) for r in sizes)
+    cw = max(w for w, _ in found)
+    ch = max(h for _, h in found)
     if cell_size > 0:  # longest side of a cell
         s = cell_size / max(cw, ch)
         cw, ch = max(1, round(cw * s)), max(1, round(ch * s))
 
-    rl = row_labels or ([format_path(p) for p, _ in rows] if path_labels else None)
+    rl = row_labels or ([format_path(p) for p in paths] if path_labels else None)
     colors = THEMES[theme]
     font = _font(font_size)
     probe = ImageDraw.Draw(Image.new("RGB", (8, 8)))
@@ -167,8 +183,10 @@ def build_grid(tree: DataTree, row_labels=None, col_labels=None, fit="fit", cell
                  for j in range(cols)] if col_labels else []
     top = max(len(l) for l in col_lines) * line_h + gap * 2 if col_lines else 0
 
-    sheet = Image.new("RGB", (left + cols * cw + (cols + 1) * gap, top + len(rows) * ch + (len(rows) + 1) * gap),
-                      colors["bg"])
+    W, H = left + cols * cw + (cols + 1) * gap, top + len(sizes) * ch + (len(sizes) + 1) * gap
+    if even:
+        W, H = W + W % 2, H + H % 2
+    sheet = Image.new("RGB", (W, H), colors["bg"])
     draw = ImageDraw.Draw(sheet)
 
     for j, lines in enumerate(col_lines):
@@ -178,23 +196,33 @@ def build_grid(tree: DataTree, row_labels=None, col_labels=None, fit="fit", cell
             draw.text((x0 + (cw - draw.textlength(line, font=font)) / 2, y), line, fill=colors["fg"], font=font)
             y += line_h
 
-    for i, (_, frames) in enumerate(rows):
-        y0 = top + gap + i * (ch + gap)
-        if rl:
+    if rl:
+        for i in range(len(sizes)):
+            y0 = top + gap + i * (ch + gap)
             lines = _wrap(draw, rl[i] if i < len(rl) else "", font, left - gap * 2, max(1, ch // line_h))
             ty = y0 + (ch - len(lines) * line_h) / 2
             for line in lines:
                 draw.text((left - gap - draw.textlength(line, font=font), ty), line, fill=colors["fg"], font=font)
                 ty += line_h
+    return Sheet(sheet, left, top, cw, ch, gap)
+
+
+def build_grid(tree: DataTree, row_labels=None, col_labels=None, fit="fit", cell_size=0, gap=8,
+               font_size=24, theme="light", path_labels=False) -> Image.Image:
+    from .media import fit_size
+
+    rows = [(p, _frames(items)) for p, items in tree.items()]
+    rows = [r for r in rows if r[1]]
+    if not any(im is not None for _, r in rows for im in r):
+        raise ValueError("Image Grid: no images to lay out")
+    sheet = layout_sheet([[im.size if im else None for im in r] for _, r in rows], row_labels, col_labels,
+                         cell_size, gap, font_size, theme, path_labels, [p for p, _ in rows])
+    for i, (_, frames) in enumerate(rows):
         for j, im in enumerate(frames):
             if im is None:
                 continue
-            if fit == "stretch":
-                im = im.resize((cw, ch), Image.LANCZOS)
-            elif fit == "fit" or im.width > cw or im.height > ch:
-                s = min(cw / im.width, ch / im.height)
-                if abs(s - 1) > 1e-3:
-                    im = im.resize((max(1, round(im.width * s)), max(1, round(im.height * s))), Image.LANCZOS)
-            x0 = left + gap + j * (cw + gap)
-            sheet.paste(im, (x0 + (cw - im.width) // 2, y0 + (ch - im.height) // 2))
-    return sheet
+            w, h = fit_size(im.width, im.height, sheet.cw, sheet.ch, fit)
+            if (w, h) != im.size:
+                im = im.resize((w, h), Image.LANCZOS)
+            sheet.image.paste(im, sheet.place(i, j, w, h))
+    return sheet.image

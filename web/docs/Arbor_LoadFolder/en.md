@@ -20,7 +20,7 @@ Load every picture, video or audio file in a folder; with subfolders on, each fo
 ## Outputs
 
 - **files** · *TREE*  
-  The pictures / videos / audio as a tree, one branch per folder, named after it — Image Grid labels its rows with the names, the Panel and Image Slider show them.
+  The pictures / videos / audio as a tree, one branch per folder, named after it — Image Grid labels its rows with the names, the Panel and Compare Viewer show them.
 - **names** · *TREE*  
   File names without extension, same layout — handy as labels or for Save by Path.
 - **folders** · *STRING ×N*  

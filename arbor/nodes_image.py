@@ -1,62 +1,126 @@
-"""Image nodes: compare, grid, resize, pick. (Loading and saving live in nodes_files.py.)"""
+"""Image and video nodes: compare, grids, resize, pick. (Loading and saving live in nodes_files.py.)"""
 
 import math
 
 import numpy as np
 import torch
 
+from . import media
 from . import tree as T
 from .common import IO, TREE, CAT_IMAGE, schema, connected, tree_in, to_tree, unwrap
-from .grid import build_grid, col_labels_for, grid_size, row_labels_for
+from .grid import build_grid, col_labels_for, grid_size, layout_sheet, row_labels_for
+from .media import is_audio, is_video
 from .preview import is_image, label_of, save_temp, to_pil
 
 MAX_SLIDES = 64
 
 
-# ======================================================================= Image Slider
+# ======================================================================= Compare Viewer
 
-def _slides(slot: str, value) -> list[tuple[torch.Tensor, str]]:
-    """(frame, label) for every frame of a socket value: a batch, a list of batches, or a tree.
-    Frames of a named branch are labelled with its name, the rest with the slot name;
-    a label shared by several frames is numbered."""
+def _slides(slot: str, value) -> list[tuple[str, object, str]]:
+    """(kind, value, label) for everything a socket value holds that can be compared: every frame
+    of an image batch, every video, every clip of an audio batch — a batch, a list or a tree.
+    Items of a named branch are labelled with its name, the rest with the slot name;
+    a label shared by several slides is numbered."""
     tree = to_tree(value)
-    pairs = [(v[i], tree.label(p, label_of) or slot)
-             for p, items in tree.items() for v in items if is_image(v) for i in range(v.shape[0])]
-    total = {lab: sum(1 for _, l in pairs if l == lab) for _, lab in pairs}
+    found = []
+    for p, items in tree.items():
+        lab = tree.label(p, label_of) or slot
+        for v in items:
+            if is_image(v):
+                found += [("image", v[i], lab) for i in range(v.shape[0])]
+            elif is_video(v):
+                found.append(("video", v, lab))
+            elif is_audio(v):
+                found += [("audio", clip, lab) for clip in media.audio_clips(v)]
+    total = {lab: sum(1 for *_, l in found if l == lab) for *_, lab in found}
     seen: dict[str, int] = {}
     out = []
-    for frame, lab in pairs:
+    for kind, v, lab in found:
         seen[lab] = seen.get(lab, 0) + 1
-        out.append((frame, lab if total[lab] == 1 else f"{lab} · {seen[lab]}/{total[lab]}"))
+        out.append((kind, v, lab if total[lab] == 1 else f"{lab} · {seen[lab]}/{total[lab]}"))
     return out
 
 
+def _slide(kind: str, v, label: str) -> dict:
+    """The UI payload of one slide: a /view reference plus what the viewer needs to lay it out."""
+    if kind == "image":
+        ref = save_temp(to_pil(v), "compare", fmt="png")
+        info = {"w": int(v.shape[1]), "h": int(v.shape[0])}
+    elif kind == "video":
+        ref, info = media.video_ref(v, "compare"), media.video_info(v)
+    else:
+        waveform, rate = v
+        ref = media.audio_ref(waveform, rate, "compare")
+        info = {"dur": waveform.shape[-1] / rate, "peaks": media.peaks(waveform)}
+    return {**ref, "kind": kind, "label": label, **info}
+
+
 class ImageSlider(IO.ComfyNode):
+    """Compare Viewer (kept under its first id, Image Slider, so saved workflows still load)."""
+
     @classmethod
     def define_schema(cls):
-        images = IO.Autogrow.TemplatePrefix(
-            IO.MultiType.Input(IO.Image.Input("image", tooltip="Image, batch or image tree; every frame "
-                                                               "becomes a slide"), types=[TREE]),
+        items = IO.Autogrow.TemplatePrefix(
+            IO.MultiType.Input(IO.Image.Input("image", tooltip="Image, video or audio — a single value, a batch, "
+                                                               "a list or a tree; each one becomes a slide"),
+                               types=[IO.Video, IO.Audio, TREE]),
             prefix="image", min=1, max=16)
         return schema(
-            "Arbor_ImageSlider", "Image Slider", CAT_IMAGE,
-            "Compare any number of images of any size. Drag the slider to flip through them, "
-            "or switch to wipe mode for a before / after split.",
-            [IO.Autogrow.Input("images", template=images, optional=True)], [],
-            ["image compare", "compare", "before after", "ab test", "image viewer", "flipbook"],
+            "Arbor_ImageSlider", "Compare Viewer", CAT_IMAGE,
+            "Compare images, videos and audio of any size. Flip through them with the slider, or wipe A against B; "
+            "videos and audio play in sync and keep their place when you switch.",
+            [IO.Autogrow.Input("images", template=items, optional=True)], [],
+            ["image compare", "video compare", "audio compare", "compare", "before after", "ab test",
+             "image slider", "image viewer", "video viewer", "flipbook"],
             is_output_node=True)
 
     @classmethod
     def execute(cls, images: IO.Autogrow.Type = None) -> IO.NodeOutput:
         slides = []
         for name, value in (images or {}).items():
-            for frame, label in _slides(name, value)[:MAX_SLIDES - len(slides)]:
-                ref = save_temp(to_pil(frame), "slider", fmt="png")
-                slides.append({**ref, "label": label, "w": int(frame.shape[1]), "h": int(frame.shape[0])})
+            for kind, v, label in _slides(name, value)[:MAX_SLIDES - len(slides)]:
+                slides.append(_slide(kind, v, label))
         return IO.NodeOutput(ui={"arbor_slider": [{"slides": slides}]})
 
 
 # ======================================================================= Image Grid
+
+def _grid_inputs(values, shape, row_labels, col_labels):
+    """The tree to lay out and the row / column labels, shared by Image Grid and Video Grid."""
+    tree = to_tree(values)
+    if connected(shape):
+        layout = to_tree(shape)
+        tree = T.rebuild(tree.flat(), layout)
+        row_values = [[label_of(v) for v in items] for items in layout.branches.values()]
+        if not connected(col_labels) and all(r == row_values[0] for r in row_values):
+            col_labels = shape  # a true matrix (XY Lists): every row holds the column values
+    if not connected(row_labels) and tree.names:  # e.g. XY Lists' x values, "Mira · lab coat"
+        row_labels = [tree.label(p, label_of) or "" for p in tree.paths()]
+    return tree, (row_labels if connected(row_labels) else None), (col_labels if connected(col_labels) else None)
+
+
+def _label_inputs(what: str):
+    return [tree_in("shape", optional=True,
+                    tooltip=f"Layout to pour plain {what} into (XY Lists' shape); labels the columns when "
+                            "every row holds the same values"),
+            tree_in("row_labels", optional=True,
+                    tooltip="One label per row — overrides the row names the tree or shape carries"),
+            tree_in("col_labels", optional=True,
+                    tooltip="One label per column — overrides the labels taken from shape")]
+
+
+def _style_inputs(cell_size_default: int):
+    return [IO.Combo.Input("fit", options=["fit", "original", "stretch"], default="fit",
+                           tooltip="How pictures of different sizes fill a cell"),
+            IO.Int.Input("cell_size", default=cell_size_default, min=0, max=8192, step=8,
+                         tooltip="Longest side of a cell in px; 0 = largest picture"),
+            IO.Int.Input("gap", default=8, min=0, max=256),
+            IO.Int.Input("font_size", default=24, min=8, max=200),
+            IO.Combo.Input("theme", options=["light", "dark"], default="light"),
+            IO.Boolean.Input("path_labels", default=False,
+                             tooltip="Label rows with their branch path when there are no row labels or names")]
+
 
 class ImageGrid(IO.ComfyNode):
     @classmethod
@@ -66,43 +130,97 @@ class ImageGrid(IO.ComfyNode):
             "XY sheet: each branch is a row, each item a column. Connect XY Lists' shape to lay out "
             "and label the images of a batch run directly; use Reshape Tree (flip matrix) to swap the axes.",
             [tree_in("images", tooltip="Image tree, or the plain images of a batch run (with shape)"),
-             tree_in("shape", optional=True,
-                     tooltip="Layout to pour plain images into (XY Lists' shape); labels the columns when "
-                             "every row holds the same values"),
-             tree_in("row_labels", optional=True,
-                     tooltip="One label per row — overrides the row names the tree or shape carries"),
-             tree_in("col_labels", optional=True,
-                     tooltip="One label per column — overrides the labels taken from shape"),
-             IO.Combo.Input("fit", options=["fit", "original", "stretch"], default="fit",
-                            tooltip="How images of different sizes fill a cell"),
-             IO.Int.Input("cell_size", default=0, min=0, max=8192, step=8,
-                          tooltip="Longest side of a cell in px; 0 = largest image"),
-             IO.Int.Input("gap", default=8, min=0, max=256),
-             IO.Int.Input("font_size", default=24, min=8, max=200),
-             IO.Combo.Input("theme", options=["light", "dark"], default="light"),
-             IO.Boolean.Input("path_labels", default=False,
-                              tooltip="Label rows with their branch path when there are no row labels or names")],
+             *_label_inputs("images"), *_style_inputs(0)],
             [IO.Image.Output(display_name="image")],
             ["xy plot", "xyz plot", "grid", "contact sheet", "comparison", "tree to grid"])
 
     @classmethod
     def execute(cls, images, fit, cell_size, gap, font_size, theme, path_labels,
                 shape=None, row_labels=None, col_labels=None) -> IO.NodeOutput:
-        tree = to_tree(images)
-        if connected(shape):
-            layout = to_tree(shape)
-            tree = T.rebuild(tree.flat(), layout)
-            row_values = [[label_of(v) for v in items] for items in layout.branches.values()]
-            if not connected(col_labels) and all(r == row_values[0] for r in row_values):
-                col_labels = shape  # a true matrix (XY Lists): every row holds the column values
+        tree, row_labels, col_labels = _grid_inputs(images, shape, row_labels, col_labels)
         rows, cols = grid_size(tree)
-        if not connected(row_labels) and tree.names:  # e.g. XY Lists' x values, "Mira · lab coat"
-            row_labels = [tree.label(p, label_of) or "" for p in tree.paths()]
-        sheet = build_grid(tree, row_labels_for(row_labels if connected(row_labels) else None, rows),
-                           col_labels_for(col_labels if connected(col_labels) else None, cols),
+        sheet = build_grid(tree, row_labels_for(row_labels, rows), col_labels_for(col_labels, cols),
                            unwrap(fit), unwrap(cell_size), unwrap(gap), unwrap(font_size), unwrap(theme),
                            unwrap(path_labels))
         return IO.NodeOutput(torch.from_numpy(np.asarray(sheet, dtype=np.float32) / 255.0)[None])
+
+
+# ======================================================================= Video Grid
+
+def _clip_size(v) -> tuple[int, int]:
+    if isinstance(v, torch.Tensor):
+        return int(v.shape[2]), int(v.shape[1])
+    info = media.video_info(v)
+    if info.get("w") and info.get("h"):
+        return info["w"], info["h"]
+    images = v.get_components().images
+    return int(images.shape[2]), int(images.shape[1])
+
+
+class VideoGrid(IO.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return schema(
+            "Arbor_VideoGrid", "Video Grid", CAT_IMAGE,
+            "Image Grid for video: each branch is a row, each clip a column, all playing in sync in one labelled "
+            "video. Shorter clips hold their last frame until the longest one ends.",
+            [tree_in("videos", tooltip="Video tree, or the plain videos of a batch run (with shape); "
+                                       "an image batch counts as one clip"),
+             *_label_inputs("videos"), *_style_inputs(512),
+             IO.Float.Input("fps", default=0.0, min=0.0, max=240.0, step=1.0,
+                            tooltip="Frame rate of the grid video; 0 = the highest rate among the clips"),
+             IO.Combo.Input("audio", options=["none", "mix"], default="none",
+                            tooltip="none: silent · mix: every clip's sound mixed together")],
+            [IO.Video.Output(display_name="video")],
+            ["video grid", "video xy plot", "video contact sheet", "video comparison", "side by side video",
+             "video collage"],
+            is_output_node=True)
+
+    @classmethod
+    def execute(cls, videos, fit, cell_size, gap, font_size, theme, path_labels, fps, audio,
+                shape=None, row_labels=None, col_labels=None) -> IO.NodeOutput:
+        from comfy_api.latest import InputImpl
+
+        tree, row_labels, col_labels = _grid_inputs(videos, shape, row_labels, col_labels)
+        rows = [(p, [v for v in items if is_video(v) or is_image(v)]) for p, items in tree.items()]
+        rows = [r for r in rows if r[1]]
+        if not rows:
+            raise ValueError("Video Grid: no videos to lay out")
+        n_cols = max(len(clips) for _, clips in rows)
+        fit = unwrap(fit)
+        sheet = layout_sheet([[_clip_size(v) for v in clips] for _, clips in rows],
+                             row_labels_for(row_labels, len(rows)), col_labels_for(col_labels, n_cols),
+                             unwrap(cell_size), unwrap(gap), unwrap(font_size), unwrap(theme), unwrap(path_labels),
+                             [p for p, _ in rows], "Video Grid", even=True)
+
+        size = lambda w, h: media.fit_size(w, h, sheet.cw, sheet.ch, fit)
+        cells = []  # (x, y, frames, fps)
+        for i, (_, clips) in enumerate(rows):
+            for j, v in enumerate(clips):
+                frames, rate = media.clip_frames(v, size)
+                if len(frames):
+                    x, y = sheet.place(i, j, frames.shape[2], frames.shape[1])
+                    cells.append((x, y, frames, rate))
+        out_fps = unwrap(fps) or max((r for *_, r in cells), default=0) or 24.0
+        length = max(len(f) / (r or out_fps) for _, _, f, r in cells)
+        count = max(1, math.ceil(length * out_fps - 1e-6))
+        background = np.asarray(sheet.image, dtype=np.uint8)
+
+        def frames():
+            for k in range(count):
+                t = k / out_fps
+                buf = background.copy()
+                for x, y, f, r in cells:
+                    frame = f[min(int(t * (r or out_fps) + 1e-6), len(f) - 1)]
+                    buf[y:y + frame.shape[0], x:x + frame.shape[1]] = frame
+                yield buf
+
+        sound = None
+        if unwrap(audio) == "mix":
+            sound = media.mix([media.video_audio(v) for _, clips in rows for v in clips if is_video(v)])
+        path = media.encode_mp4(frames(), count, out_fps, background.shape[1], background.shape[0], sound)
+        return IO.NodeOutput(InputImpl.VideoFromFile(path),
+                             ui={"images": [media.view_ref(path)], "animated": [True]})
 
 
 # ======================================================================= Smart Resize
@@ -219,4 +337,4 @@ class BatchPick(IO.ComfyNode):
         return IO.NodeOutput(images[idx], len(idx))
 
 
-NODES = [ImageSlider, ImageGrid, SmartResize, BatchPick]
+NODES = [ImageSlider, ImageGrid, VideoGrid, SmartResize, BatchPick]

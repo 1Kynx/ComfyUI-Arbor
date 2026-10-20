@@ -319,7 +319,8 @@ class Collect(IO.ComfyNode):
                               tooltip="Split IMAGE / MASK / LATENT batches into one item per frame")],
             [data_out(tooltip="Every collected item as plain data"),
              tree_out(tooltip="The collected items as a tree, one (named) branch per input")],
-            ["collect", "gather", "create list", "make list", "bundle", "group inputs", "compare pipelines"])
+            ["collect", "gather", "create list", "make list", "create data", "bundle", "group inputs",
+             "compare pipelines", "收集", "创建数据", "创建列表"])
 
     @classmethod
     def execute(cls, inputs: IO.Autogrow.Type, mode, names, split_batch) -> IO.NodeOutput:

@@ -587,6 +587,62 @@ def test_image_nodes():
     print("image nodes: OK")
 
 
+def test_compare_and_video_grid():
+    import tempfile
+    from fractions import Fraction
+    import av
+    import folder_paths
+    from comfy_api.latest import InputImpl, Types
+
+    tone = lambda secs, ch=2: {"waveform": torch.sin(torch.linspace(0, 400 * secs, int(16000 * secs)))
+                               .repeat(1, ch, 1) * 0.3, "sample_rate": 16000}
+    clip = lambda n, fps=24, audio=None: InputImpl.VideoFromComponents(Types.VideoComponents(
+        images=torch.rand(n, 32, 48, 3), audio=audio, frame_rate=Fraction(fps)))
+    with tempfile.TemporaryDirectory() as d:
+        old = folder_paths.get_temp_directory()
+        folder_paths.set_temp_directory(d)
+        try:
+            # Compare Viewer: pictures, videos and sound in one tree
+            mixed = T.DataTree({(0,): [torch.rand(2, 16, 24, 3), clip(12)], (1,): [tone(0.5)]},
+                               {(0,): "Arrival", (1,): "Sound"})
+            slides = run(nodes_image.ImageSlider, images={"image0": [mixed]}).ui["arbor_slider"][0]["slides"]
+            assert [s["kind"] for s in slides] == ["image", "image", "video", "audio"]
+            assert [s["label"] for s in slides] == ["Arrival · 1/3", "Arrival · 2/3", "Arrival · 3/3", "Sound"]
+            assert (slides[2]["w"], slides[2]["h"]) == (48, 32) and abs(slides[2]["dur"] - 0.5) < 0.01
+            assert abs(slides[3]["dur"] - 0.5) < 0.01 and max(slides[3]["peaks"]) == 1.0
+            assert all(os.path.exists(os.path.join(d, s["subfolder"], s["filename"])) for s in slides)
+            # a browser-playable file inside a ComfyUI folder is played where it is, not copied
+            on_disk = os.path.join(d, "clip.mp4")
+            clip(6).save_to(on_disk, format=Types.VideoContainer.MP4, codec=Types.VideoCodec.AUTO)
+            ref = run(nodes_image.ImageSlider, images={"image0": [InputImpl.VideoFromFile(on_disk)]}).ui
+            assert ref["arbor_slider"][0]["slides"][0]["filename"] == "clip.mp4"
+            slot = nodes_image.ImageSlider.define_schema().inputs[0].template.input
+            assert all(t in slot.get_io_type() for t in ("IMAGE", "VIDEO", "AUDIO", "ARBOR_TREE"))
+
+            # Video Grid: 0.5 s at 24 fps, 0.5 s at 12 fps, and an image batch (3 frames) as a clip
+            videos = T.DataTree({(0,): [clip(12, 24, tone(0.5)), clip(6, 12)], (1,): [torch.rand(3, 32, 48, 3)]},
+                                {(0,): "two clips", (1,): "frames"})
+            out = run(nodes_image.VideoGrid, videos=[videos], fit="fit", cell_size=64, gap=4, font_size=12,
+                      theme="light", path_labels=False, fps=0.0, audio="mix")
+            video = res(out)[0]
+            w, h = video.get_dimensions()
+            assert w % 2 == 0 and h % 2 == 0 and w > 2 * 64 and h > 2 * 40, (w, h)
+            assert video.get_frame_count() == 12 and float(video.get_frame_rate()) == 24.0
+            with av.open(video.get_stream_source()) as c:
+                assert len(c.streams.audio) == 1, "audio=mix keeps the sound"
+            assert out.ui["animated"] == [True] and out.ui["images"][0]["type"] == "temp"
+            silent = res(run(nodes_image.VideoGrid, videos=[videos], fit="fit", cell_size=64, gap=4, font_size=12,
+                             theme="dark", path_labels=False, fps=12.0, audio="none"))[0]
+            assert silent.get_frame_count() == 6
+            with av.open(silent.get_stream_source()) as c:
+                assert not c.streams.audio
+            raises(ValueError, run, nodes_image.VideoGrid, videos=[T.DataTree({(0,): ["text"]})], fit="fit",
+                   cell_size=64, gap=4, font_size=12, theme="light", path_labels=False, fps=0.0, audio="none")
+        finally:
+            folder_paths.set_temp_directory(old)
+    print("compare viewer / video grid: OK")
+
+
 def test_files():
     import tempfile
     from fractions import Fraction
@@ -751,7 +807,7 @@ def test_example_workflows():
 
 def test_registration():
     ids = [n.define_schema().node_id for n in pkg.NODES]
-    assert len(ids) == len(set(ids)) == 28, (len(ids), len(set(ids)))
+    assert len(ids) == len(set(ids)) == 29, (len(ids), len(set(ids)))
     cats = {}
     for n in pkg.NODES:
         s = n.define_schema()
@@ -767,7 +823,8 @@ def test_registration():
 
 if __name__ == "__main__":
     for test in [test_tree_algebra, test_cross_and_rebuild, test_data_nodes, test_number_slider, test_panel,
-                 test_tree_nodes, test_list_nodes, test_grasshopper_matching, test_nested_trees, test_xy_lists, test_image_grid, test_image_nodes, test_files,
+                 test_tree_nodes, test_list_nodes, test_grasshopper_matching, test_nested_trees, test_xy_lists, test_image_grid, test_image_nodes,
+                 test_compare_and_video_grid, test_files,
                  test_live_preview, test_docs_and_locales, test_example_workflows, test_registration]:
         test()
     print("ALL OK")

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import fnmatch
 import hashlib
-import io
 import json
 import os
 import re
@@ -18,6 +17,8 @@ import folder_paths
 
 from . import tree as T
 from .common import IO, CAT_IMAGE, schema, connected, tree_in, tree_out, to_tree, unwrap
+from . import media
+from .media import is_audio, is_video
 from .preview import is_image, label_of, to_pil
 
 MAX_PREVIEWS = 64
@@ -218,14 +219,6 @@ def _metadata(hidden) -> dict:
     return meta
 
 
-def is_video(v) -> bool:
-    return hasattr(v, "save_to") and hasattr(v, "get_dimensions")
-
-
-def is_audio(v) -> bool:
-    return isinstance(v, dict) and isinstance(v.get("waveform"), torch.Tensor) and bool(v.get("sample_rate"))
-
-
 def media_files(items: list) -> list[tuple[str, object]]:
     """Everything a branch saves, one entry per file: ('png', frame), ('mp4', video),
     ('flac', (waveform, rate)), ('txt', text). Other values are skipped."""
@@ -257,28 +250,8 @@ def write_mp4(video, path: str, meta: dict):
 
 
 def write_flac(audio: tuple[torch.Tensor, int], path: str, meta: dict):
-    """One clip ([channels, samples]) as FLAC, the way ComfyUI's audio saving writes it."""
-    import av
     waveform, rate = audio
-    waveform = waveform.float()
-    if waveform.dim() == 1:
-        waveform = waveform[None]
-    if waveform.shape[0] > 2:  # FLAC layouts here: mono or stereo
-        waveform = waveform[:2]
-    layout = "mono" if waveform.shape[0] == 1 else "stereo"
-    buf = io.BytesIO()
-    container = av.open(buf, mode="w", format="flac")
-    for k, v in meta.items():
-        container.metadata[k] = json.dumps(v)
-    stream = container.add_stream("flac", rate=rate, layout=layout)
-    frame = av.AudioFrame.from_ndarray(waveform.movedim(0, 1).reshape(1, -1).numpy(), format="flt", layout=layout)
-    frame.sample_rate = rate
-    frame.pts = 0
-    container.mux(stream.encode(frame))
-    container.mux(stream.encode(None))
-    container.close()
-    with open(path, "wb") as f:
-        f.write(buf.getbuffer())
+    media.write_flac(waveform, rate, path, meta)
 
 
 def write_txt(text: str, path: str, _meta: dict):

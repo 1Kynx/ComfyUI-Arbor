@@ -53,7 +53,7 @@ Branches can hold branches — `{scene;shot}`, `{character;outfit}` — and the 
 
 | Category | Nodes |
 |---|---|
-| **Arbor/Image** | Image Slider · Image Grid · Load Folder · Save by Path · Smart Resize · Batch Pick |
+| **Arbor/Image** | Compare Viewer · Image Grid · Video Grid · Load Folder · Save by Path · Smart Resize · Batch Pick |
 | **Arbor/Data** | Panel · Number Slider · Number Sequence · Split Text · Prompt Template · Expression · Random · Collect · Index Switch |
 | **Arbor/Tree** | XY Lists · Tree to Data · Construct Tree · Reshape Tree · Tree Branch · Merge · Tree Statistics |
 | **Arbor/List** | List Item · Dispatch · Partition · Repeat · Sort List · Cross Reference |
@@ -66,10 +66,16 @@ Flatten, Simplify, Flip Matrix, Shift Paths and Renumber (pick the mode); **Merg
 takes `0`, `-1`, `0, 2`, `1:4`, `2-5` or `::2`, so it covers Sub List; **Sort List** also reverses.
 Searching for any of the Grasshopper names finds the right node.
 
-**Image Slider** — connect any number of images (inputs grow as you connect) of any size — single
-images, batches or whole image trees; slides from a named branch are labelled with its name.
-*Flip*: drag the scrubber or press ← → to step through them. *Wipe*: A/B split that follows the pointer.
-*Real* keeps relative sizes, *Fit* fills the stage. Double-click opens the full image.
+**Compare Viewer** (formerly Image Slider) — connect any number of images, videos or audio (inputs grow
+as you connect) — single values, batches or whole trees; slides from a named branch are labelled with its name.
+*Flip*: drag the scrubber or press ← → to step through them. *Wipe*: A/B split that follows the pointer;
+with audio, A and B are stacked and you hear the half under the pointer. Videos and audio share one
+play / seek / loop bar and keep their time when you switch slides, so A/B comparisons stay on the same
+moment. *Real* keeps relative sizes, *Fit* fills the stage. Double-click opens the file.
+
+**Video Grid** — Image Grid for video: each branch a row, each clip a column, all playing in sync in one
+labelled video (shorter clips hold their last frame). Same shape / label inputs as Image Grid, plus the
+frame rate and an optional mix of every clip's sound.
 
 **Collect** — gather any values, not only text (pictures, masks, latents, audio, video), into data: one
 branch per input, named one per line in the names box, or all in one list. Connect the results of different
@@ -144,7 +150,7 @@ input or output is undocumented.
 | `arbor_qwen_storyboard` | A **Panel** storyboard (`# scene` lines, one shot per line) → **Expression** adds the style → **Tree to Data** flattens it for the sampler → **Image Grid** with one row per scene; **Construct Tree** + **Save by Path** write one folder per scene. Start here — the next three use its output. | 6 images, 30 s |
 | `arbor_qwen_edit_by_scene` | Pictures × instructions as one tree: **Load Folder** gives the frames per scene, a **Panel** gives each scene its *own* edits (2 / 1 / 2). **Cross Reference** pairs them per shot, **XY Lists** in *zip* mode flattens both side by side for the edit model, **Construct Tree** + **Merge** put each original in front of its edits. | 10 edits, 75 s |
 | `arbor_h3_storyboard_video` | Keyframes (images), a motion line per shot and a sound line per scene (text) drive MiniMax H3 image-to-video **with audio**. Motion and sound are both one branch per scene, so the scene's sound line repeats for each of its shots (longest list); **Construct Tree** + **Save by Path** file the clips one folder per scene (`h3/0 · Arrival/000.mp4`), ready for **Load Folder** (*videos*); **Batch Pick** + **Construct Tree** make a contact sheet per scene. | 6 clips, 110 s |
-| `arbor_folder_review` | No model: **Load Folder** reads the folders back as a named tree; contact sheet, **List Item** picks, **Reshape Tree** (flip matrix) compares shot by shot, **Image Slider** flips through. | — |
+| `arbor_folder_review` | No model: **Load Folder** reads the folders back as a named tree; contact sheet, **List Item** picks, **Reshape Tree** (flip matrix) compares shot by shot, **Compare Viewer** flips through. | — |
 | `arbor_qwen_character_sheet` | Three uneven levels — character → outfit → pose (Mira 3 outfits, Theo 2). **List Item** splits description from outfits per branch, **Cross Reference** nests the poses and hands every outfit its character's description, **Expression** pairs them branch by branch (Grasshopper's matching), **Reshape Tree** *shift paths −1* folds outfits back into one row per character. | 15 images, 65 s |
 
 **Grids and sweeps:**
