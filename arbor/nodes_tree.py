@@ -24,7 +24,8 @@ class XYLists(IO.ComfyNode):
              tree_in("z", optional=True, tooltip="Optional third parameter (columns; rows become x × y)"),
              IO.Combo.Input("mode", options=["cross", "zip"], default="cross",
                             tooltip="cross: every combination · zip: item by item (longest list) — two trees of "
-                                    "the same layout flatten side by side and the shape keeps x's branches")],
+                                    "the same layout flatten side by side; the shape keeps the branches of "
+                                    "the longest input")],
             [IO.AnyType.Output(display_name="x", is_output_list=True, tooltip="x of every run"),
              IO.AnyType.Output(display_name="y", is_output_list=True, tooltip="y of every run"),
              IO.AnyType.Output(display_name="z", is_output_list=True, tooltip="z of every run"),
@@ -38,9 +39,11 @@ class XYLists(IO.ComfyNode):
     @classmethod
     def execute(cls, x, mode, y=None, z=None) -> IO.NodeOutput:
         tx = to_tree(x)
+        ty = to_tree(y) if connected(y) else None
+        tz = to_tree(z) if connected(z) else None
         xs = tx.flat()
-        ys = to_tree(y).flat() if connected(y) else None
-        zs = to_tree(z).flat() if connected(z) else None
+        ys = ty.flat() if ty is not None else None
+        zs = tz.flat() if tz is not None else None
         if not xs:
             raise ValueError("XY Lists: x is empty")
         if ys == [] or zs == []:
@@ -52,7 +55,7 @@ class XYLists(IO.ComfyNode):
             n = len(xs)
             return IO.NodeOutput(xs, [None] * n, [None] * n, tx, n)
 
-        ox, oy, oz, shape, names = [], [], [], {}, {}
+        ox, oy, oz = [], [], []
         if unwrap(mode) == "zip":
             n = max(len(xs), len(ys), len(zs or []))
             pick = lambda vals, i: vals[min(i, len(vals) - 1)] if vals else None
@@ -60,26 +63,27 @@ class XYLists(IO.ComfyNode):
                 ox.append(pick(xs, i))
                 oy.append(pick(ys, i))
                 oz.append(pick(zs, i))
-            last = oz if zs else oy  # the shape's items: the last variable, for column labels
-            if n == len(xs):  # x is the longest: the runs keep x's branches (and names)
-                return IO.NodeOutput(ox, oy, oz, T.rebuild(last, tx), n)
-            shape[(0,)] = list(last)  # a longer y / z: one row
-        else:
-            total = len(xs) * len(ys) * len(zs or [None])
-            if total > MAX_COMBOS:
-                raise ValueError(f"XY Lists: {total} combinations (max {MAX_COMBOS})")
-            for i, xv in enumerate(xs):
-                for j, yv in enumerate(ys):
-                    for zv in zs or [None]:
-                        ox.append(xv)
-                        oy.append(yv)
-                        oz.append(zv)
-                    if zs:
-                        shape[(i, j)] = list(zs)
-                        names[(i, j)] = f"{label_of(xv)} · {label_of(yv)}"
-                if not zs:
-                    shape[(i,)] = list(ys)
-                    names[(i,)] = xv
+            # the runs keep the branches (and names) of the longest input — x, then y, then z;
+            # a plain list is one branch, so then the shape is one row. Its items are the last
+            # variable's values, for column labels.
+            longest = next(t for t, vals in ((tx, xs), (ty, ys), (tz, zs)) if vals is not None and len(vals) == n)
+            return IO.NodeOutput(ox, oy, oz, T.rebuild(oz if zs else oy, longest), n)
+        shape, names = {}, {}
+        total = len(xs) * len(ys) * len(zs or [None])
+        if total > MAX_COMBOS:
+            raise ValueError(f"XY Lists: {total} combinations (max {MAX_COMBOS})")
+        for i, xv in enumerate(xs):
+            for j, yv in enumerate(ys):
+                for zv in zs or [None]:
+                    ox.append(xv)
+                    oy.append(yv)
+                    oz.append(zv)
+                if zs:
+                    shape[(i, j)] = list(zs)
+                    names[(i, j)] = f"{label_of(xv)} · {label_of(yv)}"
+            if not zs:
+                shape[(i,)] = list(ys)
+                names[(i,)] = xv
         return IO.NodeOutput(ox, oy, oz, T.DataTree(shape, names), len(ox))
 
 

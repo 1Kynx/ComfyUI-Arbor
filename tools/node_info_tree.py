@@ -21,7 +21,7 @@ node("Arbor_XYLists", en=dict(
     inputs={"x": "Values for the rows — or any tree to flatten into plain data.",
             "y": "Values for the columns (optional).",
             "z": "Optional third parameter: becomes the columns, rows become x × y.",
-            "mode": "cross: every combination · zip: item by item (longest list, the last item repeats); when x is the longest, the shape keeps x's branches."},
+            "mode": "cross: every combination · zip: item by item (longest list, the last item repeats); the shape keeps the branches of the longest input (x, then y, then z) — one row when that is a plain list."},
     outputs=["x of every run — connect to any widget input (cfg, steps, seed…). The node it feeds runs once per combination.",
              "y of every run.", "z of every run (empty values when z is not connected).",
              "Layout of the runs: connect to Image Grid (rows × columns) or Construct Tree (back into a tree). Each row is named after its x value and its items are the column values, so Image Grid labels itself. With only x, it is x's own tree.",
@@ -42,7 +42,7 @@ Example template: *Templates → ComfyUI-Arbor → arbor_xy_sampler*.
 Connect a tree to *x* only: *x* becomes its items as plain data (ordinary nodes run once per item) and *shape* is the tree itself. Run something per item, then put the results back with **Construct Tree** (*shape* = this shape).
 
 ## Flatten two trees side by side
-Two trees of the same layout — pictures and their edit instructions from **Cross Reference**, say — go to *x* and *y* in **zip** mode: both come out as plain data, item k with item k, and *shape* keeps x's branches for putting the results back. Template: *arbor_qwen_edit_by_scene*.
+Two trees of the same layout — pictures and their edit instructions from **Cross Reference**, say — go to *x* and *y* in **zip** mode: both come out as plain data, item k with item k, and *shape* keeps the branches of the longest input for putting the results back. Template: *arbor_qwen_edit_by_scene*.
 
 ## Tips
 - 3 × 4 values = 12 runs; the limit is 10 000.
@@ -53,7 +53,7 @@ Two trees of the same layout — pictures and their edit instructions from **Cro
     inputs={"x": ("x", "行的取值——或任意要展开成普通数据的数据树。"),
             "y": ("y", "列的取值（可选）。"),
             "z": ("z", "可选的第三个参数：作为列，行变为 x × y。"),
-            "mode": ("模式", "cross 交叉：所有组合 · zip 配对：逐项对应（最长列表，不够时重复最后一项）；x 最长时，结构沿用 x 的分支。")},
+            "mode": ("模式", "cross 交叉：所有组合 · zip 配对：逐项对应（最长列表，不够时重复最后一项）；结构沿用最长那个输入的分支（依次看 x、y、z）——它是普通列表时就是单行。")},
     outputs=[("x", "每次运行的 x——接到任意参数输入（cfg、步数、种子……），被接的节点会对每种组合各运行一次。"),
              ("y", "每次运行的 y。"), ("z", "每次运行的 z（未接 z 时为空值）。"),
              ("结构", "运行结果的布局：接「图像网格」排成行 × 列，或接「构建数据树」收回成数据树。每行以 x 的取值命名，项就是列的取值，所以图像网格会自动标注行和列。只接 x 时，它就是 x 自己的数据树。"),
@@ -74,7 +74,7 @@ Two trees of the same layout — pictures and their edit instructions from **Cro
 只接 *x*：*x* 输出它的所有项（普通数据，普通节点逐项运行），*结构* 就是这棵树本身。逐项处理后，用 **构建数据树**（*结构* 接这里）把结果收回原来的分支。
 
 ## 并排展开两棵树
-两棵结构相同的数据树——例如 **交叉组合** 输出的图片和对应的编辑指令——分别接 *x* 和 *y*，用 **zip** 模式：两者都变成普通数据，第 k 项对第 k 项，*结构* 沿用 x 的分支，用来把结果收回去。模板：*arbor_qwen_edit_by_scene*。
+两棵结构相同的数据树——例如 **交叉组合** 输出的图片和对应的编辑指令——分别接 *x* 和 *y*，用 **zip** 模式：两者都变成普通数据，第 k 项对第 k 项，*结构* 沿用最长那个输入的分支，用来把结果收回去。模板：*arbor_qwen_edit_by_scene*。
 
 ## 提示
 - 3 × 4 个值 = 运行 12 次；上限 1 万次。

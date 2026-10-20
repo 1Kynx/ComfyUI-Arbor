@@ -707,7 +707,7 @@
       },
       "mode": {
         "name": "mode",
-        "tooltip": "cross: every combination · zip: item by item (longest list, the last item repeats); when x is the longest, the shape keeps x's branches."
+        "tooltip": "cross: every combination · zip: item by item (longest list, the last item repeats); the shape keeps the branches of the longest input (x, then y, then z) — one row when that is a plain list."
       }
     },
     "outputs": {

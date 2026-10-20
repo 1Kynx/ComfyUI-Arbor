@@ -454,6 +454,13 @@ def test_xy_lists():
     x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[pics], y=[edits], mode="zip"))
     assert x == ["p1", "p1", "p2", "p2", "p3"] and y == ["cat", "scarf", "cat", "scarf", "balloon"] and n == 5
     assert shape.branches == edits.branches and shape.label((1, 0)) == "Village", "x's branches and names, y's items"
+    # a longer tree on y: the shape follows y's branches, not one row
+    scenes = T.DataTree({(0,): ["a1", "a2"], (1,): ["b1"]}, {(0,): "Arrival", (1,): "Village"})
+    x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[7], y=[scenes], mode="zip"))
+    assert x == [7, 7, 7] and shape.branches == scenes.branches and shape.names == scenes.names
+    # z the longest: its branches; the items are still the last variable's values
+    x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[1], y=[2], z=[scenes], mode="zip"))
+    assert n == 3 and shape.branches == scenes.branches
     # x only: flattens any tree, the shape is the tree itself
     branched = T.DataTree({(0,): [1, 2], (1,): [3]})
     x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[branched], mode="cross"))
