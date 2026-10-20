@@ -76,6 +76,33 @@ def label_of(v) -> str:
     return describe(v)[1]
 
 
+def _seconds(s: float) -> str:
+    return f"{s:.1f} s" if s < 60 else f"{int(s // 60)}:{s % 60:04.1f}"
+
+
+def _audio_text(waveform: torch.Tensor, rate: int) -> str:
+    """'Audio 2.3 s · 32 kHz · stereo' for a ComfyUI AUDIO dict (waveform [batch, channels, samples])."""
+    shape = tuple(waveform.shape)
+    batch, channels, samples = (shape if len(shape) == 3 else (1,) * (3 - len(shape)) + shape)[-3:]
+    khz = f"{rate / 1000:g} kHz"
+    layout = {1: "mono", 2: "stereo"}.get(channels, f"{channels} ch")
+    return f"Audio {_seconds(samples / rate)} · {khz} · {layout}" + (f" ×{batch}" if batch > 1 else "")
+
+
+def _video_text(v) -> str:
+    """'Video 736×416 · 56 frames · 24 fps · 2.3 s' — whatever the video object can tell without decoding."""
+    parts = []
+    for get, fmt in ((lambda: v.get_dimensions(), lambda d: f"{d[0]}×{d[1]}"),
+                     (lambda: v.get_frame_count(), lambda n: f"{n} frames"),
+                     (lambda: float(v.get_frame_rate()), lambda f: f"{f:g} fps"),
+                     (lambda: float(v.get_duration()), _seconds)):
+        try:
+            parts.append(fmt(get()))
+        except Exception:  # a source that cannot answer one of them
+            pass
+    return "Video " + " · ".join(parts) if parts else "Video"
+
+
 def describe(v) -> tuple[str, str]:
     """(type tag, display text)"""
     if v is None:
@@ -99,6 +126,10 @@ def describe(v) -> tuple[str, str]:
     if isinstance(v, dict) and isinstance(v.get("samples"), torch.Tensor):
         dims = "×".join(str(s) for s in v["samples"].shape)
         return "latent", f"Latent [{dims}]"
+    if isinstance(v, dict) and isinstance(v.get("waveform"), torch.Tensor) and v.get("sample_rate"):
+        return "audio", _audio_text(v["waveform"], int(v["sample_rate"]))
+    if hasattr(v, "get_dimensions") and hasattr(v, "get_frame_count"):  # comfy_api VideoInput
+        return "video", _video_text(v)
     if isinstance(v, dict):
         keys = ", ".join(list(map(str, v.keys()))[:6])
         return "dict", "{" + keys + ("…" if len(v) > 6 else "") + "}"

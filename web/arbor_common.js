@@ -184,7 +184,7 @@ const CSS = `
 .arb-val.t-bool{color:#c49bf0;}
 .arb-val.t-null{color:var(--arb-sub);font-style:italic;}
 .arb-val.t-image,.arb-val.t-mask,.arb-val.t-latent,.arb-val.t-tensor,.arb-val.t-tree,
-.arb-val.t-dict,.arb-val.t-list,.arb-val.t-object{color:var(--arb-sub);}
+.arb-val.t-dict,.arb-val.t-list,.arb-val.t-object,.arb-val.t-audio,.arb-val.t-video{color:var(--arb-sub);}
 .arb-val.t-image{display:flex;align-items:center;gap:8px;}
 .arb-thumb{display:block;max-width:64px;max-height:64px;border-radius:4px;margin:2px 0;flex:0 0 auto;
   border:1px solid var(--arb-line);cursor:zoom-in;}

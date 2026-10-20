@@ -28,7 +28,7 @@ Open *Templates → ComfyUI-Arbor → arbor_xy_sampler* and pick your checkpoint
 ### Trees and plain data
 
 There are no conversion nodes to remember. Every tree input accepts plain values and native lists (they
-become branch `{0}`). The data nodes (Panel, Split Text, Prompt Template, Expression, Random) also output
+become branch `{0}`). The data nodes (Panel, Split Text, Prompt Template, Expression, Random, Collect) also output
 their items as plain `data`, so ordinary nodes run once per item. For any other tree, **Tree to Data** is the
 small bridge: *data* is every item, *shape* remembers the branches. Two or three trees of the same layout
 (e.g. pictures and their edit instructions) flatten side by side with **XY Lists** in *zip* mode, item k with
@@ -54,7 +54,7 @@ Branches can hold branches — `{scene;shot}`, `{character;outfit}` — and the 
 | Category | Nodes |
 |---|---|
 | **Arbor/Image** | Image Slider · Image Grid · Load Folder · Save Images by Path · Smart Resize · Batch Pick |
-| **Arbor/Data** | Panel · Number Slider · Number Sequence · Split Text · Prompt Template · Expression · Random · Index Switch |
+| **Arbor/Data** | Panel · Number Slider · Number Sequence · Split Text · Prompt Template · Expression · Random · Collect · Index Switch |
 | **Arbor/Tree** | XY Lists · Tree to Data · Construct Tree · Reshape Tree · Tree Branch · Merge · Tree Statistics |
 | **Arbor/List** | List Item · Dispatch · Partition · Repeat · Sort List · Cross Reference |
 
@@ -71,10 +71,14 @@ images, batches or whole image trees; slides from a named branch are labelled wi
 *Flip*: drag the scrubber or press ← → to step through them. *Wipe*: A/B split that follows the pointer.
 *Real* keeps relative sizes, *Fit* fills the stage. Double-click opens the full image.
 
+**Collect** — gather any values, not only text (pictures, masks, latents, audio, video), into data: one
+branch per input, named one per line in the names box, or all in one list. Connect the results of different
+pipelines and an Image Grid compares them, one labelled row each.
+
 **Panel** — works both ways, like Grasshopper's panel.
 *Connected*: a viewer. Trees show collapsible branches with paths, names and counts, images show thumbnails,
 long text folds to four lines (*more* unfolds it), every item has its own copy button, and ⤢ opens a
-large view. Data passes through unchanged.
+large view; audio and video items show their length, rate and size. Data passes through unchanged.
 When everything upstream is a lightweight data node (Arbor data/tree/list nodes, core primitives,
 string and math nodes) the view updates **live** as you edit — no run needed (green dot).
 Anything heavier upstream (samplers, loaders, …) never runs on its own; the Panel then shows the last run.

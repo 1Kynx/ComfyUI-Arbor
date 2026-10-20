@@ -24,4 +24,4 @@ tree ─► Tree to Data ─ data ─► ordinary nodes (run once per item) ─�
 ## Tips
 - A small node on purpose: for one tree it does what **XY Lists** does with only *x* connected.
 - Two or three trees of the same layout (pictures and their edit instructions, say) flatten side by side with **XY Lists** in *zip* mode.
-- The data nodes (Panel, Split Text, Prompt Template, Expression, Random) already have a *data* output; this is for every other tree.
+- The data nodes (Panel, Split Text, Prompt Template, Expression, Random, Collect) already have a *data* output; this is for every other tree.

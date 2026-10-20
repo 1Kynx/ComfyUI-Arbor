@@ -291,6 +291,72 @@ class Random(IO.ComfyNode):
         return both(t.map_branches(run))
 
 
+# ======================================================================= Collect
+
+COLLECT_MODES = ["branch per input", "one list"]
+
+
+class Collect(IO.ComfyNode):
+    """Gather anything — pictures, masks, latents, audio, video, text — into a list or one branch per input."""
+
+    @classmethod
+    def define_schema(cls):
+        slot = IO.Autogrow.TemplatePrefix(
+            IO.AnyType.Input("input", tooltip="Anything: an image or batch, a mask, a latent, audio, video, "
+                                              "text, a list or a tree"),
+            prefix="input", min=1, max=32)
+        return schema(
+            "Arbor_Collect", "Collect", CAT_DATA,
+            "Gather any values — not only text — into data. branch per input: every connected input becomes "
+            "its own branch {0}, {1}, …, named from the names box; one list: everything in one list.",
+            [IO.Autogrow.Input("inputs", template=slot),
+             IO.Combo.Input("mode", options=COLLECT_MODES, default=COLLECT_MODES[0],
+                            tooltip="branch per input: {0}, {1}, … one per connected input · one list: all in {0}"),
+             IO.String.Input("names", multiline=True, default="",
+                             tooltip="One name per line, for the branches in input order — they label grid "
+                                     "rows and name saved folders"),
+             IO.Boolean.Input("split_batch", default=False,
+                              tooltip="Split IMAGE / MASK / LATENT batches into one item per frame")],
+            [data_out(tooltip="Every collected item as plain data"),
+             tree_out(tooltip="The collected items as a tree, one (named) branch per input")],
+            ["collect", "gather", "create list", "make list", "bundle", "group inputs", "compare pipelines"])
+
+    @classmethod
+    def execute(cls, inputs: IO.Autogrow.Type, mode, names, split_batch) -> IO.NodeOutput:
+        slots = [v for k, v in sorted((inputs or {}).items(), key=lambda kv: int(kv[0].removeprefix("input") or 0))
+                 if connected(v)]
+        if not slots:
+            raise ValueError("Collect: connect at least one input")
+        split = bool(unwrap(split_batch))
+        labels = [line.strip() for line in str(unwrap(names, "")).splitlines() if line.strip()]
+
+        def items(values: list) -> list:
+            out = []
+            for v in values:
+                if isinstance(v, T.DataTree):
+                    out.extend(items(v.flat()))
+                elif v is not None:
+                    out.extend(T.split_batch(v) if split else [v])
+            return out
+
+        if unwrap(mode) == "one list":
+            tree = T.DataTree({(0,): items([v for s in slots for v in s])}, {(0,): labels[0]} if labels else None)
+            return both(tree)
+        branches, branch_names = {}, {}
+        for i, value in enumerate(slots):
+            values = value if isinstance(value, list) else [value]
+            if len(values) == 1 and isinstance(values[0], T.DataTree):  # a tree keeps its branches, under {i;…}
+                sub = values[0]
+                for p, its in sub.items():
+                    branches[(i,) + p] = items(its)
+                branch_names.update({(i,) + p: n for p, n in sub.names.items()})
+            else:
+                branches[(i,)] = items(values)
+            if i < len(labels):
+                branch_names[(i,)] = labels[i]
+        return both(T.DataTree(branches, branch_names))
+
+
 # ======================================================================= Index Switch
 
 class IndexSwitch(IO.ComfyNode):
@@ -347,4 +413,4 @@ class IndexSwitch(IO.ComfyNode):
         return IO.NodeOutput(inputs[names[int(index) % len(names)]], len(names))
 
 
-NODES = [NumberSlider, NumberSequence, SplitText, PromptTemplate, Expression, Random, IndexSwitch]
+NODES = [NumberSlider, NumberSequence, SplitText, PromptTemplate, Expression, Random, Collect, IndexSwitch]

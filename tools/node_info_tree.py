@@ -96,7 +96,7 @@ tree ─► Tree to Data ─ data ─► ordinary nodes (run once per item) ─�
 ## Tips
 - A small node on purpose: for one tree it does what **XY Lists** does with only *x* connected.
 - Two or three trees of the same layout (pictures and their edit instructions, say) flatten side by side with **XY Lists** in *zip* mode.
-- The data nodes (Panel, Split Text, Prompt Template, Expression, Random) already have a *data* output; this is for every other tree.
+- The data nodes (Panel, Split Text, Prompt Template, Expression, Random, Collect) already have a *data* output; this is for every other tree.
 """), zh=dict(
     name="数据树转数据",
     desc="把数据树的所有项变成普通数据，让普通节点逐项运行——同时输出它的结构，用来把结果收回去。",
@@ -113,7 +113,7 @@ tree ─► Tree to Data ─ data ─► ordinary nodes (run once per item) ─�
 ## 提示
 - 这是个特意做小的节点：对一棵树来说，它和只接 *x* 的 **XY 组合列表** 作用相同。
 - 两三棵结构相同的数据树（比如图片和对应的编辑指令）要并排展开时，用 **XY 组合列表** 的 *zip* 模式。
-- 数据类节点（面板、拆分文本、提示词模板、表达式、随机）本身就有 *数据* 输出；本节点用于其它所有数据树。
+- 数据类节点（面板、拆分文本、提示词模板、表达式、随机、收集）本身就有 *数据* 输出；本节点用于其它所有数据树。
 """))
 
 node("Arbor_ReshapeTree", en=dict(

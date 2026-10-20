@@ -293,7 +293,7 @@ node("Arbor_Panel", en=dict(
     outputs=["The data as a native list: downstream nodes run once per item (a single item runs once).",
              "The data as a tree — for Arbor nodes, keeps the branches."],
     doc="""## Viewing (input connected)
-- Trees show as collapsible branches with their path, name and count (`{1} 7 N=3` — XY Lists names each row after its x value); images as thumbnails.
+- Trees show as collapsible branches with their path, name and count (`{1} 7 N=3` — XY Lists names each row after its x value); images as thumbnails; audio and video with their length, rate and size (`Audio 2.3 s · 32 kHz · stereo`, `Video 736×416 · 56 frames · 24 fps · 2.3 s`).
 - Long text folds to four lines — *more* unfolds it. Hover an item to copy it; the toolbar copies everything.
 - **Live**: when everything upstream is a lightweight data node (Arbor data / tree / list nodes, primitives, string and math nodes) the view updates as you edit — no run needed (green dot). Anything heavier upstream (samplers, loaders) never runs on its own; the panel then shows the last run.
 - ⤢ opens a large view.
@@ -334,7 +334,7 @@ misty roofs
     outputs=[("数据", "原生列表：下游节点会对每一项各运行一次（只有一项时运行一次）。"),
              ("数据树", "数据树形式——给 Arbor 节点用，保留分支结构。")],
     doc="""## 查看（接入输入时）
-- 数据树显示为可折叠的分支，带路径、名称和数量（`{1} 7 N=3`——XY 组合列表会用 x 的取值给每行命名）；图片显示缩略图。
+- 数据树显示为可折叠的分支，带路径、名称和数量（`{1} 7 N=3`——XY 组合列表会用 x 的取值给每行命名）；图片显示缩略图；音频和视频显示时长、采样率 / 帧率和尺寸（`Audio 2.3 s · 32 kHz · stereo`、`Video 736×416 · 56 frames · 24 fps · 2.3 s`）。
 - 长文本默认折叠成四行，点「展开」查看全部。鼠标悬停某项可单独复制；工具栏按钮复制全部。
 - **实时**：上游全是轻量数据节点（Arbor 的数据 / 数据树 / 列表节点、Primitive、字符串和数学节点）时，编辑就会实时刷新，无需运行（绿点）。上游有采样器、加载器等重节点时不会自动运行，显示上一次运行的结果。
 - ⤢ 打开大窗口查看。
@@ -559,6 +559,53 @@ node("Arbor_Random", en=dict(
     doc="""## 提示
 - 为批量出图随机挑选提示词或风格：面板（每行一个）→ **随机**（抽 4 个）→ *数据* 接文本编码器。
 - 把种子的「运行后操作」设为随机，每次运行都会重新抽取。
+"""))
+
+node("Arbor_Collect", en=dict(
+    desc="Gather any values — pictures, masks, latents, audio, video, text — into data: one branch per input, named, or all in one list.",
+    inputs={"inputs": "Anything. Every connection adds a slot. A list fills its branch with all its items; a tree keeps its own branches under {i;…}.",
+            "mode": "branch per input: input 1 → {0}, input 2 → {1}, … (only connected slots count) · one list: everything in {0}, like ComfyUI's Create List.",
+            "names": "One name per line, for the branches in input order. The names label Image Grid rows, Panel branches and Image Slider slides, and name the folders of Save Images by Path. In one-list mode the first line names the list.",
+            "split_batch": "Split IMAGE / MASK / LATENT batches into one item per frame."},
+    outputs=["Every collected item as plain data — ordinary nodes run once per item.",
+             "The collected items as a tree, one named branch per input."],
+    doc="""## Compare pipelines
+```
+Qwen   ─► input0 ┐
+Flux   ─► input1 ├─ Collect (names: Qwen / Flux / original) ─ tree ─► Image Grid
+LoadImage ► input2 ┘
+```
+Every pipeline becomes a row of the sheet, labelled with its name.
+
+## Reference sets per scene
+Connect one batch of reference pictures per scene, turn on *split_batch*, write the scene names: `{0} Arrival: 3 pictures · {1} Village: 2 pictures` — ready for **List Item**, **Cross Reference** or a reference-to-video run.
+
+## Tips
+- Text typed by hand is easier in a **Panel**; this node is for values that come from other nodes.
+- Only connected slots count, so `{0}`, `{1}`, … have no gaps.
+"""), zh=dict(
+    name="收集",
+    desc="把任意数据——图片、蒙版、latent、音频、视频、文字——收集成数据：每个输入一个有名字的分支，或全部放进一个列表。",
+    inputs={"inputs": ("输入", "任意数据。每连一个就多出一个输入口。列表的所有项都放进它的分支；数据树保留自己的分支，放在 {i;…} 下。"),
+            "mode": ("模式", "branch per input 每个输入一个分支：第 1 个输入 → {0}，第 2 个 → {1}……（只算已连接的输入口）· one list 一个列表：全部放进 {0}，同 ComfyUI 的 Create List。"),
+            "names": ("名字", "一行一个名字，按输入顺序给分支命名。名字会成为图像网格的行标签、面板的分支名、图像滑块的页名，以及「按路径保存图像」的文件夹名。一个列表模式下，第一行给这个列表命名。"),
+            "split_batch": ("拆分批次", "把 IMAGE / MASK / LATENT 批次拆成每帧一项。")},
+    outputs=[("数据", "收集到的所有项（普通数据）——普通节点逐项运行。"),
+             ("数据树", "收集到的项（数据树），每个输入一个有名字的分支。")],
+    doc="""## 对比不同流程
+```
+Qwen    ─► 输入0 ┐
+Flux    ─► 输入1 ├─ 收集（名字：Qwen / Flux / 原图）─ 数据树 ─► 图像网格
+加载图像 ─► 输入2 ┘
+```
+每条流程成为对比图的一行，并用名字标注。
+
+## 按场景准备参考图
+每个场景接一批参考图，打开 *拆分批次*，写上场景名：`{0} Arrival: 3 张 · {1} Village: 2 张`——可以直接接 **列表取项**、**交叉组合** 或参考生视频。
+
+## 提示
+- 手动输入文字用 **面板** 更方便；本节点用于来自其它节点的数据。
+- 只算已连接的输入口，所以 `{0}`、`{1}`……不会有空缺。
 """))
 
 node("Arbor_ConstructTree", en=dict(

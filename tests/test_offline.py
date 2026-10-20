@@ -176,6 +176,19 @@ def test_data_nodes():
     assert sw.check_lazy_status(-1, ins) == ["inputs.input2"]
     assert list(res(sw.execute(4, {"input0": "a", "input1": "b"}))) == ["a", 2]
     assert res(sw.execute(True, {"input0": "off", "input1": "on"}))[0] == "on"
+    # Collect: any values, one branch per connected input, named; or one list
+    batch = torch.rand(2, 8, 8, 3)
+    collect = lambda **kw: res(run(nodes_data.Collect, **({"mode": "branch per input", "names": "", "split_batch": False} | kw)))
+    data, t = collect(inputs={"input0": [batch], "input1": ["x", "y"], "input2": [None]}, names="Qwen\n\nFlux\nextra")
+    assert t.paths() == [(0,), (1,)] and t.branches[(1,)] == ["x", "y"] and t.branches[(0,)][0] is batch
+    assert t.names == {(0,): "Qwen", (1,): "Flux"} and data == [batch, "x", "y"]
+    assert len(collect(inputs={"input0": [batch]}, split_batch=True)[1].branches[(0,)]) == 2, "batch split into frames"
+    one = collect(inputs={"input0": [1], "input2": [2, 3]}, mode="one list", names="all")[1]
+    assert one.branches == {(0,): [1, 2, 3]} and one.names == {(0,): "all"}
+    sub = T.DataTree({(0,): [1], (1,): [2]}, {(1,): "inner"})
+    nested = collect(inputs={"input0": [sub], "input1": ["z"]}, names="outer")[1]
+    assert nested.branches == {(0, 0): [1], (0, 1): [2], (1,): ["z"]} and nested.label((0, 1)) == "outer · inner"
+    raises(ValueError, collect, inputs={"input0": [None]})
     print("data nodes: OK")
 
 
@@ -241,6 +254,15 @@ def test_panel():
     assert ptree is tree, "tree output is the input tree"
     named = run(nodes_panel.Panel, data=[T.DataTree({(0,): [1], (1,): [2]}, {(1,): 7})]).ui["arbor_panel"][0]
     assert "name" not in named["branches"][0] and named["branches"][1]["name"] == "7"
+    # audio and video say what they are
+    from fractions import Fraction
+    from arbor_pkg.arbor.preview import describe
+    assert describe({"waveform": torch.zeros(1, 2, 64000), "sample_rate": 32000}) == ("audio", "Audio 2.0 s · 32 kHz · stereo")
+    assert describe({"waveform": torch.zeros(2, 1, 44100), "sample_rate": 44100})[1] == "Audio 1.0 s · 44.1 kHz · mono ×2"
+    from comfy_api.latest import InputImpl, Types
+    clip = InputImpl.VideoFromComponents(Types.VideoComponents(images=torch.rand(12, 16, 24, 3), audio=None,
+                                                               frame_rate=Fraction(24)))
+    assert describe(clip) == ("video", "Video 24×16 · 12 frames · 24 fps · 0.5 s"), describe(clip)
     flat = run(nodes_panel.Panel, data=[1, 2, 3]).ui["arbor_panel"][0]
     assert flat["kind"] == "list" and flat["stats"]["items"] == 3
 
@@ -705,7 +727,7 @@ def test_example_workflows():
 
 def test_registration():
     ids = [n.define_schema().node_id for n in pkg.NODES]
-    assert len(ids) == len(set(ids)) == 27, (len(ids), len(set(ids)))
+    assert len(ids) == len(set(ids)) == 28, (len(ids), len(set(ids)))
     cats = {}
     for n in pkg.NODES:
         s = n.define_schema()
