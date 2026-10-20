@@ -23,7 +23,8 @@ class XYLists(IO.ComfyNode):
              tree_in("y", optional=True, tooltip="Values for the columns"),
              tree_in("z", optional=True, tooltip="Optional third parameter (columns; rows become x × y)"),
              IO.Combo.Input("mode", options=["cross", "zip"], default="cross",
-                            tooltip="cross: every combination · zip: item by item (longest list)")],
+                            tooltip="cross: every combination · zip: item by item (longest list) — two trees of "
+                                    "the same layout flatten side by side and the shape keeps x's branches")],
             [IO.AnyType.Output(display_name="x", is_output_list=True, tooltip="x of every run"),
              IO.AnyType.Output(display_name="y", is_output_list=True, tooltip="y of every run"),
              IO.AnyType.Output(display_name="z", is_output_list=True, tooltip="z of every run"),
@@ -59,7 +60,10 @@ class XYLists(IO.ComfyNode):
                 ox.append(pick(xs, i))
                 oy.append(pick(ys, i))
                 oz.append(pick(zs, i))
-            shape[(0,)] = list(oz if zs else oy)  # one row, labelled by the last variable
+            last = oz if zs else oy  # the shape's items: the last variable, for column labels
+            if n == len(xs):  # x is the longest: the runs keep x's branches (and names)
+                return IO.NodeOutput(ox, oy, oz, T.rebuild(last, tx), n)
+            shape[(0,)] = list(last)  # a longer y / z: one row
         else:
             total = len(xs) * len(ys) * len(zs or [None])
             if total > MAX_COMBOS:

@@ -11,7 +11,7 @@ From values to a batch run: every combination of x, y (and z) as aligned plain d
 - **z** · *any, optional*  
   Optional third parameter: becomes the columns, rows become x × y.
 - **mode** · *COMBO (cross · zip)*  
-  cross: every combination · zip: item by item (longest list, the last item repeats).
+  cross: every combination · zip: item by item (longest list, the last item repeats); when x is the longest, the shape keeps x's branches.
 
 ## Outputs
 
@@ -40,6 +40,9 @@ Example template: *Templates → ComfyUI-Arbor → arbor_xy_sampler*.
 
 ## Flatten any tree
 Connect a tree to *x* only: *x* becomes its items as plain data (ordinary nodes run once per item) and *shape* is the tree itself. Run something per item, then put the results back with **Construct Tree** (*shape* = this shape).
+
+## Flatten two trees side by side
+Two trees of the same layout — pictures and their edit instructions from **Cross Reference**, say — go to *x* and *y* in **zip** mode: both come out as plain data, item k with item k, and *shape* keeps x's branches for putting the results back. Template: *arbor_qwen_edit_by_scene*.
 
 ## Tips
 - 3 × 4 values = 12 runs; the limit is 10 000.
