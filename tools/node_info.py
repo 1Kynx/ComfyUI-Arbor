@@ -575,7 +575,7 @@ node("Arbor_ConstructTree", en=dict(
 | data + shape | the items poured into shape's branches: shape `{0}: ·, · · {1}: ·, ·` + `a b c d` → `{0}: a, b · {1}: c, d` |
 
 ## Round trip
-Tree → **XY Lists** (x only) → ordinary nodes run per item → **Construct Tree** with *shape* = XY Lists' shape → the results are back in the original branches.
+Tree → **Tree to Data** → ordinary nodes run per item → **Construct Tree** with *shape* = its shape → the results are back in the original branches.
 
 ## Tips
 - A count mismatch is an error with both counts in the message — usually the shape is from a different tree than the one that was flattened.
@@ -595,7 +595,7 @@ Tree → **XY Lists** (x only) → ordinary nodes run per item → **Construct T
 | 数据 + 结构 | 按结构的分支收回：结构 `{0}: ·, · · {1}: ·, ·` + `a b c d` → `{0}: a, b · {1}: c, d` |
 
 ## 往返
-数据树 → **XY 组合列表**（只接 x）→ 普通节点逐项运行 → **构建数据树**（*结构* 接 XY 组合列表的结构）→ 结果回到原来的分支。
+数据树 → **数据树转数据** → 普通节点逐项运行 → **构建数据树**（*结构* 接它的结构）→ 结果回到原来的分支。
 
 ## 提示
 - 数量不一致会报错，并给出两边的数量——通常是结构接错了树，和当初展开的那棵不是同一棵。

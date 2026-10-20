@@ -25,7 +25,7 @@ Build a tree from plain data: put every item on one path, or — with shape conn
 | data + shape | the items poured into shape's branches: shape `{0}: ·, · · {1}: ·, ·` + `a b c d` → `{0}: a, b · {1}: c, d` |
 
 ## Round trip
-Tree → **XY Lists** (x only) → ordinary nodes run per item → **Construct Tree** with *shape* = XY Lists' shape → the results are back in the original branches.
+Tree → **Tree to Data** → ordinary nodes run per item → **Construct Tree** with *shape* = its shape → the results are back in the original branches.
 
 ## Tips
 - A count mismatch is an error with both counts in the message — usually the shape is from a different tree than the one that was flattened.

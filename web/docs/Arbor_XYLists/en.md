@@ -39,7 +39,7 @@ Panel (text)─y─┘               └─ shape ──────────
 Example template: *Templates → ComfyUI-Arbor → arbor_xy_sampler*.
 
 ## Flatten any tree
-Connect a tree to *x* only: *x* becomes its items as plain data (ordinary nodes run once per item) and *shape* is the tree itself. Run something per item, then put the results back with **Construct Tree** (*shape* = this shape).
+Connect a tree to *x* only: *x* becomes its items as plain data (ordinary nodes run once per item) and *shape* is the tree itself. Run something per item, then put the results back with **Construct Tree** (*shape* = this shape). **Tree to Data** does the same in a smaller node.
 
 ## Flatten two trees side by side
 Two trees of the same layout — pictures and their edit instructions from **Cross Reference**, say — go to *x* and *y* in **zip** mode: both come out as plain data, item k with item k, and *shape* keeps the branches of the longest input for putting the results back. Template: *arbor_qwen_edit_by_scene*.

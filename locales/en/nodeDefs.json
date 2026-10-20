@@ -733,6 +733,26 @@
       }
     }
   },
+  "Arbor_TreeToData": {
+    "display_name": "Tree to Data",
+    "description": "Every item of a tree as plain data, so ordinary nodes run once per item — plus its shape, to put the results back.",
+    "inputs": {
+      "tree": {
+        "name": "tree",
+        "tooltip": "The tree to run over — every item becomes one run of the nodes it feeds."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "data",
+        "tooltip": "Every item as plain data, in branch order: connect to any ordinary node (a text encoder, a sampler input…) and it runs once per item."
+      },
+      "1": {
+        "name": "shape",
+        "tooltip": "The tree itself: connect to Construct Tree or Image Grid to put the results back into the same branches, with their names."
+      }
+    }
+  },
   "Arbor_ConstructTree": {
     "display_name": "Construct Tree",
     "description": "Build a tree from plain data: put every item on one path, or — with shape connected — pour the items back into another tree's branches.",

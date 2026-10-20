@@ -39,7 +39,7 @@ Panel (text)─y─┘               └─ shape ──────────
 Example template: *Templates → ComfyUI-Arbor → arbor_xy_sampler*.
 
 ## Flatten any tree
-Connect a tree to *x* only: *x* becomes its items as plain data (ordinary nodes run once per item) and *shape* is the tree itself. Run something per item, then put the results back with **Construct Tree** (*shape* = this shape).
+Connect a tree to *x* only: *x* becomes its items as plain data (ordinary nodes run once per item) and *shape* is the tree itself. Run something per item, then put the results back with **Construct Tree** (*shape* = this shape). **Tree to Data** does the same in a smaller node.
 
 ## Flatten two trees side by side
 Two trees of the same layout — pictures and their edit instructions from **Cross Reference**, say — go to *x* and *y* in **zip** mode: both come out as plain data, item k with item k, and *shape* keeps the branches of the longest input for putting the results back. Template: *arbor_qwen_edit_by_scene*.
@@ -71,7 +71,7 @@ Two trees of the same layout — pictures and their edit instructions from **Cro
 示例模板：*模板 → ComfyUI-Arbor → arbor_xy_sampler*。
 
 ## 展开任意数据树
-只接 *x*：*x* 输出它的所有项（普通数据，普通节点逐项运行），*结构* 就是这棵树本身。逐项处理后，用 **构建数据树**（*结构* 接这里）把结果收回原来的分支。
+只接 *x*：*x* 输出它的所有项（普通数据，普通节点逐项运行），*结构* 就是这棵树本身。逐项处理后，用 **构建数据树**（*结构* 接这里）把结果收回原来的分支。**数据树转数据** 用更小的节点做同样的事。
 
 ## 并排展开两棵树
 两棵结构相同的数据树——例如 **交叉组合** 输出的图片和对应的编辑指令——分别接 *x* 和 *y*，用 **zip** 模式：两者都变成普通数据，第 k 项对第 k 项，*结构* 沿用最长那个输入的分支，用来把结果收回去。模板：*arbor_qwen_edit_by_scene*。
@@ -79,6 +79,41 @@ Two trees of the same layout — pictures and their edit instructions from **Cro
 ## 提示
 - 3 × 4 个值 = 运行 12 次；上限 1 万次。
 - 任何参数都能接这些输出：把 *x* 拖到参数上，它就会变成输入口。
+"""))
+
+node("Arbor_TreeToData", en=dict(
+    desc="Every item of a tree as plain data, so ordinary nodes run once per item — plus its shape, to put the results back.",
+    inputs={"tree": "The tree to run over — every item becomes one run of the nodes it feeds."},
+    outputs=["Every item as plain data, in branch order: connect to any ordinary node (a text encoder, a sampler input…) and it runs once per item.",
+             "The tree itself: connect to Construct Tree or Image Grid to put the results back into the same branches, with their names."],
+    doc="""## Round trip
+```
+tree ─► Tree to Data ─ data ─► ordinary nodes (run once per item) ─┐
+                    └─ shape ───────────────────────────────────► Construct Tree / Image Grid
+```
+`{0} Arrival: a, b · {1} Village: c` → *data* `a, b, c` → three runs → back as `{0} Arrival: A, B · {1} Village: C`.
+
+## Tips
+- A small node on purpose: for one tree it does what **XY Lists** does with only *x* connected.
+- Two or three trees of the same layout (pictures and their edit instructions, say) flatten side by side with **XY Lists** in *zip* mode.
+- The data nodes (Panel, Split Text, Prompt Template, Expression, Random) already have a *data* output; this is for every other tree.
+"""), zh=dict(
+    name="数据树转数据",
+    desc="把数据树的所有项变成普通数据，让普通节点逐项运行——同时输出它的结构，用来把结果收回去。",
+    inputs={"tree": ("数据树", "要逐项运行的数据树——每一项都会让下游节点运行一次。")},
+    outputs=[("数据", "所有项（普通数据），按分支顺序排列：接到任意普通节点（文本编码器、采样器的参数……），它就逐项运行。"),
+             ("结构", "这棵树本身：接「构建数据树」或「图像网格」，把结果连同分支名收回原来的分支。")],
+    doc="""## 往返
+```
+数据树 ─► 数据树转数据 ─ 数据 ─► 普通节点（逐项运行）─┐
+                     └─ 结构 ──────────────────────► 构建数据树 / 图像网格
+```
+`{0} Arrival: a, b · {1} Village: c` → *数据* `a, b, c` → 运行三次 → 收回为 `{0} Arrival: A, B · {1} Village: C`。
+
+## 提示
+- 这是个特意做小的节点：对一棵树来说，它和只接 *x* 的 **XY 组合列表** 作用相同。
+- 两三棵结构相同的数据树（比如图片和对应的编辑指令）要并排展开时，用 **XY 组合列表** 的 *zip* 模式。
+- 数据类节点（面板、拆分文本、提示词模板、表达式、随机）本身就有 *数据* 输出；本节点用于其它所有数据树。
 """))
 
 node("Arbor_ReshapeTree", en=dict(

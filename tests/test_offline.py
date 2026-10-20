@@ -306,6 +306,16 @@ def test_tree_nodes():
                    shape=[shape]))[0]
     assert back.branches == {(0,): ["a", "b"], (1,): ["c", "d"]}
     raises(ValueError, run, nodes_tree.ConstructTree, data=["a"], path="{0}", split_batch=False, shape=[shape])
+    # Tree to Data: every item as plain data + the tree as shape, and back with Construct Tree
+    scenes = T.DataTree({(0,): ["a", "b"], (1,): ["c"]}, {(0,): "Arrival", (1,): "Village"})
+    data, shape = res(run(nodes_tree.TreeToData, tree=[scenes]))
+    assert data == ["a", "b", "c"] and shape is scenes
+    out = nodes_tree.TreeToData.define_schema().outputs
+    assert out[0].is_output_list and len(out) == 2, "small on purpose: data + shape"
+    back = res(run(nodes_tree.ConstructTree, data=[v.upper() for v in data], path="{0}", split_batch=False,
+                   shape=[shape]))[0]
+    assert back.branches == {(0,): ["A", "B"], (1,): ["C"]} and back.label((1,)) == "Village"
+    assert res(run(nodes_tree.TreeToData, tree=["x", "y"]))[0] == ["x", "y"], "a plain list passes through"
     print("tree nodes: OK")
 
 
@@ -695,7 +705,7 @@ def test_example_workflows():
 
 def test_registration():
     ids = [n.define_schema().node_id for n in pkg.NODES]
-    assert len(ids) == len(set(ids)) == 26, (len(ids), len(set(ids)))
+    assert len(ids) == len(set(ids)) == 27, (len(ids), len(set(ids)))
     cats = {}
     for n in pkg.NODES:
         s = n.define_schema()

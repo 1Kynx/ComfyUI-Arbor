@@ -1,7 +1,7 @@
 """Tree nodes: bridging to ComfyUI's native lists, building trees, reshaping them."""
 
 from . import tree as T
-from .common import IO, CAT_TREE, schema, connected, tree_in, tree_out, to_tree, unwrap
+from .common import IO, CAT_TREE, schema, connected, data_out, tree_in, tree_out, to_tree, unwrap
 from .preview import label_of
 
 MAX_COMBOS = 10000
@@ -34,7 +34,7 @@ class XYLists(IO.ComfyNode):
                                        "after x, items are the column values, so the grid labels itself"),
              IO.Int.Output(display_name="count", tooltip="Number of runs")],
             ["xy plot", "xyz plot", "grid search", "parameter sweep", "combinations", "cartesian",
-             "tree to list", "flatten to list", "for each", "batch run"])
+             "batch run", "zip lists"])
 
     @classmethod
     def execute(cls, x, mode, y=None, z=None) -> IO.NodeOutput:
@@ -85,6 +85,27 @@ class XYLists(IO.ComfyNode):
                 shape[(i,)] = list(ys)
                 names[(i,)] = xv
         return IO.NodeOutput(ox, oy, oz, T.DataTree(shape, names), len(ox))
+
+
+class TreeToData(IO.ComfyNode):
+    """The compact bridge for one tree: XY Lists with only x, without the other outputs."""
+
+    @classmethod
+    def define_schema(cls):
+        return schema(
+            "Arbor_TreeToData", "Tree to Data", CAT_TREE,
+            "Every item of a tree as plain data, so ordinary nodes run once per item — plus its shape, "
+            "to put the results back with Construct Tree or Image Grid.",
+            [tree_in(tooltip="The tree to run over")],
+            [data_out(tooltip="Every item in branch order — ordinary nodes run once per item"),
+             tree_out("shape", tooltip="The tree itself: connect to Construct Tree or Image Grid to put the "
+                                       "results back into the same branches")],
+            ["tree to list", "flatten to list", "unpack", "for each", "tree to data"])
+
+    @classmethod
+    def execute(cls, tree) -> IO.NodeOutput:
+        t = to_tree(tree)
+        return IO.NodeOutput(t.flat(), t)
 
 
 # ======================================================================= build
@@ -206,4 +227,4 @@ class TreeStatistics(IO.ComfyNode):
         return IO.NodeOutput(t.branch_count, t.item_count, t.depth, paths)
 
 
-NODES = [XYLists, ConstructTree, ReshapeTree, TreeBranch, Merge, TreeStatistics]
+NODES = [XYLists, TreeToData, ConstructTree, ReshapeTree, TreeBranch, Merge, TreeStatistics]
