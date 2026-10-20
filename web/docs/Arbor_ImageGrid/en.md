@@ -36,4 +36,4 @@ Lay images out as an XY comparison sheet: each branch is a row, each item a colu
 
 ## Tips
 - Long labels wrap to three lines and are cut with "…".
-- Save the sheet with Save Image, or every image separately with **Save Images by Path**.
+- Save the sheet with Save Image, or every image separately with **Save by Path**.

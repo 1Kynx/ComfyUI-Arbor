@@ -27,7 +27,7 @@ Inspect anything, or type data in. Connected: shows the input and passes it thro
 - ⤢ opens a large view.
 
 ## Typing (input unconnected)
-- **Lines**: one item per line, an empty line starts a new branch. A line `# title` names its branch instead of being an item — the name shows up as the row label in **Image Grid**, as the folder name in **Save Images by Path**, and in every Panel downstream. The gutter shows each line's branch path and index, coloured by type (blue = number, purple = boolean).
+- **Lines**: one item per line, an empty line starts a new branch. A line `# title` names its branch instead of being an item — the name shows up as the row label in **Image Grid**, as the folder name in **Save by Path**, and in every Panel downstream. The gutter shows each line's branch path and index, coloured by type (blue = number, purple = boolean).
 - **Text**: the whole text is one item — for long prompts.
 - **123 / abc**: read numbers and true / false, or keep everything as text.
 - ⤢ opens a large editor. Ctrl+Enter still queues the workflow.

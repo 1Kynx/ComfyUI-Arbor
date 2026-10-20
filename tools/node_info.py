@@ -165,7 +165,7 @@ node("Arbor_ImageGrid", en=dict(
 
 ## Tips
 - Long labels wrap to three lines and are cut with "…".
-- Save the sheet with Save Image, or every image separately with **Save Images by Path**.
+- Save the sheet with Save Image, or every image separately with **Save by Path**.
 """), zh=dict(
     name="图像网格",
     desc="把图片排成 XY 对比图：每个分支一行，每项一列。",
@@ -186,100 +186,105 @@ node("Arbor_ImageGrid", en=dict(
 
 ## 提示
 - 过长的标签最多折成三行，超出部分用「…」省略。
-- 整张图用「保存图像」保存；想把每张单独存下来，用 **按路径保存图像**。
+- 整张图用「保存图像」保存；想把每张单独存下来，用 **按路径保存**。
 """))
 
 node("Arbor_LoadFolder", en=dict(
-    desc="Load every image in a folder; with subfolders on, each folder becomes a branch — the folder structure turns straight into a data tree.",
+    desc="Load every picture, video or audio file in a folder; with subfolders on, each folder becomes a branch, named after it — the folder structure turns straight into a data tree.",
     inputs={"folder": "An absolute path; output/… for ComfyUI's output folder; any other relative path is inside the input folder.",
-            "pattern": "File name patterns separated by spaces, e.g. *.png *.jpg.",
-            "subfolders": "On: each subfolder (and the folder itself, if it has images) becomes a branch. Off: only this folder.",
+            "kind": "What to load: images (IMAGE) · videos (VIDEO — read lazily, nothing is decoded until a node needs the frames) · audio (AUDIO). Each kind has its own file pattern.",
+            "kind.pattern": "File name patterns separated by spaces, e.g. *.png *.jpg or *.mp4 *.mov or *.wav *.flac.",
+            "subfolders": "On: each subfolder (and the folder itself, if it has matching files) becomes a branch. Off: only this folder.",
             "sort": "name = natural order (img2 before img10); modified = oldest first.",
-            "limit": "Maximum number of images in total; 0 = all. Every image is held in memory, so limit large folders."},
-    outputs=["Image tree, one branch per folder, named after it — Image Grid labels its rows with the names, the Panel and Image Slider show them.",
-             "File names without extension, same layout — handy as labels or for Save Images by Path.",
-             "Folder names as plain data, one per branch.", "Total number of images."],
+            "limit": "Maximum number of files in total; 0 = all. Pictures and audio are held in memory, so limit large folders."},
+    outputs=["The pictures / videos / audio as a tree, one branch per folder, named after it — Image Grid labels its rows with the names, the Panel and Image Slider show them.",
+             "File names without extension, same layout — handy as labels or for Save by Path.",
+             "Folder names as plain data, one per branch.", "Total number of files."],
     doc="""## Example
 ```
-photos/            →  images {0}: 2 images   folders: photos
-  a.png b.png
-  day/             →  images {1}: 3 images   folders: day
-  night/           →  images {2}: 1 image    folders: night
+shots/             →  files {0}: 2 videos   folders: shots
+  a.mp4 b.mp4
+  day/             →  files {1}: 3 videos   folders: day
+  night/           →  files {2}: 1 video    folders: night
 ```
+Videos go on to **Tree to Data** → any node with a VIDEO input (Get Video Components, Save Video…), once per clip; audio the same with AUDIO inputs.
 
 ## Round trip
-Folders saved by **Save Images by Path** from named branches (`0 · Arrival`, `1 · The village`) load back with their names (*Arrival*, *The village*) and in their order. Template: *arbor_folder_review*.
+Folders saved by **Save by Path** from named branches (`0 · Arrival`, `1 · The village`) load back with their names (*Arrival*, *The village*) and in their order. Template: *arbor_folder_review*.
 
 ## Tips
 - The node re-runs automatically when files are added, removed or changed.
-- Images keep their own sizes; resize with **Smart Resize** if the next step needs one size.
+- Pictures keep their own sizes; resize with **Smart Resize** if the next step needs one size.
 """), zh=dict(
     name="加载文件夹",
-    desc="加载文件夹里的所有图片；开启子文件夹后，每个文件夹就是一个分支——目录结构直接变成数据树。",
+    desc="加载文件夹里的所有图片、视频或音频；开启子文件夹后，每个文件夹就是一个以它命名的分支——目录结构直接变成数据树。",
     inputs={"folder": ("文件夹", "绝对路径；output/… 表示 ComfyUI 的 output 文件夹；其它相对路径都在 input 文件夹里。"),
-            "pattern": ("文件匹配", "用空格分隔的文件名模式，例如 *.png *.jpg。"),
-            "subfolders": ("子文件夹", "开启：每个子文件夹（以及本文件夹，如果里面有图）各成一个分支。关闭：只读本文件夹。"),
+            "kind": ("类型", "加载什么：images 图片（IMAGE）· videos 视频（VIDEO——按需读取，下游节点用到画面时才解码）· audio 音频（AUDIO）。每种类型有自己的文件匹配。"),
+            "kind.pattern": ("文件匹配", "用空格分隔的文件名模式，例如 *.png *.jpg、*.mp4 *.mov 或 *.wav *.flac。"),
+            "subfolders": ("子文件夹", "开启：每个子文件夹（以及本文件夹，如果里面有匹配的文件）各成一个分支。关闭：只读本文件夹。"),
             "sort": ("排序", "name = 自然排序（img2 排在 img10 前）；modified = 按修改时间从旧到新。"),
-            "limit": ("数量上限", "最多加载的图片总数；0 = 全部。所有图片都会载入内存，大文件夹请设上限。")},
-    outputs=[("图像", "图像数据树，每个文件夹一个分支，并以文件夹命名——图像网格用名字标注行，面板和图像滑块也会显示。"),
-             ("文件名", "不带扩展名的文件名，结构相同——可作标签或给「按路径保存图像」用。"),
-             ("文件夹", "文件夹名（普通数据），每个分支一个。"), ("数量", "图片总数。")],
+            "limit": ("数量上限", "最多加载的文件总数；0 = 全部。图片和音频会载入内存，大文件夹请设上限。")},
+    outputs=[("文件", "图片 / 视频 / 音频组成的数据树，每个文件夹一个分支，并以文件夹命名——图像网格用名字标注行，面板和图像滑块也会显示。"),
+             ("文件名", "不带扩展名的文件名，结构相同——可作标签或给「按路径保存」用。"),
+             ("文件夹", "文件夹名（普通数据），每个分支一个。"), ("数量", "文件总数。")],
     doc="""## 示例
 ```
-photos/            →  图像 {0}：2 张   文件夹：photos
-  a.png b.png
-  day/             →  图像 {1}：3 张   文件夹：day
-  night/           →  图像 {2}：1 张   文件夹：night
+shots/             →  文件 {0}：2 个视频   文件夹：shots
+  a.mp4 b.mp4
+  day/             →  文件 {1}：3 个视频   文件夹：day
+  night/           →  文件 {2}：1 个视频   文件夹：night
 ```
+视频接 **数据树转数据** → 任意有 VIDEO 输入的节点（获取视频组件、保存视频……），每段运行一次；音频同理接 AUDIO 输入。
 
 ## 往返
-**按路径保存图像** 按有名字的分支保存的文件夹（`0 · Arrival`、`1 · The village`）读回来时会恢复名字（*Arrival*、*The village*）和顺序。模板：*arbor_folder_review*。
+**按路径保存** 按有名字的分支保存的文件夹（`0 · Arrival`、`1 · The village`）读回来时会恢复名字（*Arrival*、*The village*）和顺序。模板：*arbor_folder_review*。
 
 ## 提示
 - 文件有增删改时，节点会自动重新读取。
 - 图片保持各自的尺寸；后续需要统一尺寸时用 **智能缩放**。
 """))
 
-node("Arbor_SaveImagesByPath", en=dict(
-    desc="Save an image tree keeping its structure: one subfolder (or filename part) per branch, named after the branch when it has a name, with optional names per file.",
-    inputs={"images": "Image tree to save. Batches are saved frame by frame.",
-            "filename_prefix": "Folder / prefix inside ComfyUI's output folder. Supports %date%-style variables like Save Image.",
+node("Arbor_SaveByPath", en=dict(
+    desc="Save a tree keeping its structure — pictures as PNG, videos as MP4, audio as FLAC, text as TXT: one subfolder (or filename part) per branch, named after the branch when it has a name, with optional names per file.",
+    inputs={"tree": "What to save — a tree, a list or a single value. Picture batches are saved frame by frame, audio batches clip by clip; other values are skipped.",
+            "filename_prefix": "Folder / prefix inside ComfyUI's output folder (saving outside it is not allowed, as with Save Image). Supports %date%-style variables.",
             "layout": "subfolders: prefix/0-1/000.png (a named branch: prefix/0-1 · name/000.png) · flat: prefix_0-1_000.png",
-            "names": "Optional file names, matched to the images item by item (e.g. Load Folder's names or a Prompt Template)."},
-    outputs=["Saved file paths, in the same tree layout."],
+            "names": "Optional file names, matched to the files item by item (e.g. Load Folder's names or a Prompt Template)."},
+    outputs=["Saved file paths, in the same tree layout (and with the same names)."],
     doc="""## Example
-Tree `{0}: 2 images, {1}: 3 images`, prefix `arbor/run`, layout *subfolders*:
+Tree `{0} Arrival: 2 clips · {1} Village: 1 clip`, prefix `arbor/h3`, layout *subfolders*:
 ```
-output/arbor/run/0/000.png  001.png
-output/arbor/run/1/000.png  001.png  002.png
+output/arbor/h3/0 · Arrival/000.mp4  001.mp4
+output/arbor/h3/1 · Village/000.mp4
 ```
-Named branches (storyboard scenes from a Panel's `# title` lines, Load Folder folders) keep their names: `output/arbor/run/0 · Arrival/000.png`. **Load Folder** with `output/arbor/run` reads the tree back, names included.
+Pictures become `000.png …`, audio `000.flac …`, text `000.txt …` — a branch may mix them. **Load Folder** with `output/arbor/h3` (kind *videos*) reads the tree back, names included. Template: *arbor_h3_storyboard_video*.
 
 With *names* connected the files are called after the names instead (`cat.png`, `dog.png`, …).
 
 ## Tips
 - Existing files are never overwritten: a `_2`, `_3`, … suffix is added.
-- The workflow is embedded in every PNG, like Save Image.
+- The workflow is embedded in every PNG, MP4 and FLAC, like ComfyUI's own save nodes.
 """), zh=dict(
-    name="按路径保存图像",
-    desc="按数据树结构保存图片：每个分支一个子文件夹（或文件名的一部分），有名字的分支用名字命名，可选为每个文件命名。",
-    inputs={"images": ("图像", "要保存的图像数据树，批次会逐帧保存。"),
-            "filename_prefix": ("文件名前缀", "output 文件夹内的目录 / 前缀，和「保存图像」一样支持 %date% 等变量。"),
+    name="按路径保存",
+    desc="按数据树结构保存——图片存 PNG、视频存 MP4、音频存 FLAC、文字存 TXT：每个分支一个子文件夹（或文件名的一部分），有名字的分支用名字命名，可选为每个文件命名。",
+    inputs={"tree": ("数据树", "要保存的内容——数据树、列表或单个值。图片批次逐帧保存，音频批次逐段保存；其它类型的值会跳过。"),
+            "filename_prefix": ("文件名前缀", "output 文件夹内的目录 / 前缀（和「保存图像」一样不能存到 output 以外），支持 %date% 等变量。"),
             "layout": ("布局", "subfolders：前缀/0-1/000.png（有名字的分支：前缀/0-1 · 名字/000.png）· flat：前缀_0-1_000.png"),
-            "names": ("文件名", "可选，与图像逐项对应的文件名（例如「加载文件夹」的文件名或提示词模板的输出）。")},
-    outputs=[("路径", "已保存文件的路径，结构与输入相同。")],
+            "names": ("文件名", "可选，与文件逐项对应的文件名（例如「加载文件夹」的文件名或提示词模板的输出）。")},
+    outputs=[("路径", "已保存文件的路径，结构（和分支名）与输入相同。")],
     doc="""## 示例
-数据树 `{0}: 2 张, {1}: 3 张`，前缀 `arbor/run`，布局 *subfolders*：
+数据树 `{0} Arrival: 2 段 · {1} Village: 1 段`，前缀 `arbor/h3`，布局 *subfolders*：
 ```
-output/arbor/run/0/000.png  001.png
-output/arbor/run/1/000.png  001.png  002.png
+output/arbor/h3/0 · Arrival/000.mp4  001.mp4
+output/arbor/h3/1 · Village/000.mp4
 ```
-有名字的分支（面板里 `# 标题` 行定义的分镜场景、加载的文件夹）保留名字：`output/arbor/run/0 · Arrival/000.png`。**加载文件夹** 读取 `output/arbor/run` 就能把数据树连同名字读回来。
+图片存为 `000.png ……`，音频 `000.flac ……`，文字 `000.txt ……`——同一个分支里可以混合。**加载文件夹** 读取 `output/arbor/h3`（类型选 *videos*）就能把数据树连同名字读回来。模板：*arbor_h3_storyboard_video*。
+
 接入 *文件名* 后，文件按名字命名（`cat.png`、`dog.png`……）。
 
 ## 提示
 - 永远不会覆盖已有文件：会自动加 `_2`、`_3`…… 后缀。
-- 和「保存图像」一样，每张 PNG 都内嵌工作流。
+- 和 ComfyUI 自带的保存节点一样，每个 PNG、MP4、FLAC 都内嵌工作流。
 """))
 
 # =============================================================== Data
@@ -299,7 +304,7 @@ node("Arbor_Panel", en=dict(
 - ⤢ opens a large view.
 
 ## Typing (input unconnected)
-- **Lines**: one item per line, an empty line starts a new branch. A line `# title` names its branch instead of being an item — the name shows up as the row label in **Image Grid**, as the folder name in **Save Images by Path**, and in every Panel downstream. The gutter shows each line's branch path and index, coloured by type (blue = number, purple = boolean).
+- **Lines**: one item per line, an empty line starts a new branch. A line `# title` names its branch instead of being an item — the name shows up as the row label in **Image Grid**, as the folder name in **Save by Path**, and in every Panel downstream. The gutter shows each line's branch path and index, coloured by type (blue = number, purple = boolean).
 - **Text**: the whole text is one item — for long prompts.
 - **123 / abc**: read numbers and true / false, or keep everything as text.
 - ⤢ opens a large editor. Ctrl+Enter still queues the workflow.
@@ -340,7 +345,7 @@ misty roofs
 - ⤢ 打开大窗口查看。
 
 ## 输入（未接入时）
-- **逐行**：每行一项，空一行开始新分支。`# 标题` 这样的行不是数据项，而是给所在分支命名——名字会成为 **图像网格** 的行标签、**按路径保存图像** 的文件夹名，下游面板也会显示。左侧标出每行的分支路径和序号，按类型着色（蓝色 = 数字，紫色 = 布尔值）。
+- **逐行**：每行一项，空一行开始新分支。`# 标题` 这样的行不是数据项，而是给所在分支命名——名字会成为 **图像网格** 的行标签、**按路径保存** 的文件夹名，下游面板也会显示。左侧标出每行的分支路径和序号，按类型着色（蓝色 = 数字，紫色 = 布尔值）。
 - **整段**：整段文字作为一项——适合长提示词。
 - **123 / abc**：识别数字和 true / false，或全部保留为文本。
 - ⤢ 打开大编辑窗口。Ctrl+Enter 仍可运行工作流。
@@ -565,7 +570,7 @@ node("Arbor_Collect", en=dict(
     desc="Gather any values — pictures, masks, latents, audio, video, text — into data: one branch per input, named, or all in one list.",
     inputs={"inputs": "Anything. Every connection adds a slot. A list fills its branch with all its items; a tree keeps its own branches under {i;…}.",
             "mode": "branch per input: input 1 → {0}, input 2 → {1}, … (only connected slots count) · one list: everything in {0}, like ComfyUI's Create List.",
-            "names": "One name per line, for the branches in input order. The names label Image Grid rows, Panel branches and Image Slider slides, and name the folders of Save Images by Path. In one-list mode the first line names the list.",
+            "names": "One name per line, for the branches in input order. The names label Image Grid rows, Panel branches and Image Slider slides, and name the folders of Save by Path. In one-list mode the first line names the list.",
             "split_batch": "Split IMAGE / MASK / LATENT batches into one item per frame."},
     outputs=["Every collected item as plain data — ordinary nodes run once per item.",
              "The collected items as a tree, one named branch per input."],
@@ -588,7 +593,7 @@ Connect one batch of reference pictures per scene, turn on *split_batch*, write 
     desc="把任意数据——图片、蒙版、latent、音频、视频、文字——收集成数据：每个输入一个有名字的分支，或全部放进一个列表。",
     inputs={"inputs": ("输入", "任意数据。每连一个就多出一个输入口。列表的所有项都放进它的分支；数据树保留自己的分支，放在 {i;…} 下。"),
             "mode": ("模式", "branch per input 每个输入一个分支：第 1 个输入 → {0}，第 2 个 → {1}……（只算已连接的输入口）· one list 一个列表：全部放进 {0}，同 ComfyUI 的 Create List。"),
-            "names": ("名字", "一行一个名字，按输入顺序给分支命名。名字会成为图像网格的行标签、面板的分支名、图像滑块的页名，以及「按路径保存图像」的文件夹名。一个列表模式下，第一行给这个列表命名。"),
+            "names": ("名字", "一行一个名字，按输入顺序给分支命名。名字会成为图像网格的行标签、面板的分支名、图像滑块的页名，以及「按路径保存」的文件夹名。一个列表模式下，第一行给这个列表命名。"),
             "split_batch": ("拆分批次", "把 IMAGE / MASK / LATENT 批次拆成每帧一项。")},
     outputs=[("数据", "收集到的所有项（普通数据）——普通节点逐项运行。"),
              ("数据树", "收集到的项（数据树），每个输入一个有名字的分支。")],

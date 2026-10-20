@@ -589,9 +589,16 @@ def test_image_nodes():
 
 def test_files():
     import tempfile
+    from fractions import Fraction
     import folder_paths
     from PIL import Image
+    from comfy_api.latest import InputImpl, Types
 
+    images = lambda pattern="*.png": {"kind": "images", "pattern": pattern}
+    load = lambda folder, kind, limit=0: res(nodes_files.LoadFolder.execute(
+        folder=folder, kind=kind, subfolders=True, sort="name", limit=limit))
+    save = lambda tree, prefix, layout="subfolders", **kw: run(nodes_files.SaveByPath, tree=[tree],
+                                                              filename_prefix=prefix, layout=layout, **kw)
     with tempfile.TemporaryDirectory() as d:
         src = os.path.join(d, "src")
         for sub, n in (("a", 2), ("b10", 1), ("b2", 3)):
@@ -600,44 +607,61 @@ def test_files():
                 Image.new("RGB", (16 + k, 8), (k * 40, 0, 0)).save(os.path.join(src, sub, f"img{k}.png"))
         Image.new("RGB", (4, 4)).save(os.path.join(src, "root.png"))
         open(os.path.join(src, "notes.txt"), "w").close()
-        imgs, names, folders, count = res(nodes_files.LoadFolder.execute(
-            folder=src, pattern="*.png", subfolders=True, sort="name", limit=0))
+        imgs, names, folders, count = load(src, images())
         assert count == 7 and folders == ["src", "a", "b2", "b10"], folders  # plain data, one per branch
         assert list(imgs.names.values()) == folders and names.names == imgs.names, "branches named after folders"
         assert names.branches[(1,)] == ["img0", "img1"] and imgs.branches[(2,)][2].shape == (1, 8, 18, 3)
-        assert nodes_files.LoadFolder.fingerprint_inputs(src, "*.png", True, "name", 0)
-        assert res(nodes_files.LoadFolder.execute(folder=src, pattern="*.png", subfolders=True,
-                                                  sort="name", limit=3))[3] == 3
+        assert nodes_files.LoadFolder.fingerprint_inputs(src, images(), True, "name", 0)
+        assert load(src, images(), limit=3)[3] == 3
 
         out = os.path.join(d, "out")
         os.makedirs(out)
         old = folder_paths.get_output_directory()
         folder_paths.set_output_directory(out)
         try:
-            saved = run(nodes_files.SaveImagesByPath, images=[imgs], filename_prefix="xy/run",
-                        layout="subfolders", names=[names])
+            saved = save(imgs, "xy/run", names=[names])
             paths = res(saved)[0]
             rel = lambda p: os.path.relpath(p, out).replace("\\", "/")
             assert os.path.basename(paths.branches[(1,)][1]) == "img1.png"
             assert rel(os.path.dirname(paths.branches[(2,)][0])) == "xy/run/2 · b2", "the prefix holds the tree"
             assert saved.ui["images"][0]["subfolder"].replace("\\", "/") == "xy/run/0 · src"
             # ... and Load Folder reads it back, names and all ('output/…' is the output folder)
-            back, _, back_folders, back_count = res(nodes_files.LoadFolder.execute(
-                folder="output/xy/run", pattern="*.png", subfolders=True, sort="name", limit=0))
+            back, _, back_folders, back_count = load("output/xy/run", images())
             assert back_count == 7 and back_folders == folders and back.names == imgs.names
-            plain = res(run(nodes_files.SaveImagesByPath, images=[T.DataTree({(0, 1): [imgs.branches[(1,)][0]]})],
-                            filename_prefix="xy/plain", layout="subfolders"))[0]
+            plain = res(save(T.DataTree({(0, 1): [imgs.branches[(1,)][0]]}), "xy/plain"))[0]
             assert rel(plain.branches[(0, 1)][0]) == "xy/plain/0-1/000.png", "unnamed branches: just the path"
-            again = res(run(nodes_files.SaveImagesByPath, images=[imgs], filename_prefix="xy/run",
-                            layout="flat"))[0]
+            again = res(save(imgs, "xy/run", layout="flat"))[0]
             assert os.path.basename(again.branches[(0,)][0]) == "run_0 · src_000.png"
             # a long name cut at a space must not leave a trailing space (Windows drops it from folder names)
             long_name = T.DataTree({(0,): [imgs.branches[(1,)][0]]}, {(0,): "word " * 30})
-            cut = res(run(nodes_files.SaveImagesByPath, images=[long_name], filename_prefix="xy/long",
-                          layout="subfolders"))[0]
+            cut = res(save(long_name, "xy/long"))[0]
             assert os.path.exists(cut.branches[(0,)][0]) and not os.path.basename(os.path.dirname(cut.branches[(0,)][0])).endswith(" ")
             assert nodes_files.folder_label("2 · Night market") == "Night market"
             assert nodes_files.folder_label("2024 photos") == "2024 photos", "only the saved tag is dropped"
+
+            # videos, audio and text by tree, and back
+            clip = lambda n: InputImpl.VideoFromComponents(Types.VideoComponents(
+                images=torch.rand(n, 32, 48, 3), audio=None, frame_rate=Fraction(24)))
+            tone = lambda secs, ch: {"waveform": torch.sin(torch.linspace(0, 400 * secs, int(16000 * secs)))
+                                     .repeat(1, ch, 1) * 0.3, "sample_rate": 16000}
+            media = T.DataTree({(0,): [clip(12), clip(6)], (1,): [tone(1.0, 2), "a caption"]},
+                               {(0,): "Arrival", (1,): "Village"})
+            saved = save(media, "media/run")
+            files = res(saved)[0]
+            assert [os.path.basename(f) for f in files.branches[(0,)]] == ["000.mp4", "001.mp4"]
+            assert [os.path.basename(f) for f in files.branches[(1,)]] == ["000.flac", "001.txt"]
+            assert rel(os.path.dirname(files.branches[(1,)][0])) == "media/run/1 · Village"
+            assert saved.ui["images"] and saved.ui["animated"] == [True] and saved.ui["audio"], saved.ui
+            vids, vnames, vfolders, vcount = load("output/media/run", {"kind": "videos", "pattern": "*.mp4"})
+            assert vcount == 2 and vfolders == ["Arrival"] and vnames.branches[(0,)] == ["000", "001"]
+            assert vids.branches[(0,)][1].get_frame_count() == 6 and vids.branches[(0,)][0].get_dimensions() == (48, 32)
+            sounds = load("output/media/run", {"kind": "audio", "pattern": "*.flac"})[0]
+            wav = sounds.branches[(0,)][0]
+            assert sounds.names == {(0,): "Village"} and wav["sample_rate"] == 16000
+            assert tuple(wav["waveform"].shape) == (1, 2, 16000) and wav["waveform"].abs().max() > 0.2
+            with open(files.branches[(1,)][1], encoding="utf-8") as f:
+                assert f.read() == "a caption"
+            raises(ValueError, save, T.DataTree({(0,): [123]}), "media/none")  # nothing it can save
         finally:
             folder_paths.set_output_directory(old)
     print("load / save: OK")

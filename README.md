@@ -53,7 +53,7 @@ Branches can hold branches — `{scene;shot}`, `{character;outfit}` — and the 
 
 | Category | Nodes |
 |---|---|
-| **Arbor/Image** | Image Slider · Image Grid · Load Folder · Save Images by Path · Smart Resize · Batch Pick |
+| **Arbor/Image** | Image Slider · Image Grid · Load Folder · Save by Path · Smart Resize · Batch Pick |
 | **Arbor/Data** | Panel · Number Slider · Number Sequence · Split Text · Prompt Template · Expression · Random · Collect · Index Switch |
 | **Arbor/Tree** | XY Lists · Tree to Data · Construct Tree · Reshape Tree · Tree Branch · Merge · Tree Statistics |
 | **Arbor/List** | List Item · Dispatch · Partition · Repeat · Sort List · Cross Reference |
@@ -106,10 +106,11 @@ Names: `x`, `y` (matched like Grasshopper: branches in order, items longest-list
 `b` branch index, `n` branch length, `name` the branch's name.
 A safe evaluator: no attribute access or imports.
 
-**Load Folder / Save Images by Path** — subfolders become branches on the way in, named after the folder;
-branches become subfolders (or filename parts) on the way out — `prefix/0-1/000.png`, or `prefix/0 · Arrival/…`
-for a named branch — with optional names per file. Saved trees load back with their names; `output/…` paths
-read from ComfyUI's output folder.
+**Load Folder / Save by Path** — pictures, videos and audio by tree. Subfolders become branches on the way
+in, named after the folder; branches become subfolders (or filename parts) on the way out — `prefix/0-1/000.png`,
+or `prefix/0 · Arrival/…` for a named branch — with optional names per file. Pictures are saved as PNG, videos
+as MP4, audio as FLAC, text as TXT. Saved trees load back with their names; `output/…` paths read from
+ComfyUI's output folder.
 
 **Smart Resize** — longest / shortest side, megapixels, fit, fill & crop or scale; snaps to multiples of
 8/16/32/64. Only the fields for the chosen mode are shown.
@@ -140,9 +141,9 @@ input or output is undocumented.
 
 | Workflow | Shows | Run |
 |---|---|---|
-| `arbor_qwen_storyboard` | A **Panel** storyboard (`# scene` lines, one shot per line) → **Expression** adds the style → **Tree to Data** flattens it for the sampler → **Image Grid** with one row per scene; **Construct Tree** + **Save Images by Path** write one folder per scene. Start here — the next three use its output. | 6 images, 30 s |
+| `arbor_qwen_storyboard` | A **Panel** storyboard (`# scene` lines, one shot per line) → **Expression** adds the style → **Tree to Data** flattens it for the sampler → **Image Grid** with one row per scene; **Construct Tree** + **Save by Path** write one folder per scene. Start here — the next three use its output. | 6 images, 30 s |
 | `arbor_qwen_edit_by_scene` | Pictures × instructions as one tree: **Load Folder** gives the frames per scene, a **Panel** gives each scene its *own* edits (2 / 1 / 2). **Cross Reference** pairs them per shot, **XY Lists** in *zip* mode flattens both side by side for the edit model, **Construct Tree** + **Merge** put each original in front of its edits. | 10 edits, 75 s |
-| `arbor_h3_storyboard_video` | Keyframes (images), a motion line per shot and a sound line per scene (text) drive MiniMax H3 image-to-video **with audio**. Motion and sound are both one branch per scene, so the scene's sound line repeats for each of its shots (longest list); **Expression** `name` files each clip under its scene; **Batch Pick** + **Construct Tree** make a contact sheet per scene. | 6 clips, 110 s |
+| `arbor_h3_storyboard_video` | Keyframes (images), a motion line per shot and a sound line per scene (text) drive MiniMax H3 image-to-video **with audio**. Motion and sound are both one branch per scene, so the scene's sound line repeats for each of its shots (longest list); **Construct Tree** + **Save by Path** file the clips one folder per scene (`h3/0 · Arrival/000.mp4`), ready for **Load Folder** (*videos*); **Batch Pick** + **Construct Tree** make a contact sheet per scene. | 6 clips, 110 s |
 | `arbor_folder_review` | No model: **Load Folder** reads the folders back as a named tree; contact sheet, **List Item** picks, **Reshape Tree** (flip matrix) compares shot by shot, **Image Slider** flips through. | — |
 | `arbor_qwen_character_sheet` | Three uneven levels — character → outfit → pose (Mira 3 outfits, Theo 2). **List Item** splits description from outfits per branch, **Cross Reference** nests the poses and hands every outfit its character's description, **Expression** pairs them branch by branch (Grasshopper's matching), **Reshape Tree** *shift paths −1* folds outfits back into one row per character. | 15 images, 65 s |
 

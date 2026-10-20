@@ -9,7 +9,7 @@ Gather any values — pictures, masks, latents, audio, video, text — into data
 - **mode** · *COMBO (branch per input · one list)*  
   branch per input: input 1 → {0}, input 2 → {1}, … (only connected slots count) · one list: everything in {0}, like ComfyUI's Create List.
 - **names** · *STRING*  
-  One name per line, for the branches in input order. The names label Image Grid rows, Panel branches and Image Slider slides, and name the folders of Save Images by Path. In one-list mode the first line names the list.
+  One name per line, for the branches in input order. The names label Image Grid rows, Panel branches and Image Slider slides, and name the folders of Save by Path. In one-list mode the first line names the list.
 - **split_batch** · *BOOLEAN*  
   Split IMAGE / MASK / LATENT batches into one item per frame.
 

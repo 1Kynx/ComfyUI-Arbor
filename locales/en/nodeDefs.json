@@ -219,19 +219,23 @@
   },
   "Arbor_LoadFolder": {
     "display_name": "Load Folder",
-    "description": "Load every image in a folder; with subfolders on, each folder becomes a branch — the folder structure turns straight into a data tree.",
+    "description": "Load every picture, video or audio file in a folder; with subfolders on, each folder becomes a branch, named after it — the folder structure turns straight into a data tree.",
     "inputs": {
       "folder": {
         "name": "folder",
         "tooltip": "An absolute path; output/… for ComfyUI's output folder; any other relative path is inside the input folder."
       },
-      "pattern": {
+      "kind": {
+        "name": "kind",
+        "tooltip": "What to load: images (IMAGE) · videos (VIDEO — read lazily, nothing is decoded until a node needs the frames) · audio (AUDIO). Each kind has its own file pattern."
+      },
+      "kind_pattern": {
         "name": "pattern",
-        "tooltip": "File name patterns separated by spaces, e.g. *.png *.jpg."
+        "tooltip": "File name patterns separated by spaces, e.g. *.png *.jpg or *.mp4 *.mov or *.wav *.flac."
       },
       "subfolders": {
         "name": "subfolders",
-        "tooltip": "On: each subfolder (and the folder itself, if it has images) becomes a branch. Off: only this folder."
+        "tooltip": "On: each subfolder (and the folder itself, if it has matching files) becomes a branch. Off: only this folder."
       },
       "sort": {
         "name": "sort",
@@ -239,17 +243,17 @@
       },
       "limit": {
         "name": "limit",
-        "tooltip": "Maximum number of images in total; 0 = all. Every image is held in memory, so limit large folders."
+        "tooltip": "Maximum number of files in total; 0 = all. Pictures and audio are held in memory, so limit large folders."
       }
     },
     "outputs": {
       "0": {
-        "name": "images",
-        "tooltip": "Image tree, one branch per folder, named after it — Image Grid labels its rows with the names, the Panel and Image Slider show them."
+        "name": "files",
+        "tooltip": "The pictures / videos / audio as a tree, one branch per folder, named after it — Image Grid labels its rows with the names, the Panel and Image Slider show them."
       },
       "1": {
         "name": "names",
-        "tooltip": "File names without extension, same layout — handy as labels or for Save Images by Path."
+        "tooltip": "File names without extension, same layout — handy as labels or for Save by Path."
       },
       "2": {
         "name": "folders",
@@ -257,21 +261,21 @@
       },
       "3": {
         "name": "count",
-        "tooltip": "Total number of images."
+        "tooltip": "Total number of files."
       }
     }
   },
-  "Arbor_SaveImagesByPath": {
-    "display_name": "Save Images by Path",
-    "description": "Save an image tree keeping its structure: one subfolder (or filename part) per branch, named after the branch when it has a name, with optional names per file.",
+  "Arbor_SaveByPath": {
+    "display_name": "Save by Path",
+    "description": "Save a tree keeping its structure — pictures as PNG, videos as MP4, audio as FLAC, text as TXT: one subfolder (or filename part) per branch, named after the branch when it has a name, with optional names per file.",
     "inputs": {
-      "images": {
-        "name": "images",
-        "tooltip": "Image tree to save. Batches are saved frame by frame."
+      "tree": {
+        "name": "tree",
+        "tooltip": "What to save — a tree, a list or a single value. Picture batches are saved frame by frame, audio batches clip by clip; other values are skipped."
       },
       "filename_prefix": {
         "name": "filename_prefix",
-        "tooltip": "Folder / prefix inside ComfyUI's output folder. Supports %date%-style variables like Save Image."
+        "tooltip": "Folder / prefix inside ComfyUI's output folder (saving outside it is not allowed, as with Save Image). Supports %date%-style variables."
       },
       "layout": {
         "name": "layout",
@@ -279,13 +283,13 @@
       },
       "names": {
         "name": "names",
-        "tooltip": "Optional file names, matched to the images item by item (e.g. Load Folder's names or a Prompt Template)."
+        "tooltip": "Optional file names, matched to the files item by item (e.g. Load Folder's names or a Prompt Template)."
       }
     },
     "outputs": {
       "0": {
         "name": "paths",
-        "tooltip": "Saved file paths, in the same tree layout."
+        "tooltip": "Saved file paths, in the same tree layout (and with the same names)."
       }
     }
   },
@@ -679,7 +683,7 @@
       },
       "names": {
         "name": "names",
-        "tooltip": "One name per line, for the branches in input order. The names label Image Grid rows, Panel branches and Image Slider slides, and name the folders of Save Images by Path. In one-list mode the first line names the list."
+        "tooltip": "One name per line, for the branches in input order. The names label Image Grid rows, Panel branches and Image Slider slides, and name the folders of Save by Path. In one-list mode the first line names the list."
       },
       "split_batch": {
         "name": "split_batch",
