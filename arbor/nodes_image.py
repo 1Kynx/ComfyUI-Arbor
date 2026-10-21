@@ -7,7 +7,7 @@ import torch
 
 from . import media
 from . import tree as T
-from .common import IO, TREE, CAT_IMAGE, schema, connected, tree_in, to_tree, unwrap
+from .common import IO, TREE, CAT_MEDIA, schema, connected, tree_in, to_tree, unwrap
 from .grid import build_grid, col_labels_for, grid_size, layout_sheet, row_labels_for
 from .media import is_audio, is_video
 from .preview import is_image, label_of, save_temp, to_pil
@@ -67,7 +67,7 @@ class ImageSlider(IO.ComfyNode):
                                types=[IO.Video, IO.Audio, TREE]),
             prefix="image", min=1, max=16)
         return schema(
-            "Arbor_ImageSlider", "Compare Viewer", CAT_IMAGE,
+            "Arbor_ImageSlider", "Compare Viewer", CAT_MEDIA,
             "Compare images, videos and audio of any size. Flip through them with the slider, or wipe A against B; "
             "videos and audio play in sync and keep their place when you switch.",
             [IO.Autogrow.Input("images", template=items, optional=True)], [],
@@ -126,7 +126,7 @@ class ImageGrid(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
         return schema(
-            "Arbor_ImageGrid", "Image Grid", CAT_IMAGE,
+            "Arbor_ImageGrid", "Image Grid", CAT_MEDIA,
             "XY sheet: each branch is a row, each item a column. Connect XY Lists' shape to lay out "
             "and label the images of a batch run directly; use Reshape Tree (flip matrix) to swap the axes.",
             [tree_in("images", tooltip="Image tree, or the plain images of a batch run (with shape)"),
@@ -161,7 +161,7 @@ class VideoGrid(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
         return schema(
-            "Arbor_VideoGrid", "Video Grid", CAT_IMAGE,
+            "Arbor_VideoGrid", "Video Grid", CAT_MEDIA,
             "Image Grid for video: each branch is a row, each clip a column, all playing in sync in one labelled "
             "video. Shorter clips hold their last frame until the longest one ends.",
             [tree_in("videos", tooltip="Video tree, or the plain videos of a batch run (with shape); "
@@ -262,7 +262,7 @@ class SmartResize(IO.ComfyNode):
         wh = lambda: [IO.Int.Input("width", default=1024, min=8, max=16384, step=8),
                       IO.Int.Input("height", default=1024, min=8, max=16384, step=8)]
         return schema(
-            "Arbor_SmartResize", "Smart Resize", CAT_IMAGE,
+            "Arbor_SmartResize", "Smart Resize", CAT_MEDIA,
             "Resize by longest / shortest side, megapixels, a box or a scale factor, "
             "snapping both sides to a multiple (8 / 16 / 64 for latent-friendly sizes).",
             [IO.Image.Input("image"),
@@ -321,7 +321,7 @@ class BatchPick(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
         return schema(
-            "Arbor_BatchPick", "Batch Pick", CAT_IMAGE,
+            "Arbor_BatchPick", "Batch Pick", CAT_MEDIA,
             "Pick frames from an image batch: '0, 2, -1', ranges '3-5' (inclusive) or slices '1:8:2'. "
             "Order and repeats are kept.",
             [IO.Image.Input("images"), IO.String.Input("indices", default="0", tooltip="e.g. 0, 2, -1, 3-5, ::2")],

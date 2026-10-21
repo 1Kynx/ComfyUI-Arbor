@@ -16,7 +16,7 @@ from PIL.PngImagePlugin import PngInfo
 import folder_paths
 
 from . import tree as T
-from .common import IO, CAT_IMAGE, schema, connected, tree_in, tree_out, to_tree, unwrap
+from .common import IO, CAT_MEDIA, schema, connected, tree_in, tree_out, to_tree, unwrap
 from . import media
 from .media import is_audio, is_video
 from .preview import is_image, label_of, to_pil
@@ -137,7 +137,7 @@ class LoadFolder(IO.ComfyNode):
                                                              tooltip="File patterns separated by spaces")])
                  for k, p in KINDS.items()]
         return schema(
-            "Arbor_LoadFolder", "Load Folder", CAT_IMAGE,
+            "Arbor_LoadFolder", "Load Folder", CAT_MEDIA,
             "Load every picture, video or audio file in a folder. With subfolders on, each folder becomes a "
             "branch, named after it — the folder structure turns straight into a data tree.",
             [IO.String.Input("folder", default="", tooltip="Absolute path; output/… for ComfyUI's output folder; "
@@ -266,7 +266,7 @@ class SaveByPath(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
         return schema(
-            "Arbor_SaveByPath", "Save by Path", CAT_IMAGE,
+            "Arbor_SaveByPath", "Save by Path", CAT_MEDIA,
             "Save a tree keeping its structure: one subfolder (or filename part) per branch, named after the "
             "branch when it has a name. Pictures are saved as PNG (a batch frame by frame), videos as MP4, "
             "audio as FLAC, text as TXT. Optional names give each file a readable name.",

@@ -53,7 +53,7 @@ Branches can hold branches — `{scene;shot}`, `{character;outfit}` — and the 
 
 | Category | Nodes |
 |---|---|
-| **Arbor/Image** | Compare Viewer · Image Grid · Video Grid · Load Folder · Save by Path · Smart Resize · Batch Pick |
+| **Arbor/Media** | Compare Viewer · Image Grid · Video Grid · Load Folder · Save by Path · Smart Resize · Batch Pick |
 | **Arbor/Data** | Panel · Number Slider · Number Sequence · Split Text · Prompt Template · Expression · Random · Collect · Index Switch |
 | **Arbor/Tree** | XY Lists · Tree to Data · Construct Tree · Reshape Tree · Tree Branch · Merge · Tree Statistics |
 | **Arbor/List** | List Item · Dispatch · Partition · Repeat · Sort List · Cross Reference |

@@ -19,7 +19,7 @@ TREE = IO.Custom("ARBOR_TREE")
 # a socket that is both: "FLOAT,INT" matches INT and FLOAT inputs (comma types overlap)
 NUMBER = IO.Custom("FLOAT,INT")
 
-CAT_IMAGE = "Arbor/Image"
+CAT_MEDIA = "Arbor/Media"
 CAT_DATA = "Arbor/Data"
 CAT_TREE = "Arbor/Tree"
 CAT_LIST = "Arbor/List"
@@ -59,5 +59,5 @@ def connected(value) -> bool:
     return True
 
 
-__all__ = ["IO", "TREE", "NUMBER", "CAT_IMAGE", "CAT_DATA", "CAT_TREE", "CAT_LIST",
+__all__ = ["IO", "TREE", "NUMBER", "CAT_MEDIA", "CAT_DATA", "CAT_TREE", "CAT_LIST",
            "schema", "tree_in", "tree_out", "data_out", "connected", "to_tree", "unwrap"]

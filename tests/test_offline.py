@@ -816,7 +816,7 @@ def test_registration():
         assert s.node_id == f"Arbor_{n.__name__}", f"{s.node_id} is defined by class {n.__name__}"
         assert not s.is_deprecated
         cats[s.node_id] = s.category
-    assert set(cats.values()) == {"Arbor/Image", "Arbor/Data", "Arbor/Tree", "Arbor/List"}, set(cats.values())
+    assert set(cats.values()) == {"Arbor/Media", "Arbor/Data", "Arbor/Tree", "Arbor/List"}, set(cats.values())
     assert cats["Arbor_IndexSwitch"] == "Arbor/Data" and cats["Arbor_ConstructTree"] == "Arbor/Tree"
     print(f"registration: OK ({len(ids)} nodes)")
 
