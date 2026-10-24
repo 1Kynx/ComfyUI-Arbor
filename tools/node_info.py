@@ -238,7 +238,7 @@ node("Arbor_VideoGrid", en=dict(
             "audio": "none: a silent grid · mix: every clip's sound mixed together (loudness kept below clipping)."},
     outputs=["The grid as one VIDEO (H.264 MP4 in the temp folder) — save it with Save by Path or Save Video, or compare it in the Compare Viewer."],
     doc="""## How to use
-- **From a tree**: connect any video tree, e.g. *arbor_h3_storyboard_video*'s clips through **Construct Tree** (one row per scene), or **Load Folder** with kind *videos* (one row per folder).
+- **From a tree**: connect any video tree, e.g. *arbor_h3_two_characters*'s clips through **Construct Tree** (one row per scene), or **Load Folder** with kind *videos* (one row per folder).
 - **After a batch run**: connect the plain videos to *videos* and **XY Lists'** *shape* to *shape* — rows and columns are laid out and labelled like **Image Grid**.
 - The node shows the grid video when it runs; it also works on its own, nothing needs to follow it.
 
@@ -276,7 +276,7 @@ node("Arbor_VideoGrid", en=dict(
             "audio": ("音频", "none：无声 · mix：把所有视频的声音混在一起（自动压低音量避免爆音）。")},
     outputs=[("视频", "合成后的网格视频（VIDEO，临时文件夹里的 H.264 MP4）——用「按路径保存」或「保存视频」保存，也可以接「对比查看器」。")],
     doc="""## 用法
-- **来自数据树**：接任意视频数据树，例如 *arbor_h3_storyboard_video* 里经 **构建数据树** 整理好的视频（每个场景一行），或「加载文件夹」类型选 *videos*（每个文件夹一行）。
+- **来自数据树**：接任意视频数据树，例如 *arbor_h3_two_characters* 里经 **构建数据树** 整理好的视频（每个场景一行），或「加载文件夹」类型选 *videos*（每个文件夹一行）。
 - **批量运行之后**：普通视频接 *视频*，**XY 组合列表** 的 *结构* 接 *结构*——和 **图像网格** 一样自动排好行列并标注。
 - 运行后节点上直接显示网格视频；节点可以单独运行，后面不必再接别的节点。
 
@@ -436,7 +436,7 @@ Tree `{0} Arrival: 2 clips · {1} Village: 1 clip`, prefix `arbor/h3`, layout *s
 output/arbor/h3/0 · Arrival/000.mp4  001.mp4
 output/arbor/h3/1 · Village/000.mp4
 ```
-Pictures become `000.png …`, audio `000.flac …`, text `000.txt …` — a branch may mix them. **Load Folder** with `output/arbor/h3` (kind *videos*) reads the tree back, names included. Template: *arbor_h3_storyboard_video*.
+Pictures become `000.png …`, audio `000.flac …`, text `000.txt …` — a branch may mix them. **Load Folder** with `output/arbor/h3_two_characters` (kind *videos*) reads the tree back, names included. Template: *arbor_h3_storyboard_video*.
 
 With *names* connected the files are called after the names instead (`cat.png`, `dog.png`, …).
 
@@ -464,7 +464,7 @@ Previews of files saved outside the output folder are shown from a copy in the t
 output/arbor/h3/0 · Arrival/000.mp4  001.mp4
 output/arbor/h3/1 · Village/000.mp4
 ```
-图片存为 `000.png ……`，音频 `000.flac ……`，文字 `000.txt ……`——同一个分支里可以混合。**加载文件夹** 读取 `output/arbor/h3`（类型选 *videos*）就能把数据树连同名字读回来。模板：*arbor_h3_storyboard_video*。
+图片存为 `000.png ……`，音频 `000.flac ……`，文字 `000.txt ……`——同一个分支里可以混合。**加载文件夹** 读取 `output/arbor/h3_two_characters`（类型选 *videos*）就能把数据树连同名字读回来。模板：*arbor_h3_storyboard_video*。
 
 接入 *文件名* 后，文件按名字命名（`cat.png`、`dog.png`……）。
 
@@ -641,7 +641,7 @@ b = {0}: horn · {1}: bells          template "{name}: {a} + {b}"
 → {0} Arrival: "Arrival: door + horn", "Arrival: map + horn"
   {1} Village: "Village: mist + bells", "Village: steps + bells"
 ```
-`{name}` is the branch's name (a scene, a page). Template: *arbor_h3_storyboard_video* writes a structured video prompt per shot this way.
+`{name}` is the branch's name (a scene, a page). Template: *arbor_h3_two_characters* writes a structured video prompt per scene this way, *arbor_h3_continuous_shots* one per transition.
 
 ## Tips
 - Type the values in **Panels** (one per line) and connect their *data* output (or *tree*, to keep branches).
@@ -670,7 +670,7 @@ b = {0}: horn · {1}: bells          模板 "{name}: {a} + {b}"
 → {0} Arrival: "Arrival: door + horn", "Arrival: map + horn"
   {1} Village: "Village: mist + bells", "Village: steps + bells"
 ```
-`{name}` 是分支的名字（场景、页面）。模板 *arbor_h3_storyboard_video* 就是这样为每个镜头写结构化的视频提示词。
+`{name}` 是分支的名字（场景、页面）。模板 *arbor_h3_two_characters* 就是这样为每个场景写结构化的视频提示词，*arbor_h3_continuous_shots* 则为每段过渡写一条。
 
 ## 提示
 - 在 **面板** 里逐行输入取值，接它的 *数据* 输出（想保留分支就接 *数据树*）。

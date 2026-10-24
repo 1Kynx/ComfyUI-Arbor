@@ -27,4 +27,4 @@ Pick items from every branch by index, list, range or slice — Grasshopper's Li
 | `1:` | `{0}: b, c, d · {1}: f` |
 | `::2` | `{0}: a, c · {1}: e` |
 
-The same syntax picks frames in **Batch Pick**.
+`:-1` and `1:` pair every item with the next one (a → b, b → c, c → d): *arbor_h3_continuous_shots* takes its first and last frames this way. The same syntax picks frames in **Batch Pick**.

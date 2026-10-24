@@ -24,7 +24,7 @@
 output/arbor/h3/0 · Arrival/000.mp4  001.mp4
 output/arbor/h3/1 · Village/000.mp4
 ```
-图片存为 `000.png ……`，音频 `000.flac ……`，文字 `000.txt ……`——同一个分支里可以混合。**加载文件夹** 读取 `output/arbor/h3`（类型选 *videos*）就能把数据树连同名字读回来。模板：*arbor_h3_storyboard_video*。
+图片存为 `000.png ……`，音频 `000.flac ……`，文字 `000.txt ……`——同一个分支里可以混合。**加载文件夹** 读取 `output/arbor/h3_two_characters`（类型选 *videos*）就能把数据树连同名字读回来。模板：*arbor_h3_storyboard_video*。
 
 接入 *文件名* 后，文件按名字命名（`cat.png`、`dog.png`……）。
 

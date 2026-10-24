@@ -43,7 +43,7 @@ Image Grid for video: each branch is a row, each clip a column, all playing in s
   The grid as one VIDEO (H.264 MP4 in the temp folder) — save it with Save by Path or Save Video, or compare it in the Compare Viewer.
 
 ## How to use
-- **From a tree**: connect any video tree, e.g. *arbor_h3_storyboard_video*'s clips through **Construct Tree** (one row per scene), or **Load Folder** with kind *videos* (one row per folder).
+- **From a tree**: connect any video tree, e.g. *arbor_h3_two_characters*'s clips through **Construct Tree** (one row per scene), or **Load Folder** with kind *videos* (one row per folder).
 - **After a batch run**: connect the plain videos to *videos* and **XY Lists'** *shape* to *shape* — rows and columns are laid out and labelled like **Image Grid**.
 - The node shows the grid video when it runs; it also works on its own, nothing needs to follow it.
 

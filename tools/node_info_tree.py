@@ -235,7 +235,7 @@ node("Arbor_ListItem", en=dict(
 | `1:` | `{0}: b, c, d · {1}: f` |
 | `::2` | `{0}: a, c · {1}: e` |
 
-The same syntax picks frames in **Batch Pick**.
+`:-1` and `1:` pair every item with the next one (a → b, b → c, c → d): *arbor_h3_continuous_shots* takes its first and last frames this way. The same syntax picks frames in **Batch Pick**.
 """), zh=dict(
     name="列表取项",
     desc="按序号、列表、范围或切片从每个分支取项——一个节点包含 Grasshopper 的 List Item 和 Sub List。",
@@ -254,7 +254,7 @@ The same syntax picks frames in **Batch Pick**.
 | `1:` | `{0}: b, c, d · {1}: f` |
 | `::2` | `{0}: a, c · {1}: e` |
 
-**批次挑选** 用的是同样的写法。
+`:-1` 和 `1:` 能把每一项和下一项配成对（a → b、b → c、c → d）：模板 *arbor_h3_continuous_shots* 就这样取首帧和尾帧。**批次挑选** 用的是同样的写法。
 """))
 
 PATTERN_EN = ("Typed repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), or connect BOOLEAN values / a boolean tree "

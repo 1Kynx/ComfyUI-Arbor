@@ -34,7 +34,7 @@ b = {0}: horn · {1}: bells          模板 "{name}: {a} + {b}"
 → {0} Arrival: "Arrival: door + horn", "Arrival: map + horn"
   {1} Village: "Village: mist + bells", "Village: steps + bells"
 ```
-`{name}` 是分支的名字（场景、页面）。模板 *arbor_h3_storyboard_video* 就是这样为每个镜头写结构化的视频提示词。
+`{name}` 是分支的名字（场景、页面）。模板 *arbor_h3_two_characters* 就是这样为每个场景写结构化的视频提示词，*arbor_h3_continuous_shots* 则为每段过渡写一条。
 
 ## 提示
 - 在 **面板** 里逐行输入取值，接它的 *数据* 输出（想保留分支就接 *数据树*）。
