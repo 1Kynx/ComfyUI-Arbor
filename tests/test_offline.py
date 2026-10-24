@@ -706,24 +706,36 @@ def test_load_media():
         media.write_flac(torch.zeros(1, 800), 8000, os.path.join(d, "voice.flac"))
         far = os.path.join(elsewhere, "far.png")
         Image.new("RGB", (8, 8)).save(far)
-        text = f"# Shots\nshots/s0.png\nshots/s1.png\n\n# Mixed\nclip.mp4\nvoice.flac\n{far}"
-        files, images, videos, audio, names = res(LM.execute(folder=d, files=text))
+        at = lambda *parts: os.path.join(d, *parts)
+        text = (f"# Shots\n{at('shots', 's0.png')}\n{at('shots', 's1.png')}\n\n"
+                f"# Mixed\n{at('clip.mp4')}\n{at('voice.flac')}\n{far}")
+        files, images, videos, audio, names = res(LM.execute(files=text))
         assert files.names == {(0,): "Shots", (1,): "Mixed"} and [len(v) for v in files.branches.values()] == [2, 3]
-        assert images.branches[(0,)][1].shape == (1, 8, 17, 3) and len(images.branches[(1,)]) == 1, "absolute paths work"
+        assert images.branches[(0,)][1].shape == (1, 8, 17, 3) and len(images.branches[(1,)]) == 1, "every line is a full path"
         assert list(videos.branches) == [(1,)] and videos.names == {(1,): "Mixed"}, "each kind keeps its groups"
         assert videos.branches[(1,)][0].get_frame_count() == 4 and audio.branches[(1,)][0]["sample_rate"] == 8000
         assert names.branches[(1,)] == ["clip", "voice", "far"]
-        assert LM.fingerprint_inputs(d, text) != LM.fingerprint_inputs(d, text.replace("s1", "s0"))
-        raises(ValueError, LM.execute, folder=d, files="")
-        raises(FileNotFoundError, LM.execute, folder=d, files="missing.png")
-        raises(ValueError, LM.execute, folder=d, files="notes.txt")
+        assert LM.fingerprint_inputs(text) != LM.fingerprint_inputs(text.replace("s1", "s0"))
+        raises(ValueError, LM.execute, files="")
+        raises(FileNotFoundError, LM.execute, files=at("missing.png"))
+        raises(ValueError, LM.execute, files=at("notes.txt"))
 
         whole = load_media.tree_of(d)  # what Add folder… adds
         assert [g["name"] for g in whole] == [os.path.basename(d), "shots"] and len(whole[1]["files"]) == 2
+        assert nodes_files.resolve_path(whole[1]["files"][0]) == os.path.realpath(at("shots", "s0.png"))
         for p in (os.path.join(d, "clip.mp4"), os.path.join(d, "shots", "s0.png")):
             assert load_media.thumbnail(p, 64)[:4] == b"RIFF", "webp thumbnails of pictures and videos"
     assert nodes_files.resolve_folder("arbor:storyboard").endswith(os.path.join("example_media", "storyboard"))
-    assert len(load_media.tree_of(nodes_files.resolve_folder("arbor:storyboard"))) == 3, "the sample keyframes ship"
+    samples = load_media.tree_of(nodes_files.resolve_folder("arbor:storyboard"))
+    assert len(samples) == 3 and samples[0]["files"][0] == "arbor:storyboard/0 · Arrival/000.jpg", "written short"
+    # paths are written the short way and read back the same
+    import folder_paths
+    out_file = os.path.join(folder_paths.get_output_directory(), "arbor", "x.png")
+    in_file = os.path.join(folder_paths.get_input_directory(), "shots", "y.png")
+    assert nodes_files.short_path(out_file) == "output/arbor/x.png"
+    assert nodes_files.short_path(in_file) == "shots/y.png"
+    for f in (out_file, in_file):
+        assert nodes_files.resolve_path(nodes_files.short_path(f)) == os.path.realpath(f)
     print("load media: OK")
 
 

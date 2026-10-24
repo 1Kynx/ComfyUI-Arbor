@@ -135,6 +135,26 @@ const CSS = `
   background:var(--arb-bg);color:var(--arb-fg);padding:6px 9px;outline:none;
   font:11.5px/1.6 "JetBrains Mono","Cascadia Code",Consolas,monospace;}
 
+/* folder row (Load Folder): a text widget with a folder icon at its end — a pill on the classic
+   canvas, label | box like the other widgets in Nodes 2.0 (.v2) */
+.arb.arb-path{flex-direction:row;align-items:center;gap:6px;height:24px;padding:0 3px 0 11px;border-radius:12px;
+  background:var(--arb-bg);border:1px solid var(--arb-line);}
+.arb-path-label{color:var(--arb-sub);font-size:12px;white-space:nowrap;flex:0 0 auto;overflow:hidden;text-overflow:ellipsis;}
+.arb-path-box{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:4px;height:100%;}
+.arb-path-in{flex:1 1 auto;min-width:0;height:20px;border:0;outline:none;background:transparent;color:var(--arb-fg);
+  font:12px/20px inherit;text-align:right;text-overflow:ellipsis;}
+.arb-path-in:focus{text-align:left;}
+.arb-path-btn{flex:0 0 auto;width:20px;height:20px;padding:0;border:0;border-radius:50%;background:transparent;
+  color:var(--arb-sub);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
+.arb-path-btn:hover{color:var(--arb-fg);background:var(--arb-hover);}
+.arb-path-btn svg{width:14px;height:14px;}
+.arb.arb-path.v2{height:auto;padding:0;border:0;border-radius:0;background:transparent;gap:8px;}
+.arb-path.v2 .arb-path-label{width:var(--lw,80px);color:var(--lc,rgb(160,160,160));font-weight:var(--lwt,400);}
+.arb-path.v2 .arb-path-box{height:var(--bh,32px);padding:0 6px 0 16px;border-radius:6px;
+  background:var(--bbg,#313235);}
+.arb-path.v2 .arb-path-in{text-align:left;color:var(--bfg,#fff);}
+.arb-path.v2 .arb-path-box:focus-within{box-shadow:0 0 0 1px var(--color-border-default,#555);}
+
 /* ------------------------------------------------------------- number slider */
 .arb-num{gap:4px;justify-content:center;}
 .arb-num-bar{position:relative;flex:0 0 auto;height:30px;border-radius:8px;overflow:hidden;cursor:ew-resize;
@@ -294,13 +314,13 @@ const STRINGS = {
     sliderEmpty: "Connect images, videos or audio and run to compare",
     playTip: "Play (Space)", pauseTip: "Pause (Space)", loopTip: "Loop",
     muteTip: "Sound on / off — in Wipe you hear the side that shows more, or the half under the pointer",
-    addFiles: "Add files…", addFilesTip: "Pick pictures, videos or audio with the system dialog — files are used where they are",
-    addFolderBtn: "Add folder…", addFolderBtnTip: "Every media file in a folder and its subfolders; each folder becomes a group",
-    browseFolder: "Browse…", dialogFiles: "Add pictures, videos or audio", dialogFolder: "Choose a folder",
+    addMedia: "Add…", addMediaTip: "Pick files or a whole folder with the system dialog — files are used where they are",
+    pickFiles: "Files…", pickFolder: "Folder… (each subfolder a group)", folderPickTip: "Choose the folder with the system dialog",
+    dialogFiles: "Add pictures, videos or audio", dialogFolder: "Choose a folder",
     dialogRemote: "The system file dialog opens on the computer running ComfyUI — from this one, type the path instead",
     addGroup: "+ Group", viewList: "List", viewText: "Text", groupName: "Group name",
-    removeGroup: "Remove group", remove: "Remove", groupEmpty: "Empty — Add files… adds to the selected group",
-    mediaEmpty: "Add files… or Add folder… to pick pictures, videos or audio\nEach group becomes a named branch",
+    removeGroup: "Remove group", remove: "Remove", groupEmpty: "Empty — Add… puts files into the selected group",
+    mediaEmpty: "Add… to pick pictures, videos or audio — or a whole folder\nEach group becomes a named branch",
     mediaTextPh: "# Group name\nfile.png\nfolder/clip.mp4\nC:/absolute/path/voice.wav\n\nAn empty line starts a new group",
     file_one: "{n} file", file_other: "{n} files", group_one: "{n} group", group_other: "{n} groups",
     live: "Live — updates as you edit, no need to run",
@@ -342,13 +362,13 @@ const STRINGS = {
     sliderEmpty: "接入图片、视频或音频并运行后即可对比",
     playTip: "播放（空格）", pauseTip: "暂停（空格）", loopTip: "循环播放",
     muteTip: "声音开 / 关——对比模式下听到占画面更多的一侧，或鼠标所在的那一半",
-    addFiles: "添加文件…", addFilesTip: "用系统窗口选择图片、视频或音频——文件原地使用，不复制",
-    addFolderBtn: "添加文件夹…", addFolderBtnTip: "文件夹及其子文件夹里的所有媒体文件；每个文件夹成为一个分组",
-    browseFolder: "浏览…", dialogFiles: "添加图片、视频或音频", dialogFolder: "选择文件夹",
+    addMedia: "添加…", addMediaTip: "用系统窗口选择文件或整个文件夹——文件原地使用，不复制",
+    pickFiles: "文件…", pickFolder: "文件夹…（每个子文件夹一个分组）", folderPickTip: "用系统窗口选择文件夹",
+    dialogFiles: "添加图片、视频或音频", dialogFolder: "选择文件夹",
     dialogRemote: "系统文件窗口只能在运行 ComfyUI 的电脑上打开——在这台电脑上请直接输入路径",
     addGroup: "+ 分组", viewList: "列表", viewText: "文本", groupName: "分组名",
-    removeGroup: "删除分组", remove: "移除", groupEmpty: "空分组——点「添加文件…」添加到选中的分组",
-    mediaEmpty: "点「添加文件…」或「添加文件夹…」选择图片、视频或音频\n每个分组成为一个有名字的分支",
+    removeGroup: "删除分组", remove: "移除", groupEmpty: "空分组——点「添加…」把文件放进选中的分组",
+    mediaEmpty: "点「添加…」选择图片、视频、音频或整个文件夹\n每个分组成为一个有名字的分支",
     mediaTextPh: "# 分组名\nfile.png\nfolder/clip.mp4\nC:/绝对路径/voice.wav\n\n空一行开始新分组",
     file_one: "{n} 个文件", file_other: "{n} 个文件", group_one: "{n} 个分组", group_other: "{n} 个分组",
     live: "实时 — 编辑时自动更新，无需运行",
@@ -524,5 +544,6 @@ export const ICONS = {
   loop: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 7.5v-1a2 2 0 0 1 2-2h8M11 2.5l2 2-2 2M13 8.5v1a2 2 0 0 1-2 2H3M5 13.5l-2-2 2-2"/></svg>`,
   sound: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 6v4H5l3.5 3V3L5 6z"/><path d="M11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.8a6 6 0 0 1 0 8.4"/></svg>`,
   muted: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 6v4H5l3.5 3V3L5 6z"/><path d="M11 6l3.5 4M14.5 6L11 10"/></svg>`,
+  folder: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.8 4.2a1 1 0 0 1 1-1h3.3l1.4 1.5h5.7a1 1 0 0 1 1 1v6.6a1 1 0 0 1-1 1H2.8a1 1 0 0 1-1-1z"/></svg>`,
   open: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M9 2.5h4.5V7M13.5 2.5 7.5 8.5M12 9.5v3a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h3"/></svg>`,
 };

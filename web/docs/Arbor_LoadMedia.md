@@ -4,10 +4,8 @@ Pick pictures, videos and audio from anywhere on disk and group them into named 
 
 ## Inputs
 
-- **folder** · *STRING*  
-  Base folder: relative entries in the list are read from here and the file dialog starts here. An absolute path; output/… for ComfyUI's output folder; arbor:… for Arbor's sample media; any other relative path is inside input.
 - **files** · *STRING*  
-  The list (kept as text): '# name' starts a named group, an empty line a new group, every other line is a file — relative to the folder, or absolute. Edit it in the node's Text view, or fill it with Add files… / Add folder….
+  The list (kept as text): '# name' starts a named group, an empty line a new group, every other line is a file — an absolute path, output/… (ComfyUI's output folder), arbor:… (Arbor's sample media) or relative to the input folder. Edit it in the node's Text view, or fill it with Add….
 
 ## Outputs
 
@@ -23,17 +21,17 @@ Pick pictures, videos and audio from anywhere on disk and group them into named 
   File names without extension, like files — handy as captions or for Save by Path.
 
 ## How to use
-- **Add files…** opens the system's file dialog — select one or several pictures, videos or audio files.
-- **Add folder…** opens the system's folder dialog and adds every media file in it — each subfolder becomes a group named after it, like Load Folder.
+- **Add…** → **Files…** opens the system's file dialog — select one or several pictures, videos or audio files.
+- **Add…** → **Folder…** opens the system's folder dialog and adds every media file in it — each subfolder becomes a group named after it, like Load Folder.
 - Files go into the group you clicked last; **+ Group** starts a new one. Rename a group in its header, drag thumbnails to reorder or move them between groups, × removes.
 - **Text** shows the list itself — paste paths, write `# name` lines, delete lines.
 
 ```
-# Arrival            →  files {0} Arrival: 2 pictures
-0 · Arrival/000.jpg
-0 · Arrival/001.jpg
+# Arrival                              →  files {0} Arrival: 2 pictures
+output/shots/arrival_01.png
+output/shots/arrival_02.png
 
-# Sound              →  files {1} Sound: 1 audio
+# Sound                                →  files {1} Sound: 1 audio
 C:/music/theme.wav
 ```
 
@@ -42,6 +40,7 @@ C:/music/theme.wav
 - **Load Folder**: everything in a folder, re-read on every run — new files are picked up by themselves.
 
 ## Tips
-- The dialog opens on the computer ComfyUI runs on (it hands back real paths, so nothing is copied). Opened from another computer, type the paths in the Text view instead.
-- The templates use `arbor:storyboard`, the sample keyframes that come with Arbor.
+- The dialog opens on the computer ComfyUI runs on and hands back real paths, so nothing is copied; it opens where you picked last. Opened from another computer, type the paths in the Text view instead.
+- Paths inside ComfyUI's output or input folder are written short (`output/…`, relative), so the workflow still works when ComfyUI moves.
+- The templates use `arbor:storyboard/…`, the sample keyframes that come with Arbor.
 - The node re-runs when a listed file changes.

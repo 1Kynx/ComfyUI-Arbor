@@ -38,19 +38,41 @@ def _natural_key(s: str):
 EXAMPLE_MEDIA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "example_media")
 
 
-def resolve_folder(folder: str) -> str:
-    """Absolute path; 'output/…' is in ComfyUI's output folder, 'arbor:…' in Arbor's sample media
-    (what the templates use), any other relative path in input."""
-    folder = os.path.expanduser(str(folder or "").strip().strip('"'))
-    if folder.lower().startswith("arbor:"):
-        folder = os.path.join(EXAMPLE_MEDIA, folder[len("arbor:"):].lstrip("/").lstrip(os.sep))
-    elif not os.path.isabs(folder):
-        head, _, rest = folder.replace("\\", "/").partition("/")
+def resolve_path(path: str) -> str:
+    """Absolute path of a file or folder; 'output/…' is in ComfyUI's output folder, 'arbor:…' in Arbor's
+    sample media (what the templates use), any other relative path in input."""
+    path = os.path.expanduser(str(path or "").strip().strip('"'))
+    if path.lower().startswith("arbor:"):
+        path = os.path.join(EXAMPLE_MEDIA, path[len("arbor:"):].lstrip("/").lstrip(os.sep))
+    elif not os.path.isabs(path):
+        head, _, rest = path.replace(os.sep, "/").partition("/")
         if head.lower() == "output":
-            folder = os.path.join(folder_paths.get_output_directory(), rest)
+            path = os.path.join(folder_paths.get_output_directory(), rest)
         else:
-            folder = os.path.join(folder_paths.get_input_directory(), rest if head.lower() == "input" else folder)
-    folder = os.path.normpath(folder)
+            path = os.path.join(folder_paths.get_input_directory(), rest if head.lower() == "input" else path)
+    return os.path.normpath(path)
+
+
+def short_path(path: str) -> str:
+    """The shortest way to write an absolute path for resolve_path: arbor:…, output/…, relative to input,
+    or the path itself."""
+    full = os.path.realpath(path)  # through junctions / symlinks, so either spelling of a folder matches
+    for prefix, root in (("arbor:", EXAMPLE_MEDIA), ("output/", folder_paths.get_output_directory()),
+                         ("", folder_paths.get_input_directory())):
+        root = os.path.realpath(root)
+        try:
+            rel = os.path.relpath(full, root)
+        except ValueError:  # another drive
+            continue
+        if not rel.startswith("..") and not os.path.isabs(rel):
+            rel = "" if rel == "." else rel.replace(os.sep, "/")
+            if prefix or rel:
+                return (prefix + rel).rstrip("/") or prefix.rstrip("/")
+    return full
+
+
+def resolve_folder(folder: str) -> str:
+    folder = resolve_path(folder)
     if not os.path.isdir(folder):
         raise FileNotFoundError(f"Load Folder: '{folder}' is not a folder")
     return folder

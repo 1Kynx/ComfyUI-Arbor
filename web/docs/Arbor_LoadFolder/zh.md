@@ -5,7 +5,7 @@
 ## 输入
 
 - **文件夹** `folder` · *STRING*  
-  绝对路径；output/… 表示 ComfyUI 的 output 文件夹；arbor:… 表示 Arbor 自带的示例素材；其它相对路径都在 input 文件夹里。也可以点「浏览…」按钮用系统的文件夹窗口选择。
+  绝对路径；output/… 表示 ComfyUI 的 output 文件夹；arbor:… 表示 Arbor 自带的示例素材；其它相对路径都在 input 文件夹里。也可以点输入框末尾的文件夹图标，用系统的文件夹窗口选择。
 - **类型** `kind` · *COMBO*  
   加载什么：images 图片（IMAGE）· videos 视频（VIDEO——按需读取，下游节点用到画面时才解码）· audio 音频（AUDIO）。每种类型有自己的文件匹配。
   - **文件匹配** `pattern` · *STRING*  
@@ -38,7 +38,7 @@ shots/             →  文件 {0}：2 个视频   文件夹：shots
 视频接 **数据树转数据** → 任意有 VIDEO 输入的节点（获取视频组件、保存视频……），每段运行一次；音频同理接 AUDIO 输入。
 
 ## 选择文件夹
-点节点底部的 **浏览…** 打开系统的文件夹窗口。位于 ComfyUI output 文件夹里的文件夹会写成 `output/…`。窗口在运行 ComfyUI 的电脑上打开；从其它电脑访问时请直接输入路径。
+点文件夹输入框末尾的 **文件夹图标** 打开系统的文件夹窗口。位于 ComfyUI output 文件夹里的文件夹会写成 `output/…`。窗口在运行 ComfyUI 的电脑上打开；从其它电脑访问时请直接输入路径。
 
 ## 往返
 **按路径保存** 按有名字的分支保存的文件夹（`0 · Arrival`、`1 · The village`）读回来时会恢复名字（*Arrival*、*The village*）和顺序。模板：*arbor_folder_review*。

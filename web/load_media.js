@@ -2,16 +2,16 @@
  *
  * The node keeps its file list as text in the hidden `files` widget, the Panel's
  * way: `# name` starts a named group, an empty line a new group, every other
- * line is a file (relative to `folder`, or absolute).
+ * line is a file: absolute, output/…, arbor:… or relative to ComfyUI's input folder.
  * List view: groups of thumbnails — rename a group, drag files to reorder or
  * move them between groups, × to remove. Text view: edit the list directly.
- * Add files… / Add folder…: the system's own dialog (system_dialog.js) picks files, or a
+ * Add… → Files… / Folder…: the system's own dialog (system_dialog.js) picks files, or a
  * whole folder whose subfolders become groups; files are used where they are.
  */
 
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { injectStyle, el, isolatePointer, isolateKeys, markChanged, chain, hideWidget, t, tn, onLocaleChange } from "./arbor_common.js";
+import { injectStyle, el, isolatePointer, isolateKeys, markChanged, chain, hideWidget, showMenu, t, tn, onLocaleChange } from "./arbor_common.js";
 import { systemDialog } from "./system_dialog.js";
 
 const NODE = "Arbor_LoadMedia";
@@ -52,16 +52,6 @@ export function formatList(groups) {
     .join("\n\n");
 }
 
-/* the path stored in the list: relative to the folder when the file is inside it */
-function entryFor(abs, base) {
-  if (!base) return abs;
-  const norm = (p) => p.replace(/\\/g, "/").replace(/\/+$/, "");
-  const a = norm(abs), b = norm(base);
-  const ci = /^[a-zA-Z]:/.test(b); // Windows paths ignore case
-  const inside = ci ? a.toLowerCase().startsWith(b.toLowerCase() + "/") : a.startsWith(b + "/");
-  return inside ? a.slice(b.length + 1) : abs;
-}
-
 class MediaView {
   constructor(node) {
     this.node = node;
@@ -72,15 +62,15 @@ class MediaView {
   }
 
   w(name) { return this.node.widgets?.find((w) => w.name === name); }
-  get folder() { return String(this.w("folder")?.value ?? ""); }
 
   build() {
     const root = (this.root = el("div", "arb arb-media"));
     const bar = el("div", "arb-bar");
-    this.filesBtn = el("button", "arb-btn arb-btn-main");
-    this.filesBtn.addEventListener("click", () => this.pickFiles());
-    this.folderBtn = el("button", "arb-btn");
-    this.folderBtn.addEventListener("click", () => this.pickFolder());
+    this.pickBtn = el("button", "arb-btn arb-btn-main");
+    this.pickBtn.addEventListener("click", () => showMenu(this.pickBtn, [
+      { label: t("pickFiles"), pick: () => this.pickFiles() },
+      { label: t("pickFolder"), pick: () => this.pickFolder() },
+    ]));
     this.seg = el("div", "arb-seg", `<button data-m="list"></button><button data-m="text"></button>`);
     this.seg.addEventListener("click", (e) => {
       const m = e.target?.dataset?.m;
@@ -97,7 +87,7 @@ class MediaView {
       this.save();
       this.render();
     });
-    bar.append(this.filesBtn, this.folderBtn, this.seg, this.info, el("span", "arb-sp"), this.addBtn);
+    bar.append(this.pickBtn, this.seg, this.info, el("span", "arb-sp"), this.addBtn);
 
     this.body = el("div", "arb-media-body");
     this.ta = el("textarea", "arb-media-ta");
@@ -136,7 +126,7 @@ class MediaView {
   }
 
   thumbURL(entry) {
-    const q = new URLSearchParams({ folder: this.folder, path: entry, size: "160" });
+    const q = new URLSearchParams({ path: entry, size: "160" });
     return api.apiURL(`/arbor/media/thumb?${q}`);
   }
 
@@ -148,10 +138,8 @@ class MediaView {
   /* ------------------------------------------------------- drawing */
 
   render() {
-    this.filesBtn.textContent = t("addFiles");
-    this.filesBtn.title = t("addFilesTip");
-    this.folderBtn.textContent = t("addFolderBtn");
-    this.folderBtn.title = t("addFolderBtnTip");
+    this.pickBtn.textContent = t("addMedia");
+    this.pickBtn.title = t("addMediaTip");
     this.addBtn.textContent = t("addGroup");
     this.seg.children[0].textContent = t("viewList");
     this.seg.children[1].textContent = t("viewText");
@@ -278,14 +266,26 @@ class MediaView {
     this.render();
   }
 
+  /* the system dialog opens where the last pick was, else next to the last file in the list */
+  get start() {
+    const last = this.groups.flatMap((g) => g.files).pop();
+    return this.node.properties.arbor_dir || last || "";
+  }
+
+  remember(r) {
+    if (r?.dir) this.node.properties.arbor_dir = r.dir;
+  }
+
   async pickFiles() {
-    const r = await systemDialog("files", this.folder, t("dialogFiles"));
-    if (r) this.add(r.paths.map((p) => entryFor(p, r.base)));
+    const r = await systemDialog("files", this.start, t("dialogFiles"));
+    this.remember(r);
+    if (r) this.add(r.entries);
   }
 
   async pickFolder() {
-    const r = await systemDialog("tree", this.folder, t("dialogFolder"));
-    for (const g of r?.groups || []) this.add(g.files.map((p) => entryFor(p, r.base)), g.name);
+    const r = await systemDialog("tree", this.start, t("dialogFolder"));
+    this.remember(r);
+    for (const g of r?.groups || []) this.add(g.files, g.name);
   }
 }
 
@@ -301,20 +301,12 @@ app.registerExtension({
       this.__arborMedia = view;
       const off = onLocaleChange(() => view.render());
       chain(this, "onRemoved", off);
-      this.addDOMWidget("arbor_media", "arbor-media", view.root, {
+      const dom = this.addDOMWidget("arbor_media", "arbor-media", view.root, {
         serialize: false,
         hideOnZoom: false,
         getMinHeight: () => 180,
       });
-      const fw = view.w("folder");
-      if (fw) {
-        const cb = fw.callback;
-        fw.callback = function (...a) {
-          const r = cb?.apply(this, a);
-          view.render();
-          return r;
-        };
-      }
+      dom.serialize = false;
       view.sync();
       const [w, h] = this.size || [0, 0];
       this.setSize?.([Math.max(w, 380), Math.max(h, 360)]);

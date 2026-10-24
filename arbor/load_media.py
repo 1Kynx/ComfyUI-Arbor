@@ -1,8 +1,9 @@
 """Load Media: a hand-picked list of pictures, videos and audio files, grouped into named branches.
 
 The list lives in the node as text, the Panel's way: `# name` starts a named branch, an empty
-line starts a new branch, every other line is a file — relative to the folder, or absolute.
-The node's buttons fill it from the system's own file / folder dialog (opened by the server, see
+line starts a new branch, every other line is a file: an absolute path, output/… (ComfyUI's output
+folder), arbor:… (Arbor's sample media) or relative to ComfyUI's input folder.
+The node's Add… button fills it from the system's own file / folder dialog (opened by the server, see
 dialogs.py and the /arbor/media routes below), so the files are used where they are, nothing is copied.
 """
 
@@ -16,7 +17,8 @@ import folder_paths
 
 from . import tree as T
 from .common import IO, CAT_MEDIA, schema, tree_out, unwrap
-from .nodes_files import EXAMPLE_MEDIA, KINDS, LOADERS, _natural_key, folder_label, resolve_folder, scan_folder
+from .nodes_files import EXAMPLE_MEDIA, KINDS, LOADERS, _natural_key, folder_label, resolve_path, scan_folder, \
+    short_path
 
 EXTS = {kind: {p.strip("*").lower() for p in pattern.split()} for kind, pattern in KINDS.items()}
 KIND_OF = {ext: kind for kind, exts in EXTS.items() for ext in exts}
@@ -48,31 +50,16 @@ def parse_list(text: str) -> list[tuple[str, list[str]]]:
     return [(n, f) for n, f in groups if f]
 
 
-def file_path(folder: str, entry: str) -> str:
-    entry = os.path.expanduser(entry)
-    return os.path.normpath(entry if os.path.isabs(entry) else os.path.join(folder, entry))
-
-
-def _base(folder: str) -> str:
-    try:
-        return resolve_folder(folder)
-    except FileNotFoundError:
-        raise FileNotFoundError(f"Load Media: folder '{folder}' does not exist") from None
-
-
 class LoadMedia(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
         return schema(
             "Arbor_LoadMedia", "Load Media", CAT_MEDIA,
-            "Pick pictures, videos and audio anywhere on disk (Add files… / Add folder… open the system dialog) and group "
-            "them into named branches. "
-            "Files are used where they are; each group becomes a branch named after it.",
-            [IO.String.Input("folder", default="",
-                             tooltip="Base folder for relative entries (and where the file dialog starts): an absolute "
-                                     "path, output/… for ComfyUI's output folder, anything else inside input"),
-             IO.String.Input("files", multiline=True, default="",
-                             tooltip="One file per line; '# name' starts a named group, an empty line a new group")],
+            "Pick pictures, videos and audio anywhere on disk (Add… opens the system's file or folder dialog) and "
+            "group them into named branches. Files are used where they are; each group becomes a branch named after it.",
+            [IO.String.Input("files", multiline=True, default="",
+                             tooltip="One file per line (absolute, output/…, arbor:… or inside input); '# name' starts "
+                                     "a named group, an empty line a new group")],
             [tree_out("files", tooltip="Everything, one branch per group, named after it"),
              tree_out("images", tooltip="The pictures (IMAGE), same groups"),
              tree_out("videos", tooltip="The videos (VIDEO), same groups"),
@@ -83,26 +70,21 @@ class LoadMedia(IO.ComfyNode):
             input_list=False)
 
     @classmethod
-    def fingerprint_inputs(cls, folder, files):
-        h = hashlib.sha256(f"{folder}\n{files}".encode())
-        try:
-            base = resolve_folder(folder)
-        except FileNotFoundError:
-            return h.hexdigest()
+    def fingerprint_inputs(cls, files):
+        h = hashlib.sha256(str(files).encode())
         for _, entries in parse_list(files):
             for e in entries:
-                p = file_path(base, e)
+                p = resolve_path(e)
                 if os.path.isfile(p):
                     st = os.stat(p)
                     h.update(f"{p}|{st.st_mtime_ns}|{st.st_size}".encode())
         return h.hexdigest()
 
     @classmethod
-    def execute(cls, folder, files) -> IO.NodeOutput:
-        base = _base(folder)
+    def execute(cls, files) -> IO.NodeOutput:
         groups = parse_list(files)
         if not groups:
-            raise ValueError("Load Media: the list is empty — use Add files… or Add folder…")
+            raise ValueError("Load Media: the list is empty — use Add… to pick files or a folder")
         everything, names = {}, {}
         by_kind = {k: {} for k in KINDS}
         labels = {}
@@ -111,7 +93,7 @@ class LoadMedia(IO.ComfyNode):
             if label:
                 labels[path] = label
             for e in entries:
-                p = file_path(base, e)
+                p = resolve_path(e)
                 kind = kind_of(p)
                 if kind is None:
                     raise ValueError(f"Load Media: '{e}' is not a picture, video or audio file")
@@ -166,7 +148,7 @@ def tree_of(path: str) -> list[dict]:
     out = []
     for rel, files in scan_folder(path, pattern, True, "name", 0).items():
         name = folder_label(rel) if rel else os.path.basename(os.path.normpath(path))
-        out.append({"name": name, "files": files})
+        out.append({"name": name, "files": [short_path(f) for f in files]})
     return out
 
 
@@ -203,15 +185,6 @@ def register_routes():
 
     routes = PromptServer.instance.routes
 
-    def target(q) -> str:
-        folder = q.get("folder", "")
-        try:
-            base = resolve_folder(folder)
-        except FileNotFoundError:
-            base = folder_paths.get_input_directory()
-        p = q.get("path") or ""
-        return file_path(base, p) if p else base
-
     @routes.post("/arbor/media/pick")
     async def _pick(request):
         """Open the system dialog on this computer. mode: files | folder | tree (a folder, read as groups)."""
@@ -222,10 +195,9 @@ def register_routes():
             return web.json_response({"error": "remote"}, status=403)
         q = await request.json()
         mode = q.get("mode", "files")
-        try:
-            start = resolve_folder(q.get("folder", ""))
-        except FileNotFoundError:
-            start = folder_paths.get_input_directory()
+        start = resolve_path(q.get("start", "")) if q.get("start") else folder_paths.get_input_directory()
+        if not os.path.isdir(start):  # a file: start in its folder
+            start = os.path.dirname(start) if os.path.isdir(os.path.dirname(start)) else folder_paths.get_input_directory()
         try:
             paths = await asyncio.to_thread(dialogs.pick, "files" if mode == "files" else "folder", start,
                                             q.get("title", ""), FILTERS)
@@ -233,8 +205,10 @@ def register_routes():
             return web.json_response({"error": str(e)}, status=409)
         except Exception as e:  # pragma: no cover - a broken system dialog
             return web.json_response({"error": f"The system dialog failed: {e}"}, status=500)
-        out = {"paths": paths, "base": start, "input": folder_paths.get_input_directory(),
-               "output": folder_paths.get_output_directory()}
+        # entries / folder written the short way (output/…, arbor:…, relative to input) where possible;
+        # dir = where the next dialog should start
+        out = {"paths": paths, "entries": [short_path(p) for p in paths],
+               "dir": paths[0] if mode != "files" else (os.path.dirname(paths[0]) if paths else "")}
         if mode == "tree" and paths:
             out["groups"] = tree_of(paths[0])
         return web.json_response(out)
@@ -242,7 +216,7 @@ def register_routes():
     @routes.get("/arbor/media/thumb")
     async def _thumb(request):
         q = request.rel_url.query
-        path = target(q)
+        path = resolve_path(q.get("path", ""))
         if not allowed(request, path) or not os.path.isfile(path) or kind_of(path) not in ("images", "videos"):
             return web.Response(status=404)
         try:

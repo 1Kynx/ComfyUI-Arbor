@@ -5,7 +5,7 @@ Load every picture, video or audio file in a folder; with subfolders on, each fo
 ## Inputs
 
 - **folder** · *STRING*  
-  An absolute path; output/… for ComfyUI's output folder; arbor:… for Arbor's sample media; any other relative path is inside the input folder. The Browse… button picks it with the system's folder dialog.
+  An absolute path; output/… for ComfyUI's output folder; arbor:… for Arbor's sample media; any other relative path is inside the input folder. The folder icon at the end of the box picks it with the system's folder dialog.
 - **kind** · *COMBO*  
   What to load: images (IMAGE) · videos (VIDEO — read lazily, nothing is decoded until a node needs the frames) · audio (AUDIO). Each kind has its own file pattern.
   - **kind.pattern** `pattern` · *STRING*  
@@ -38,7 +38,7 @@ shots/             →  files {0}: 2 videos   folders: shots
 Videos go on to **Tree to Data** → any node with a VIDEO input (Get Video Components, Save Video…), once per clip; audio the same with AUDIO inputs.
 
 ## Choosing the folder
-**Browse…** (at the bottom of the node) opens the system's folder dialog. A folder inside ComfyUI's output folder is written as `output/…`. The dialog opens on the computer ComfyUI runs on; from another computer, type the path.
+The **folder icon** at the end of the folder box opens the system's folder dialog. A folder inside ComfyUI's output folder is written as `output/…`. The dialog opens on the computer ComfyUI runs on; from another computer, type the path.
 
 ## Round trip
 Folders saved by **Save by Path** from named branches (`0 · Arrival`, `1 · The village`) load back with their names (*Arrival*, *The village*) and in their order. Template: *arbor_folder_review*.
