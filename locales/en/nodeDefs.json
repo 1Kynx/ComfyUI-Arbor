@@ -311,15 +311,15 @@
   },
   "Arbor_LoadMedia": {
     "display_name": "Load Media",
-    "description": "Pick pictures, videos and audio from anywhere on disk and group them into named branches — several Load Image nodes in one, with a browse window and thumbnails. Files are used where they are; nothing is copied.",
+    "description": "Pick pictures, videos and audio from anywhere on disk and group them into named branches — several Load Image nodes in one, using the system's own file dialog, with thumbnails. Files are used where they are; nothing is copied.",
     "inputs": {
       "folder": {
         "name": "folder",
-        "tooltip": "Base folder: relative entries in the list are read from here and Browse… starts here. An absolute path; output/… for ComfyUI's output folder; arbor:… for Arbor's sample media; any other relative path is inside input."
+        "tooltip": "Base folder: relative entries in the list are read from here and the file dialog starts here. An absolute path; output/… for ComfyUI's output folder; arbor:… for Arbor's sample media; any other relative path is inside input."
       },
       "files": {
         "name": "files",
-        "tooltip": "The list (kept as text): '# name' starts a named group, an empty line a new group, every other line is a file — relative to the folder, or absolute. Edit it in the node's Text view, or fill it with Browse…."
+        "tooltip": "The list (kept as text): '# name' starts a named group, an empty line a new group, every other line is a file — relative to the folder, or absolute. Edit it in the node's Text view, or fill it with Add files… / Add folder…."
       }
     },
     "outputs": {
@@ -351,7 +351,7 @@
     "inputs": {
       "folder": {
         "name": "folder",
-        "tooltip": "An absolute path; output/… for ComfyUI's output folder; arbor:… for Arbor's sample media; any other relative path is inside the input folder. The Browse… button picks it in a window."
+        "tooltip": "An absolute path; output/… for ComfyUI's output folder; arbor:… for Arbor's sample media; any other relative path is inside the input folder. The Browse… button picks it with the system's folder dialog."
       },
       "kind": {
         "name": "kind",

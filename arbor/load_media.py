@@ -2,15 +2,14 @@
 
 The list lives in the node as text, the Panel's way: `# name` starts a named branch, an empty
 line starts a new branch, every other line is a file — relative to the folder, or absolute.
-The node's own UI fills it from a browse dialog (the /arbor/media routes below), so the files
-are used where they are, nothing is copied.
+The node's buttons fill it from the system's own file / folder dialog (opened by the server, see
+dialogs.py and the /arbor/media routes below), so the files are used where they are, nothing is copied.
 """
 
 from __future__ import annotations
 
 import hashlib
 import os
-import string
 from collections import OrderedDict
 
 import folder_paths
@@ -66,10 +65,11 @@ class LoadMedia(IO.ComfyNode):
     def define_schema(cls):
         return schema(
             "Arbor_LoadMedia", "Load Media", CAT_MEDIA,
-            "Pick pictures, videos and audio from anywhere on disk (Browse…) and group them into named branches. "
+            "Pick pictures, videos and audio anywhere on disk (Add files… / Add folder… open the system dialog) and group "
+            "them into named branches. "
             "Files are used where they are; each group becomes a branch named after it.",
             [IO.String.Input("folder", default="",
-                             tooltip="Base folder for relative entries (and where Browse… starts): an absolute "
+                             tooltip="Base folder for relative entries (and where the file dialog starts): an absolute "
                                      "path, output/… for ComfyUI's output folder, anything else inside input"),
              IO.String.Input("files", multiline=True, default="",
                              tooltip="One file per line; '# name' starts a named group, an empty line a new group")],
@@ -102,7 +102,7 @@ class LoadMedia(IO.ComfyNode):
         base = _base(folder)
         groups = parse_list(files)
         if not groups:
-            raise ValueError("Load Media: the list is empty — use Browse… to add files")
+            raise ValueError("Load Media: the list is empty — use Add files… or Add folder…")
         everything, names = {}, {}
         by_kind = {k: {} for k in KINDS}
         labels = {}
@@ -129,9 +129,14 @@ class LoadMedia(IO.ComfyNode):
 NODES = [LoadMedia]
 
 
-# ------------------------------------------------------------------ browse dialog
+# ------------------------------------------------------------------ dialogs and thumbnails
 
 _THUMBS: OrderedDict = OrderedDict()
+FILTERS = [("Pictures, videos and audio", ";".join(f"*{e}" for exts in EXTS.values() for e in sorted(exts))),
+           ("Pictures", ";".join(f"*{e}" for e in sorted(EXTS["images"]))),
+           ("Videos", ";".join(f"*{e}" for e in sorted(EXTS["videos"]))),
+           ("Audio", ";".join(f"*{e}" for e in sorted(EXTS["audio"]))),
+           ("All files", "*.*")]
 
 
 def _roots() -> list[str]:
@@ -146,35 +151,13 @@ def _inside(path: str, root: str) -> bool:
         return False
 
 
+def is_local(request) -> bool:
+    return request.remote in ("127.0.0.1", "::1", "localhost")
+
+
 def allowed(request, path: str) -> bool:
     """Anything on disk for the machine ComfyUI runs on; only ComfyUI's own folders for other ones."""
-    if request.remote in ("127.0.0.1", "::1", "localhost"):
-        return True
-    return any(_inside(path, r) for r in _roots())
-
-
-def _drives() -> list[str]:
-    if os.name != "nt":
-        return ["/"]
-    return [f"{d}:\\" for d in string.ascii_uppercase if os.path.exists(f"{d}:\\")]
-
-
-def browse(path: str) -> dict:
-    path = os.path.normpath(path)
-    dirs, files = [], []
-    for e in sorted(os.scandir(path), key=lambda e: _natural_key(e.name)):
-        if e.name.startswith("."):
-            continue
-        try:
-            if e.is_dir():
-                dirs.append(e.name)
-            elif kind_of(e.name):
-                files.append({"name": e.name, "kind": SINGULAR[kind_of(e.name)]})
-        except OSError:
-            continue
-    parent = os.path.dirname(path)
-    return {"path": path, "parent": parent if parent != path else "", "dirs": dirs, "files": files,
-            "drives": _drives()}
+    return is_local(request) or any(_inside(path, r) for r in _roots())
 
 
 def tree_of(path: str) -> list[dict]:
@@ -229,29 +212,32 @@ def register_routes():
         p = q.get("path") or ""
         return file_path(base, p) if p else base
 
-    @routes.get("/arbor/media/browse")
-    async def _browse(request):
-        q = request.rel_url.query
+    @routes.post("/arbor/media/pick")
+    async def _pick(request):
+        """Open the system dialog on this computer. mode: files | folder | tree (a folder, read as groups)."""
+        import asyncio
+        from . import dialogs
+
+        if not is_local(request):
+            return web.json_response({"error": "remote"}, status=403)
+        q = await request.json()
+        mode = q.get("mode", "files")
         try:
-            base = resolve_folder(q.get("folder", ""))
+            start = resolve_folder(q.get("folder", ""))
         except FileNotFoundError:
-            base = folder_paths.get_input_directory()
-        path = q.get("path") or base
-        path = os.path.normpath(os.path.expanduser(path))
-        if not allowed(request, path):
-            return web.json_response({"error": "Browsing outside ComfyUI's folders only works on this computer"},
-                                     status=403)
-        if not os.path.isdir(path):
-            return web.json_response({"error": f"'{path}' is not a folder"}, status=404)
+            start = folder_paths.get_input_directory()
         try:
-            data = browse(path) if not q.get("recursive") else {"path": path, "groups": tree_of(path)}
-        except OSError as e:
-            return web.json_response({"error": str(e)}, status=400)
-        data["base"] = base
-        data["input"] = folder_paths.get_input_directory()  # so a picked folder can be written short
-        data["output"] = folder_paths.get_output_directory()
-        data["local"] = request.remote in ("127.0.0.1", "::1", "localhost")
-        return web.json_response(data)
+            paths = await asyncio.to_thread(dialogs.pick, "files" if mode == "files" else "folder", start,
+                                            q.get("title", ""), FILTERS)
+        except dialogs.Unavailable as e:
+            return web.json_response({"error": str(e)}, status=409)
+        except Exception as e:  # pragma: no cover - a broken system dialog
+            return web.json_response({"error": f"The system dialog failed: {e}"}, status=500)
+        out = {"paths": paths, "base": start, "input": folder_paths.get_input_directory(),
+               "output": folder_paths.get_output_directory()}
+        if mode == "tree" and paths:
+            out["groups"] = tree_of(paths[0])
+        return web.json_response(out)
 
     @routes.get("/arbor/media/thumb")
     async def _thumb(request):

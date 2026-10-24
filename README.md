@@ -117,9 +117,8 @@ Names: `x`, `y` (matched like Grasshopper: branches in order, items longest-list
 `b` branch index, `n` branch length, `name` the branch's name.
 A safe evaluator: no attribute access or imports.
 
-**Load Media** — several Load Image nodes in one, for pictures, videos and audio: **Browse…** picks files
-(or a whole folder, subfolders becoming groups) from anywhere on disk with thumbnails; files are used where they
-are. Groups are named branches (`# name` in the list, editable as text); drag thumbnails to reorder.
+**Load Media** — several Load Image nodes in one, for pictures, videos and audio: **Add files…** / **Add folder…** open the system's
+own file dialog (a whole folder: subfolders become groups); files are used where they are, shown as thumbnails. Groups are named branches (`# name` in the list, editable as text); drag thumbnails to reorder.
 Outputs everything plus one tree per kind, with the same groups.
 
 **Load Folder / Save by Path** — pictures, videos and audio by tree. Subfolders become branches on the way
@@ -153,14 +152,14 @@ input or output is undocumented.
 
 *Templates → ComfyUI-Arbor*. Each one has a note explaining what the nodes are doing. Times are for a 16 GB card.
 The templates that start from pictures use the sample keyframes in `example_media/` (folder `arbor:storyboard`),
-so they run straight after installing; swap in your own with Load Media's **Browse…**.
+so they run straight after installing; swap in your own with Load Media's **Add files…** / **Add folder…**.
 
 **Trees of pictures, video and sound** — where branches pay off:
 
 | Workflow | Shows | Run |
 |---|---|---|
 | `arbor_qwen_storyboard` | A **Panel** storyboard (`# scene` lines, one shot per line) → **Expression** adds the style → **Tree to Data** flattens it for the sampler → **Image Grid** with one row per scene; **Construct Tree** + **Save by Path** write one folder per scene. | 6 images, 30 s |
-| `arbor_qwen_edit_by_scene` | Pictures × instructions as one tree: **Load Media** gives the frames per scene (Arbor's sample keyframes — Browse… for your own), a **Panel** gives each scene its *own* edits (2 / 1 / 2). **Cross Reference** pairs them per shot, **XY Lists** in *zip* mode flattens both side by side for the edit model, **Construct Tree** + **Merge** put each original in front of its edits. | 10 edits, 75 s |
+| `arbor_qwen_edit_by_scene` | Pictures × instructions as one tree: **Load Media** gives the frames per scene (Arbor's sample keyframes — Add folder… for your own), a **Panel** gives each scene its *own* edits (2 / 1 / 2). **Cross Reference** pairs them per shot, **XY Lists** in *zip* mode flattens both side by side for the edit model, **Construct Tree** + **Merge** put each original in front of its edits. | 10 edits, 75 s |
 | `arbor_h3_storyboard_video` | Keyframes (images), a motion line per shot and a sound line per scene (text) drive MiniMax H3 image-to-video **with audio**. Motion and sound are both one branch per scene, so the scene's sound line repeats for each of its shots (longest list); **Construct Tree** + **Save by Path** file the clips one folder per scene (`h3/0 · Arrival/000.mp4`), ready for **Load Folder** (*videos*); **Batch Pick** + **Construct Tree** make a contact sheet per scene, and **Video Grid** plays every clip at once, a row per scene. | 6 clips, 110 s |
 | `arbor_folder_review` | No model: **Load Folder** reads the folders back as a named tree; contact sheet, **List Item** picks, **Reshape Tree** (flip matrix) compares shot by shot, **Compare Viewer** flips through. | — |
 | `arbor_qwen_character_sheet` | Three uneven levels — character → outfit → pose (Mira 3 outfits, Theo 2). **List Item** splits description from outfits per branch, **Cross Reference** nests the poses and hands every outfit its character's description, **Expression** pairs them branch by branch (Grasshopper's matching), **Reshape Tree** *shift paths −1* folds outfits back into one row per character. | 15 images, 65 s |

@@ -5,14 +5,14 @@
  * line is a file (relative to `folder`, or absolute).
  * List view: groups of thumbnails — rename a group, drag files to reorder or
  * move them between groups, × to remove. Text view: edit the list directly.
- * Browse…: pick files, or a whole folder (subfolders become groups), from disk
- * (media_browser.js); files are used where they are.
+ * Add files… / Add folder…: the system's own dialog (system_dialog.js) picks files, or a
+ * whole folder whose subfolders become groups; files are used where they are.
  */
 
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { injectStyle, el, isolatePointer, isolateKeys, markChanged, chain, hideWidget, t, tn, onLocaleChange } from "./arbor_common.js";
-import { openMediaBrowser } from "./media_browser.js";
+import { systemDialog } from "./system_dialog.js";
 
 const NODE = "Arbor_LoadMedia";
 const KIND_EXT = {
@@ -77,8 +77,10 @@ class MediaView {
   build() {
     const root = (this.root = el("div", "arb arb-media"));
     const bar = el("div", "arb-bar");
-    this.browseBtn = el("button", "arb-btn arb-btn-main");
-    this.browseBtn.addEventListener("click", () => this.browse());
+    this.filesBtn = el("button", "arb-btn arb-btn-main");
+    this.filesBtn.addEventListener("click", () => this.pickFiles());
+    this.folderBtn = el("button", "arb-btn");
+    this.folderBtn.addEventListener("click", () => this.pickFolder());
     this.seg = el("div", "arb-seg", `<button data-m="list"></button><button data-m="text"></button>`);
     this.seg.addEventListener("click", (e) => {
       const m = e.target?.dataset?.m;
@@ -95,7 +97,7 @@ class MediaView {
       this.save();
       this.render();
     });
-    bar.append(this.browseBtn, this.seg, this.info, el("span", "arb-sp"), this.addBtn);
+    bar.append(this.filesBtn, this.folderBtn, this.seg, this.info, el("span", "arb-sp"), this.addBtn);
 
     this.body = el("div", "arb-media-body");
     this.ta = el("textarea", "arb-media-ta");
@@ -146,8 +148,10 @@ class MediaView {
   /* ------------------------------------------------------- drawing */
 
   render() {
-    this.browseBtn.textContent = t("browse");
-    this.browseBtn.title = t("browseTip");
+    this.filesBtn.textContent = t("addFiles");
+    this.filesBtn.title = t("addFilesTip");
+    this.folderBtn.textContent = t("addFolderBtn");
+    this.folderBtn.title = t("addFolderBtnTip");
     this.addBtn.textContent = t("addGroup");
     this.seg.children[0].textContent = t("viewList");
     this.seg.children[1].textContent = t("viewText");
@@ -274,15 +278,14 @@ class MediaView {
     this.render();
   }
 
-  browse() {
-    openMediaBrowser({
-      folder: this.folder,
-      mode: "files",
-      onFiles: (paths, info) => this.add(paths.map((p) => entryFor(p, info.base))),
-      onGroups: (groups, info) => {
-        for (const g of groups) this.add(g.files.map((p) => entryFor(p, info.base)), g.name);
-      },
-    });
+  async pickFiles() {
+    const r = await systemDialog("files", this.folder, t("dialogFiles"));
+    if (r) this.add(r.paths.map((p) => entryFor(p, r.base)));
+  }
+
+  async pickFolder() {
+    const r = await systemDialog("tree", this.folder, t("dialogFolder"));
+    for (const g of r?.groups || []) this.add(g.files.map((p) => entryFor(p, r.base)), g.name);
   }
 }
 

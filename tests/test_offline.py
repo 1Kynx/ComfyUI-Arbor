@@ -718,10 +718,7 @@ def test_load_media():
         raises(FileNotFoundError, LM.execute, folder=d, files="missing.png")
         raises(ValueError, LM.execute, folder=d, files="notes.txt")
 
-        listing = load_media.browse(d)
-        assert listing["dirs"] == ["shots"] and [f["name"] for f in listing["files"]] == ["clip.mp4", "voice.flac"]
-        assert [f["kind"] for f in listing["files"]] == ["video", "audio"]
-        whole = load_media.tree_of(d)
+        whole = load_media.tree_of(d)  # what Add folder… adds
         assert [g["name"] for g in whole] == [os.path.basename(d), "shots"] and len(whole[1]["files"]) == 2
         for p in (os.path.join(d, "clip.mp4"), os.path.join(d, "shots", "s0.png")):
             assert load_media.thumbnail(p, 64)[:4] == b"RIFF", "webp thumbnails of pictures and videos"

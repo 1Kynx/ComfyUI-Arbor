@@ -120,9 +120,6 @@ const CSS = `
   background:var(--arb-hover);border:1px solid var(--arb-line);}
 .arb-media-tile img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;}
 .arb-media-tile.over{outline:2px solid var(--arb-accent);}
-.arb-media-tile.sel{outline:2px solid var(--arb-accent);outline-offset:-2px;}
-.arb-media-tile.sel::after{content:"✓";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;
-  background:var(--arb-accent);color:#fff;font-size:11px;line-height:16px;text-align:center;}
 .arb-media-fn{position:absolute;left:0;right:0;bottom:0;padding:1px 4px;font-size:10px;color:#fff;
   background:rgba(0,0,0,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .arb-media-tile.k-audio .arb-media-fn,.arb-media-tile.noimg .arb-media-fn{position:static;background:none;
@@ -137,19 +134,6 @@ const CSS = `
 .arb-media-ta{flex:1 1 auto;min-height:60px;resize:none;border-radius:8px;border:1px solid var(--arb-line);
   background:var(--arb-bg);color:var(--arb-fg);padding:6px 9px;outline:none;
   font:11.5px/1.6 "JetBrains Mono","Cascadia Code",Consolas,monospace;}
-.arb-br-body{gap:8px;min-height:0;}
-.arb-br-path{flex:1 1 auto;min-width:0;height:24px;border-radius:6px;border:1px solid var(--arb-line);
-  background:var(--arb-bg);color:var(--arb-fg);padding:0 8px;outline:none;font:12px/1 inherit;}
-.arb-br-drives{max-width:90px;}
-.arb-br-panes{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(140px,220px) 1fr;gap:8px;}
-.arb-br-dirs,.arb-br-files{position:relative;overflow:auto;border-radius:8px;border:1px solid var(--arb-line);
-  background:var(--arb-bg);padding:4px;scrollbar-width:thin;}
-.arb-br-dir{padding:3px 8px;border-radius:5px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.arb-br-dir::before{content:"▸ ";color:var(--arb-sub);}
-.arb-br-dir:hover{background:var(--arb-hover);}
-.arb-br-files{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;align-content:start;}
-.arb-br-files .arb-media-tile{cursor:pointer;}
-.arb-br-files.preview .arb-media-tile{cursor:default;}
 
 /* ------------------------------------------------------------- number slider */
 .arb-num{gap:4px;justify-content:center;}
@@ -310,16 +294,13 @@ const STRINGS = {
     sliderEmpty: "Connect images, videos or audio and run to compare",
     playTip: "Play (Space)", pauseTip: "Pause (Space)", loopTip: "Loop",
     muteTip: "Sound on / off — in Wipe you hear the side that shows more, or the half under the pointer",
-    browse: "Browse…", browseTip: "Pick pictures, videos or audio — or a whole folder — from disk; files are used where they are",
-    browseTitle: "Browse", up: "Up", browseFolder: "Browse…", browseFolderTitle: "Choose a folder",
-    useFolder: "Use this folder", mediaHere: "{n} media files at this level", drives: "Drive", selectAll: "Select all",
-    addSelected: "Add selected ({n})", addFolder: "Add whole folder",
-    addFolderTip: "Every media file in this folder and its subfolders; each folder becomes a group",
-    noMedia: "No pictures, videos or audio here",
-    remoteBrowse: "Opened from another computer: only ComfyUI's input / output folders can be browsed",
+    addFiles: "Add files…", addFilesTip: "Pick pictures, videos or audio with the system dialog — files are used where they are",
+    addFolderBtn: "Add folder…", addFolderBtnTip: "Every media file in a folder and its subfolders; each folder becomes a group",
+    browseFolder: "Browse…", dialogFiles: "Add pictures, videos or audio", dialogFolder: "Choose a folder",
+    dialogRemote: "The system file dialog opens on the computer running ComfyUI — from this one, type the path instead",
     addGroup: "+ Group", viewList: "List", viewText: "Text", groupName: "Group name",
-    removeGroup: "Remove group", remove: "Remove", groupEmpty: "Empty — Browse… adds files to the selected group",
-    mediaEmpty: "Browse… to pick pictures, videos or audio\nEach group becomes a named branch",
+    removeGroup: "Remove group", remove: "Remove", groupEmpty: "Empty — Add files… adds to the selected group",
+    mediaEmpty: "Add files… or Add folder… to pick pictures, videos or audio\nEach group becomes a named branch",
     mediaTextPh: "# Group name\nfile.png\nfolder/clip.mp4\nC:/absolute/path/voice.wav\n\nAn empty line starts a new group",
     file_one: "{n} file", file_other: "{n} files", group_one: "{n} group", group_other: "{n} groups",
     live: "Live — updates as you edit, no need to run",
@@ -361,16 +342,13 @@ const STRINGS = {
     sliderEmpty: "接入图片、视频或音频并运行后即可对比",
     playTip: "播放（空格）", pauseTip: "暂停（空格）", loopTip: "循环播放",
     muteTip: "声音开 / 关——对比模式下听到占画面更多的一侧，或鼠标所在的那一半",
-    browse: "浏览…", browseTip: "从硬盘选择图片、视频或音频，也可以整个文件夹；文件原地使用，不复制",
-    browseTitle: "浏览", up: "上一级", browseFolder: "浏览…", browseFolderTitle: "选择文件夹",
-    useFolder: "使用这个文件夹", mediaHere: "这一层有 {n} 个媒体文件", drives: "磁盘", selectAll: "全选",
-    addSelected: "添加选中（{n}）", addFolder: "添加整个文件夹",
-    addFolderTip: "这个文件夹及其子文件夹里的所有媒体文件；每个文件夹成为一个分组",
-    noMedia: "这里没有图片、视频或音频",
-    remoteBrowse: "从其它电脑访问：只能浏览 ComfyUI 的 input / output 文件夹",
+    addFiles: "添加文件…", addFilesTip: "用系统窗口选择图片、视频或音频——文件原地使用，不复制",
+    addFolderBtn: "添加文件夹…", addFolderBtnTip: "文件夹及其子文件夹里的所有媒体文件；每个文件夹成为一个分组",
+    browseFolder: "浏览…", dialogFiles: "添加图片、视频或音频", dialogFolder: "选择文件夹",
+    dialogRemote: "系统文件窗口只能在运行 ComfyUI 的电脑上打开——在这台电脑上请直接输入路径",
     addGroup: "+ 分组", viewList: "列表", viewText: "文本", groupName: "分组名",
-    removeGroup: "删除分组", remove: "移除", groupEmpty: "空分组——点「浏览…」把文件添加到选中的分组",
-    mediaEmpty: "点「浏览…」选择图片、视频或音频\n每个分组成为一个有名字的分支",
+    removeGroup: "删除分组", remove: "移除", groupEmpty: "空分组——点「添加文件…」添加到选中的分组",
+    mediaEmpty: "点「添加文件…」或「添加文件夹…」选择图片、视频或音频\n每个分组成为一个有名字的分支",
     mediaTextPh: "# 分组名\nfile.png\nfolder/clip.mp4\nC:/绝对路径/voice.wav\n\n空一行开始新分组",
     file_one: "{n} 个文件", file_other: "{n} 个文件", group_one: "{n} 个分组", group_other: "{n} 个分组",
     live: "实时 — 编辑时自动更新，无需运行",

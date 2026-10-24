@@ -296,16 +296,17 @@ node("Arbor_VideoGrid", en=dict(
 """))
 
 node("Arbor_LoadMedia", en=dict(
-    desc="Pick pictures, videos and audio from anywhere on disk and group them into named branches — several Load Image nodes in one, with a browse window and thumbnails. Files are used where they are; nothing is copied.",
-    inputs={"folder": "Base folder: relative entries in the list are read from here and Browse… starts here. An absolute path; output/… for ComfyUI's output folder; arbor:… for Arbor's sample media; any other relative path is inside input.",
-            "files": "The list (kept as text): '# name' starts a named group, an empty line a new group, every other line is a file — relative to the folder, or absolute. Edit it in the node's Text view, or fill it with Browse…."},
+    desc="Pick pictures, videos and audio from anywhere on disk and group them into named branches — several Load Image nodes in one, using the system's own file dialog, with thumbnails. Files are used where they are; nothing is copied.",
+    inputs={"folder": "Base folder: relative entries in the list are read from here and the file dialog starts here. An absolute path; output/… for ComfyUI's output folder; arbor:… for Arbor's sample media; any other relative path is inside input.",
+            "files": "The list (kept as text): '# name' starts a named group, an empty line a new group, every other line is a file — relative to the folder, or absolute. Edit it in the node's Text view, or fill it with Add files… / Add folder…."},
     outputs=["Everything, one branch per group, named after it — for the Compare Viewer, Save by Path or a Panel.",
              "Only the pictures (IMAGE), same groups — go on to Tree to Data → image nodes, or Image Grid.",
              "Only the videos (VIDEO), same groups.",
              "Only the audio clips (AUDIO), same groups.",
              "File names without extension, like files — handy as captions or for Save by Path."],
     doc="""## How to use
-- **Browse…** opens a file window: pick files (click to select, double-click to add one) and **Add selected**, or **Add whole folder** — every subfolder becomes a group named after it, like Load Folder.
+- **Add files…** opens the system's file dialog — select one or several pictures, videos or audio files.
+- **Add folder…** opens the system's folder dialog and adds every media file in it — each subfolder becomes a group named after it, like Load Folder.
 - Files go into the group you clicked last; **+ Group** starts a new one. Rename a group in its header, drag thumbnails to reorder or move them between groups, × removes.
 - **Text** shows the list itself — paste paths, write `# name` lines, delete lines.
 
@@ -323,21 +324,22 @@ C:/music/theme.wav
 - **Load Folder**: everything in a folder, re-read on every run — new files are picked up by themselves.
 
 ## Tips
-- Browsing anywhere on disk works on the computer ComfyUI runs on. Opened from another computer, only ComfyUI's input / output folders can be browsed (typing paths still works).
+- The dialog opens on the computer ComfyUI runs on (it hands back real paths, so nothing is copied). Opened from another computer, type the paths in the Text view instead.
 - The templates use `arbor:storyboard`, the sample keyframes that come with Arbor.
 - The node re-runs when a listed file changes.
 """), zh=dict(
     name="加载素材",
-    desc="从硬盘任意位置挑选图片、视频和音频，分组成带名字的分支——相当于把多个「加载图像」合成一个节点，带浏览窗口和缩略图。文件原地使用，不复制。",
-    inputs={"folder": ("文件夹", "基准文件夹：列表里的相对路径从这里读取，「浏览…」也从这里打开。绝对路径；output/… 表示 ComfyUI 的 output 文件夹；arbor:… 表示 Arbor 自带的示例素材；其它相对路径都在 input 文件夹里。"),
-            "files": ("文件", "文件列表（以文本保存）：「# 名字」开始一个有名字的分组，空一行开始新分组，其余每行一个文件——相对于文件夹，或绝对路径。可以在节点的「文本」视图里直接编辑，也可以用「浏览…」添加。")},
+    desc="从硬盘任意位置挑选图片、视频和音频，分组成带名字的分支——相当于把多个「加载图像」合成一个节点，用系统自带的文件窗口选择，带缩略图。文件原地使用，不复制。",
+    inputs={"folder": ("文件夹", "基准文件夹：列表里的相对路径从这里读取，文件窗口也从这里打开。绝对路径；output/… 表示 ComfyUI 的 output 文件夹；arbor:… 表示 Arbor 自带的示例素材；其它相对路径都在 input 文件夹里。"),
+            "files": ("文件", "文件列表（以文本保存）：「# 名字」开始一个有名字的分组，空一行开始新分组，其余每行一个文件——相对于文件夹，或绝对路径。可以在节点的「文本」视图里直接编辑，也可以用「添加文件…」「添加文件夹…」添加。")},
     outputs=[("文件", "全部文件，每个分组一个分支，并以分组命名——可以接对比查看器、按路径保存或面板。"),
              ("图片", "只有图片（IMAGE），分组相同——接「数据树转数据」后给图片节点，或接图像网格。"),
              ("视频", "只有视频（VIDEO），分组相同。"),
              ("音频", "只有音频（AUDIO），分组相同。"),
              ("文件名", "不带扩展名的文件名，结构同「文件」——可作单元格说明，或给「按路径保存」命名。")],
     doc="""## 用法
-- **浏览…** 打开文件窗口：点击选择文件（双击直接添加一个），再点 **添加选中**；或点 **添加整个文件夹**——每个子文件夹成为一个以它命名的分组，和「加载文件夹」一样。
+- **添加文件…** 打开系统的文件窗口——可以选一个或多个图片、视频、音频文件。
+- **添加文件夹…** 打开系统的文件夹窗口，添加其中所有媒体文件——每个子文件夹成为一个以它命名的分组，和「加载文件夹」一样。
 - 文件会加到最后点击的分组里；**+ 分组** 新建分组。在分组标题上改名，拖动缩略图调整顺序或移到别的分组，× 移除。
 - **文本** 视图显示列表本身——可以粘贴路径、写「# 名字」、删除行。
 
@@ -355,14 +357,14 @@ C:/music/theme.wav
 - **加载文件夹**：读取文件夹里的全部文件，每次运行都重新读取——新增的文件会自动包含进来。
 
 ## 提示
-- 在运行 ComfyUI 的这台电脑上可以浏览整个硬盘；从其它电脑访问时只能浏览 ComfyUI 的 input / output 文件夹（直接输入路径仍然可用）。
+- 系统窗口在运行 ComfyUI 的电脑上打开（返回的是真实路径，所以不需要复制文件）；从其它电脑访问时，请在「文本」视图里直接输入路径。
 - 模板使用 `arbor:storyboard`，即 Arbor 自带的示例关键帧。
 - 列表中的文件有改动时，节点会自动重新运行。
 """))
 
 node("Arbor_LoadFolder", en=dict(
     desc="Load every picture, video or audio file in a folder; with subfolders on, each folder becomes a branch, named after it — the folder structure turns straight into a data tree.",
-    inputs={"folder": "An absolute path; output/… for ComfyUI's output folder; arbor:… for Arbor's sample media; any other relative path is inside the input folder. The Browse… button picks it in a window.",
+    inputs={"folder": "An absolute path; output/… for ComfyUI's output folder; arbor:… for Arbor's sample media; any other relative path is inside the input folder. The Browse… button picks it with the system's folder dialog.",
             "kind": "What to load: images (IMAGE) · videos (VIDEO — read lazily, nothing is decoded until a node needs the frames) · audio (AUDIO). Each kind has its own file pattern.",
             "kind.pattern": "File name patterns separated by spaces, e.g. *.png *.jpg or *.mp4 *.mov or *.wav *.flac.",
             "subfolders": "On: each subfolder (and the folder itself, if it has matching files) becomes a branch. Off: only this folder.",
@@ -381,7 +383,7 @@ shots/             →  files {0}: 2 videos   folders: shots
 Videos go on to **Tree to Data** → any node with a VIDEO input (Get Video Components, Save Video…), once per clip; audio the same with AUDIO inputs.
 
 ## Choosing the folder
-**Browse…** (at the bottom of the node) opens a window: go into the folder, check its files in the preview, **Use this folder**. A folder inside ComfyUI's output folder is written as `output/…`. Browsing anywhere on disk works on the computer ComfyUI runs on; from another computer, only ComfyUI's own folders.
+**Browse…** (at the bottom of the node) opens the system's folder dialog. A folder inside ComfyUI's output folder is written as `output/…`. The dialog opens on the computer ComfyUI runs on; from another computer, type the path.
 
 ## Round trip
 Folders saved by **Save by Path** from named branches (`0 · Arrival`, `1 · The village`) load back with their names (*Arrival*, *The village*) and in their order. Template: *arbor_folder_review*.
@@ -392,7 +394,7 @@ Folders saved by **Save by Path** from named branches (`0 · Arrival`, `1 · The
 """), zh=dict(
     name="加载文件夹",
     desc="加载文件夹里的所有图片、视频或音频；开启子文件夹后，每个文件夹就是一个以它命名的分支——目录结构直接变成数据树。",
-    inputs={"folder": ("文件夹", "绝对路径；output/… 表示 ComfyUI 的 output 文件夹；arbor:… 表示 Arbor 自带的示例素材；其它相对路径都在 input 文件夹里。也可以点「浏览…」按钮在窗口中选择。"),
+    inputs={"folder": ("文件夹", "绝对路径；output/… 表示 ComfyUI 的 output 文件夹；arbor:… 表示 Arbor 自带的示例素材；其它相对路径都在 input 文件夹里。也可以点「浏览…」按钮用系统的文件夹窗口选择。"),
             "kind": ("类型", "加载什么：images 图片（IMAGE）· videos 视频（VIDEO——按需读取，下游节点用到画面时才解码）· audio 音频（AUDIO）。每种类型有自己的文件匹配。"),
             "kind.pattern": ("文件匹配", "用空格分隔的文件名模式，例如 *.png *.jpg、*.mp4 *.mov 或 *.wav *.flac。"),
             "subfolders": ("子文件夹", "开启：每个子文件夹（以及本文件夹，如果里面有匹配的文件）各成一个分支。关闭：只读本文件夹。"),
@@ -411,7 +413,7 @@ shots/             →  文件 {0}：2 个视频   文件夹：shots
 视频接 **数据树转数据** → 任意有 VIDEO 输入的节点（获取视频组件、保存视频……），每段运行一次；音频同理接 AUDIO 输入。
 
 ## 选择文件夹
-点节点底部的 **浏览…** 打开窗口：进入要用的文件夹，在预览里确认文件，再点 **使用这个文件夹**。位于 ComfyUI output 文件夹里的文件夹会写成 `output/…`。在运行 ComfyUI 的这台电脑上可以浏览整个硬盘；从其它电脑访问时只能浏览 ComfyUI 自己的文件夹。
+点节点底部的 **浏览…** 打开系统的文件夹窗口。位于 ComfyUI output 文件夹里的文件夹会写成 `output/…`。窗口在运行 ComfyUI 的电脑上打开；从其它电脑访问时请直接输入路径。
 
 ## 往返
 **按路径保存** 按有名字的分支保存的文件夹（`0 · Arrival`、`1 · The village`）读回来时会恢复名字（*Arrival*、*The village*）和顺序。模板：*arbor_folder_review*。
