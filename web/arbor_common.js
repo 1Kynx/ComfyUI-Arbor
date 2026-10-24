@@ -99,6 +99,57 @@ const CSS = `
   padding:0 4px;font-size:10px;}
 .arb-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
+/* ------------------------------------------------------------- load media */
+.arb-btn-main{color:var(--arb-fg);border-color:color-mix(in srgb,var(--arb-accent) 60%,var(--arb-line));
+  background:var(--arb-accent-soft);}
+.arb-btn:disabled{opacity:.45;cursor:default;}
+.arb-media-body{position:relative;flex:1 1 auto;min-height:60px;overflow:auto;border-radius:8px;padding:4px;
+  background:var(--arb-bg);border:1px solid var(--arb-line);display:flex;flex-direction:column;gap:6px;
+  scrollbar-width:thin;scrollbar-color:var(--arb-line) transparent;}
+.arb-media-group{border-radius:6px;padding:4px;border:1px solid transparent;}
+.arb-media-group.on{border-color:color-mix(in srgb,var(--arb-accent) 45%,transparent);}
+.arb-media-hd{display:flex;align-items:center;gap:6px;padding:0 2px 4px;}
+.arb-media-name{flex:0 1 160px;min-width:40px;background:transparent;border:0;border-bottom:1px dashed var(--arb-line);
+  color:var(--arb-fg);font:600 12px/1.4 inherit;padding:1px 2px;outline:none;}
+.arb-media-name:focus{border-bottom-color:var(--arb-accent);}
+.arb-media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:4px;min-height:40px;
+  border-radius:5px;}
+.arb-media-grid.over{background:var(--arb-accent-soft);}
+.arb-media-hint{grid-column:1/-1;color:var(--arb-sub);font-size:11px;padding:10px;text-align:center;}
+.arb-media-tile{position:relative;aspect-ratio:1;border-radius:5px;overflow:hidden;cursor:grab;
+  background:var(--arb-hover);border:1px solid var(--arb-line);}
+.arb-media-tile img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;}
+.arb-media-tile.over{outline:2px solid var(--arb-accent);}
+.arb-media-tile.sel{outline:2px solid var(--arb-accent);outline-offset:-2px;}
+.arb-media-tile.sel::after{content:"✓";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;
+  background:var(--arb-accent);color:#fff;font-size:11px;line-height:16px;text-align:center;}
+.arb-media-fn{position:absolute;left:0;right:0;bottom:0;padding:1px 4px;font-size:10px;color:#fff;
+  background:rgba(0,0,0,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.arb-media-tile.k-audio .arb-media-fn,.arb-media-tile.noimg .arb-media-fn{position:static;background:none;
+  color:var(--arb-fg);white-space:normal;word-break:break-all;padding:20px 4px 2px;}
+.arb-media-badge{position:absolute;top:3px;right:4px;font-size:11px;color:#fff;text-shadow:0 0 3px #000;}
+.arb-media-tile.k-audio .arb-media-badge{color:var(--arb-accent);text-shadow:none;font-size:14px;left:5px;right:auto;}
+.arb-media-x{border:0;background:rgba(0,0,0,.6);color:#fff;width:16px;height:16px;border-radius:50%;padding:0;
+  font-size:12px;line-height:16px;cursor:pointer;display:none;}
+.arb-media-tile .arb-media-x{position:absolute;top:3px;right:3px;}
+.arb-media-tile:hover .arb-media-x,.arb-media-hd:hover .arb-media-x{display:inline-block;}
+.arb-media-hd .arb-media-x{background:var(--arb-hover);color:var(--arb-sub);}
+.arb-media-ta{flex:1 1 auto;min-height:60px;resize:none;border-radius:8px;border:1px solid var(--arb-line);
+  background:var(--arb-bg);color:var(--arb-fg);padding:6px 9px;outline:none;
+  font:11.5px/1.6 "JetBrains Mono","Cascadia Code",Consolas,monospace;}
+.arb-br-body{gap:8px;min-height:0;}
+.arb-br-path{flex:1 1 auto;min-width:0;height:24px;border-radius:6px;border:1px solid var(--arb-line);
+  background:var(--arb-bg);color:var(--arb-fg);padding:0 8px;outline:none;font:12px/1 inherit;}
+.arb-br-drives{max-width:90px;}
+.arb-br-panes{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(140px,220px) 1fr;gap:8px;}
+.arb-br-dirs,.arb-br-files{position:relative;overflow:auto;border-radius:8px;border:1px solid var(--arb-line);
+  background:var(--arb-bg);padding:4px;scrollbar-width:thin;}
+.arb-br-dir{padding:3px 8px;border-radius:5px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.arb-br-dir::before{content:"▸ ";color:var(--arb-sub);}
+.arb-br-dir:hover{background:var(--arb-hover);}
+.arb-br-files{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;align-content:start;}
+.arb-br-files .arb-media-tile{cursor:pointer;}
+
 /* ------------------------------------------------------------- number slider */
 .arb-num{gap:4px;justify-content:center;}
 .arb-num-bar{position:relative;flex:0 0 auto;height:30px;border-radius:8px;overflow:hidden;cursor:ew-resize;
@@ -258,6 +309,17 @@ const STRINGS = {
     sliderEmpty: "Connect images, videos or audio and run to compare",
     playTip: "Play (Space)", pauseTip: "Pause (Space)", loopTip: "Loop",
     muteTip: "Sound on / off — in Wipe you hear the side that shows more, or the half under the pointer",
+    browse: "Browse…", browseTip: "Pick pictures, videos or audio — or a whole folder — from disk; files are used where they are",
+    browseTitle: "Browse", up: "Up", drives: "Drive", selectAll: "Select all",
+    addSelected: "Add selected ({n})", addFolder: "Add whole folder",
+    addFolderTip: "Every media file in this folder and its subfolders; each folder becomes a group",
+    noMedia: "No pictures, videos or audio here",
+    remoteBrowse: "Opened from another computer: only ComfyUI's input / output folders can be browsed",
+    addGroup: "+ Group", viewList: "List", viewText: "Text", groupName: "Group name",
+    removeGroup: "Remove group", remove: "Remove", groupEmpty: "Empty — Browse… adds files to the selected group",
+    mediaEmpty: "Browse… to pick pictures, videos or audio\nEach group becomes a named branch",
+    mediaTextPh: "# Group name\nfile.png\nfolder/clip.mp4\nC:/absolute/path/voice.wav\n\nAn empty line starts a new group",
+    file_one: "{n} file", file_other: "{n} files", group_one: "{n} group", group_other: "{n} groups",
     live: "Live — updates as you edit, no need to run",
     lines: "Lines", text: "Text",
     linesTip: "Each line is an item · an empty line starts a new branch",
@@ -297,6 +359,17 @@ const STRINGS = {
     sliderEmpty: "接入图片、视频或音频并运行后即可对比",
     playTip: "播放（空格）", pauseTip: "暂停（空格）", loopTip: "循环播放",
     muteTip: "声音开 / 关——对比模式下听到占画面更多的一侧，或鼠标所在的那一半",
+    browse: "浏览…", browseTip: "从硬盘选择图片、视频或音频，也可以整个文件夹；文件原地使用，不复制",
+    browseTitle: "浏览", up: "上一级", drives: "磁盘", selectAll: "全选",
+    addSelected: "添加选中（{n}）", addFolder: "添加整个文件夹",
+    addFolderTip: "这个文件夹及其子文件夹里的所有媒体文件；每个文件夹成为一个分组",
+    noMedia: "这里没有图片、视频或音频",
+    remoteBrowse: "从其它电脑访问：只能浏览 ComfyUI 的 input / output 文件夹",
+    addGroup: "+ 分组", viewList: "列表", viewText: "文本", groupName: "分组名",
+    removeGroup: "删除分组", remove: "移除", groupEmpty: "空分组——点「浏览…」把文件添加到选中的分组",
+    mediaEmpty: "点「浏览…」选择图片、视频或音频\n每个分组成为一个有名字的分支",
+    mediaTextPh: "# 分组名\nfile.png\nfolder/clip.mp4\nC:/绝对路径/voice.wav\n\n空一行开始新分组",
+    file_one: "{n} 个文件", file_other: "{n} 个文件", group_one: "{n} 个分组", group_other: "{n} 个分组",
     live: "实时 — 编辑时自动更新，无需运行",
     lines: "逐行", text: "整段",
     linesTip: "每行是一项 · 空一行开始新分支",
@@ -400,6 +473,37 @@ export function chain(proto, name, fn) {
     try { fn.apply(this, args); } catch (err) { console.warn(`[Arbor] ${name} failed`, err); }
     return r;
   };
+}
+
+/* ------------------------------------------------------------- large view (modal) */
+
+export function openModal(title, buildBody, onClose) {
+  const overlay = el("div", "arb arb-modal-wrap");
+  const box = overlay.appendChild(el("div", "arb-modal"));
+  const hd = box.appendChild(el("div", "arb-bar arb-modal-hd"));
+  hd.appendChild(el("span", "arb-modal-title")).textContent = title;
+  const extra = hd.appendChild(el("span", "arb-sub"));
+  hd.appendChild(el("span", "arb-sp"));
+  const close = hd.appendChild(el("button", "arb-btn"));
+  close.textContent = t("done");
+  const body = box.appendChild(el("div", "arb-modal-body"));
+  const done = () => {
+    overlay.remove();
+    window.removeEventListener("keydown", onKey, true);
+    onClose?.();
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); done(); }
+  };
+  close.addEventListener("click", done);
+  overlay.addEventListener("pointerdown", (e) => { if (e.target === overlay) done(); });
+  for (const ev of ["pointerdown", "mousedown", "wheel", "dblclick"]) {
+    box.addEventListener(ev, (e) => e.stopPropagation(), { passive: true });
+  }
+  window.addEventListener("keydown", onKey, true);
+  document.body.appendChild(overlay);
+  buildBody(body, extra);
+  return done;
 }
 
 let openMenuEl = null;

@@ -8,7 +8,8 @@ import torch
 from . import media
 from . import tree as T
 from .common import IO, TREE, CAT_MEDIA, schema, connected, tree_in, to_tree, unwrap
-from .grid import build_grid, col_labels_for, grid_size, layout_sheet, row_labels_for
+from .grid import CAPTION_STYLES, FITS, LABEL_DIRS, build_grid, caption_rows, col_labels_for, fit_box, \
+    grid_size, layout_sheet, row_labels_for, wrap_rows
 from .media import is_audio, is_video
 from .preview import is_image, label_of, save_temp, to_pil
 
@@ -107,12 +108,15 @@ def _label_inputs(what: str):
             tree_in("row_labels", optional=True,
                     tooltip="One label per row — overrides the row names the tree or shape carries"),
             tree_in("col_labels", optional=True,
-                    tooltip="One label per column — overrides the labels taken from shape")]
+                    tooltip="One label per column — overrides the labels taken from shape"),
+            tree_in("captions", optional=True,
+                    tooltip="One caption per cell — a tree shaped like the grid, or a list read cell by cell")]
 
 
 def _style_inputs(cell_size_default: int):
-    return [IO.Combo.Input("fit", options=["fit", "original", "stretch"], default="fit",
-                           tooltip="How pictures of different sizes fill a cell"),
+    return [IO.Combo.Input("fit", options=FITS, default="fit",
+                           tooltip="fit: whole picture, bars around · fill: covers the cell, edges cut · "
+                                   "original: no scaling · stretch: fills the cell, distorted"),
             IO.Int.Input("cell_size", default=cell_size_default, min=0, max=8192, step=8,
                          tooltip="Longest side of a cell in px; 0 = largest picture"),
             IO.Int.Input("gap", default=8, min=0, max=256),
@@ -120,6 +124,17 @@ def _style_inputs(cell_size_default: int):
             IO.Combo.Input("theme", options=["light", "dark"], default="light"),
             IO.Boolean.Input("path_labels", default=False,
                              tooltip="Label rows with their branch path when there are no row labels or names")]
+
+
+def _layout_inputs():
+    """Added after the original widgets so workflows saved before keep their values."""
+    return [IO.Int.Input("columns", default=0, min=0, max=256,
+                         tooltip="0: one row per branch · N: wrap every branch after N cells (a flat list "
+                                 "becomes rows of N)"),
+            IO.Combo.Input("label_direction", options=LABEL_DIRS, default="auto",
+                           tooltip="Row labels — auto: horizontal while they fit in two lines, else standing up"),
+            IO.Combo.Input("caption_style", options=CAPTION_STYLES, default="below",
+                           tooltip="below: under each cell · overlay: on a dark bar over the picture's bottom")]
 
 
 class ImageGrid(IO.ComfyNode):
@@ -130,18 +145,20 @@ class ImageGrid(IO.ComfyNode):
             "XY sheet: each branch is a row, each item a column. Connect XY Lists' shape to lay out "
             "and label the images of a batch run directly; use Reshape Tree (flip matrix) to swap the axes.",
             [tree_in("images", tooltip="Image tree, or the plain images of a batch run (with shape)"),
-             *_label_inputs("images"), *_style_inputs(0)],
+             *_label_inputs("images"), *_style_inputs(0), *_layout_inputs()],
             [IO.Image.Output(display_name="image")],
-            ["xy plot", "xyz plot", "grid", "contact sheet", "comparison", "tree to grid"])
+            ["xy plot", "xyz plot", "grid", "contact sheet", "comparison", "tree to grid", "captions"])
 
     @classmethod
-    def execute(cls, images, fit, cell_size, gap, font_size, theme, path_labels,
-                shape=None, row_labels=None, col_labels=None) -> IO.NodeOutput:
+    def execute(cls, images, fit, cell_size, gap, font_size, theme, path_labels, columns=0,
+                label_direction="auto", caption_style="below", shape=None, row_labels=None, col_labels=None,
+                captions=None) -> IO.NodeOutput:
         tree, row_labels, col_labels = _grid_inputs(images, shape, row_labels, col_labels)
         rows, cols = grid_size(tree)
         sheet = build_grid(tree, row_labels_for(row_labels, rows), col_labels_for(col_labels, cols),
                            unwrap(fit), unwrap(cell_size), unwrap(gap), unwrap(font_size), unwrap(theme),
-                           unwrap(path_labels))
+                           unwrap(path_labels), unwrap(columns, 0), captions if connected(captions) else None,
+                           unwrap(caption_style, "below"), unwrap(label_direction, "auto"))
         return IO.NodeOutput(torch.from_numpy(np.asarray(sheet, dtype=np.float32) / 255.0)[None])
 
 
@@ -170,39 +187,55 @@ class VideoGrid(IO.ComfyNode):
              IO.Float.Input("fps", default=0.0, min=0.0, max=240.0, step=1.0,
                             tooltip="Frame rate of the grid video; 0 = the highest rate among the clips"),
              IO.Combo.Input("audio", options=["none", "mix"], default="none",
-                            tooltip="none: silent · mix: every clip's sound mixed together")],
+                            tooltip="none: silent · mix: every clip's sound mixed together"),
+             *_layout_inputs()],
             [IO.Video.Output(display_name="video")],
             ["video grid", "video xy plot", "video contact sheet", "video comparison", "side by side video",
-             "video collage"],
+             "video collage", "captions"],
             is_output_node=True)
 
     @classmethod
-    def execute(cls, videos, fit, cell_size, gap, font_size, theme, path_labels, fps, audio,
-                shape=None, row_labels=None, col_labels=None) -> IO.NodeOutput:
+    def execute(cls, videos, fit, cell_size, gap, font_size, theme, path_labels, fps, audio, columns=0,
+                label_direction="auto", caption_style="below", shape=None, row_labels=None, col_labels=None,
+                captions=None) -> IO.NodeOutput:
         from comfy_api.latest import InputImpl
 
         tree, row_labels, col_labels = _grid_inputs(videos, shape, row_labels, col_labels)
-        rows = [(p, [v for v in items if is_video(v) or is_image(v)]) for p, items in tree.items()]
-        rows = [r for r in rows if r[1]]
-        if not rows:
+        branches = [(p, [v for v in items if is_video(v) or is_image(v)]) for p, items in tree.items()]
+        branches = [b for b in branches if b[1]]
+        if not branches:
             raise ValueError("Video Grid: no videos to lay out")
-        n_cols = max(len(clips) for _, clips in rows)
-        fit = unwrap(fit)
-        sheet = layout_sheet([[_clip_size(v) for v in clips] for _, clips in rows],
-                             row_labels_for(row_labels, len(rows)), col_labels_for(col_labels, n_cols),
+        fit, columns, style = unwrap(fit), unwrap(columns, 0), unwrap(caption_style, "below")
+        caps = caption_rows(captions if connected(captions) else None, [len(c) for _, c in branches])
+        rows, blocks = wrap_rows([c for _, c in branches], columns)
+        cap_rows = wrap_rows(caps, columns)[0] if caps else None
+        n_cols = max(len(c) for _, c in branches)
+        sheet = layout_sheet([[_clip_size(v) for v in clips] for clips in rows],
+                             row_labels_for(row_labels, len(branches)),
+                             None if columns > 0 else col_labels_for(col_labels, n_cols),
                              unwrap(cell_size), unwrap(gap), unwrap(font_size), unwrap(theme), unwrap(path_labels),
-                             [p for p, _ in rows], "Video Grid", even=True)
+                             [p for p, _ in branches], "Video Grid", even=True, blocks=blocks, captions=cap_rows,
+                             caption_style=style, label_dir=unwrap(label_direction, "auto"))
 
-        size = lambda w, h: media.fit_size(w, h, sheet.cw, sheet.ch, fit)
-        cells = []  # (x, y, frames, fps)
-        for i, (_, clips) in enumerate(rows):
+        size = lambda w, h: fit_box(w, h, sheet.cw, sheet.ch, fit)[:2]
+        crop = (sheet.cw, sheet.ch) if fit == "fill" else None
+        cells = []  # (x, y, frames, fps, caption bar)
+        for i, clips in enumerate(rows):
             for j, v in enumerate(clips):
-                frames, rate = media.clip_frames(v, size)
-                if len(frames):
-                    x, y = sheet.place(i, j, frames.shape[2], frames.shape[1])
-                    cells.append((x, y, frames, rate))
-        out_fps = unwrap(fps) or max((r for *_, r in cells), default=0) or 24.0
-        length = max(len(f) / (r or out_fps) for _, _, f, r in cells)
+                frames, rate = media.clip_frames(v, size, crop)
+                if not len(frames):
+                    continue
+                h, w = frames.shape[1:3]
+                x, y = sheet.place(i, j, w, h)
+                bar = None
+                if cap_rows and style == "overlay":
+                    img = sheet.overlay(cap_rows[i][j], w)
+                    if img is not None:
+                        rgba = np.asarray(img, dtype=np.float32) / 255.0
+                        bar = (rgba[..., :3] * 255.0, rgba[..., 3:])
+                cells.append((x, y, frames, rate, bar))
+        out_fps = unwrap(fps) or max((c[3] for c in cells), default=0) or 24.0
+        length = max(len(c[2]) / (c[3] or out_fps) for c in cells)
         count = max(1, math.ceil(length * out_fps - 1e-6))
         background = np.asarray(sheet.image, dtype=np.uint8)
 
@@ -210,14 +243,20 @@ class VideoGrid(IO.ComfyNode):
             for k in range(count):
                 t = k / out_fps
                 buf = background.copy()
-                for x, y, f, r in cells:
+                for x, y, f, r, bar in cells:
                     frame = f[min(int(t * (r or out_fps) + 1e-6), len(f) - 1)]
-                    buf[y:y + frame.shape[0], x:x + frame.shape[1]] = frame
+                    fh, fw = frame.shape[:2]
+                    buf[y:y + fh, x:x + fw] = frame
+                    if bar is not None:  # caption over the picture's bottom
+                        rgb, a = bar
+                        bh = min(rgb.shape[0], fh)
+                        region = buf[y + fh - bh:y + fh, x:x + fw].astype(np.float32)
+                        buf[y + fh - bh:y + fh, x:x + fw] = (rgb[-bh:] * a[-bh:] + region * (1 - a[-bh:])).astype(np.uint8)
                 yield buf
 
         sound = None
         if unwrap(audio) == "mix":
-            sound = media.mix([media.video_audio(v) for _, clips in rows for v in clips if is_video(v)])
+            sound = media.mix([media.video_audio(v) for clips in rows for v in clips if is_video(v)])
         path = media.encode_mp4(frames(), count, out_fps, background.shape[1], background.shape[0], sound)
         return IO.NodeOutput(InputImpl.VideoFromFile(path),
                              ui={"images": [media.view_ref(path)], "animated": [True]})

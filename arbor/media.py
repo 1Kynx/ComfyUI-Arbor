@@ -191,16 +191,6 @@ def mix(tracks: list[tuple[torch.Tensor, int]], rate: int = 48000) -> torch.Tens
 
 # ------------------------------------------------------------------ frames
 
-def fit_size(w: int, h: int, cw: int, ch: int, fit: str) -> tuple[int, int]:
-    """Size of a w×h picture in a cw×ch cell (Image Grid's fit modes)."""
-    if fit == "stretch":
-        return cw, ch
-    if fit == "fit" or w > cw or h > ch:
-        s = min(cw / w, ch / h)
-        return max(1, round(w * s)), max(1, round(h * s))
-    return w, h
-
-
 def _resize(frames: torch.Tensor, w: int, h: int) -> np.ndarray:
     """[N,H,W,C] float 0..1 -> [N,h,w,3] uint8."""
     out = []
@@ -212,13 +202,22 @@ def _resize(frames: torch.Tensor, w: int, h: int) -> np.ndarray:
     return np.concatenate(out) if out else np.zeros((0, h, w, 3), np.uint8)
 
 
-def clip_frames(v, size) -> tuple[np.ndarray, float]:
-    """Every frame of a video (or an image batch) resized by size(w, h) -> (tw, th),
-    as uint8 [N, th, tw, 3], and its frame rate (0 for an image batch). Videos on disk
-    are decoded and scaled frame by frame, so a long clip never sits in memory at full size."""
+def clip_frames(v, size, crop: tuple[int, int] | None = None) -> tuple[np.ndarray, float]:
+    """Every frame of a video (or an image batch) resized by size(w, h) -> (tw, th) and, with
+    crop=(cw, ch), cut to that size around the centre — as uint8 [N, h, w, 3] — and its frame rate
+    (0 for an image batch). Videos on disk are decoded and scaled frame by frame, so a long clip
+    never sits in memory at full size."""
+    def cut(frames: np.ndarray) -> np.ndarray:
+        if crop is None:
+            return frames
+        h, w = frames.shape[1:3]
+        cw, ch = min(crop[0], w), min(crop[1], h)
+        x, y = (w - cw) // 2, (h - ch) // 2
+        return frames[:, y:y + ch, x:x + cw]
+
     if isinstance(v, torch.Tensor):
         tw, th = size(int(v.shape[2]), int(v.shape[1]))
-        return _resize(v, tw, th), 0.0
+        return cut(_resize(v, tw, th)), 0.0
     path = plain_file(v)
     if path:
         import av
@@ -229,13 +228,13 @@ def clip_frames(v, size) -> tuple[np.ndarray, float]:
             frames = []
             for frame in c.decode(stream):
                 tw, th = size(frame.width, frame.height)
-                frames.append(frame.reformat(width=tw, height=th, format="rgb24").to_ndarray())
+                frames.append(cut(frame.reformat(width=tw, height=th, format="rgb24").to_ndarray()[None])[0])
         if frames:
             return np.stack(frames), fps
     comps = v.get_components()
     images = comps.images
     tw, th = size(int(images.shape[2]), int(images.shape[1]))
-    return _resize(images, tw, th), float(comps.frame_rate)
+    return cut(_resize(images, tw, th)), float(comps.frame_rate)
 
 
 def encode_mp4(frames, count: int, fps: float, width: int, height: int, audio: torch.Tensor | None,

@@ -17,7 +17,7 @@
 
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { injectStyle, el, viewURL, isolatePointer, isolateKeys, markChanged, chain, hideWidget, ICONS, t, tn, onLocaleChange } from "./arbor_common.js";
+import { injectStyle, el, viewURL, isolatePointer, isolateKeys, markChanged, chain, hideWidget, openModal, ICONS, t, tn, onLocaleChange } from "./arbor_common.js";
 
 const NODE = "Arbor_Panel";
 const AUTO_COLLAPSE = 24; // start collapsed when the tree has more branches than this
@@ -276,37 +276,6 @@ function renderRow(it, j, key, state, opts) {
     r.appendChild(cp);
   }
   return r;
-}
-
-/* ------------------------------------------------------------ large view */
-
-function openModal(title, buildBody, onClose) {
-  const overlay = el("div", "arb arb-modal-wrap");
-  const box = overlay.appendChild(el("div", "arb-modal"));
-  const hd = box.appendChild(el("div", "arb-bar arb-modal-hd"));
-  hd.appendChild(el("span", "arb-modal-title")).textContent = title;
-  const extra = hd.appendChild(el("span", "arb-sub"));
-  hd.appendChild(el("span", "arb-sp"));
-  const close = hd.appendChild(el("button", "arb-btn"));
-  close.textContent = t("done");
-  const body = box.appendChild(el("div", "arb-modal-body"));
-  const done = () => {
-    overlay.remove();
-    window.removeEventListener("keydown", onKey, true);
-    onClose?.();
-  };
-  const onKey = (e) => {
-    if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); done(); }
-  };
-  close.addEventListener("click", done);
-  overlay.addEventListener("pointerdown", (e) => { if (e.target === overlay) done(); });
-  for (const ev of ["pointerdown", "mousedown", "wheel", "dblclick"]) {
-    box.addEventListener(ev, (e) => e.stopPropagation(), { passive: true });
-  }
-  window.addEventListener("keydown", onKey, true);
-  document.body.appendChild(overlay);
-  buildBody(body, extra);
-  return done;
 }
 
 /* ------------------------------------------------------------ panel */

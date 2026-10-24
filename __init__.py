@@ -6,7 +6,7 @@ Inspired by Grasshopper; not affiliated with Robert McNeel & Associates.
 
 from comfy_api.latest import ComfyExtension
 
-from .arbor import nodes_data, nodes_files, nodes_image, nodes_list, nodes_panel, nodes_tree
+from .arbor import load_media, nodes_data, nodes_files, nodes_image, nodes_list, nodes_panel, nodes_tree
 
 WEB_DIRECTORY = "./web"
 
@@ -16,8 +16,13 @@ try:  # live Panel preview endpoint (skipped when imported outside a running ser
 except Exception as e:  # pragma: no cover
     print(f"[Arbor] live preview disabled: {e}")
 
-# library order: Image, Data, Tree, List
-NODES = [*nodes_image.NODES, *nodes_files.NODES, *nodes_panel.NODES, *nodes_data.NODES,
+try:  # Load Media's browse dialog
+    load_media.register_routes()
+except Exception as e:  # pragma: no cover
+    print(f"[Arbor] Load Media browsing disabled: {e}")
+
+# library order: Media, Data, Tree, List
+NODES = [*nodes_image.NODES, *load_media.NODES, *nodes_files.NODES, *nodes_panel.NODES, *nodes_data.NODES,
          *nodes_tree.NODES, *nodes_list.NODES]
 
 

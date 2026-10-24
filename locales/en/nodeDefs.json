@@ -93,9 +93,13 @@
         "name": "col_labels",
         "tooltip": "One label per column — overrides the labels taken from shape (which labels the columns when every row holds the same values, as in XY Lists)."
       },
+      "captions": {
+        "name": "captions",
+        "tooltip": "One caption per cell — e.g. the prompts or seeds of a batch run: a tree shaped like the grid (item by item, branch by branch) or a flat list read cell by cell. Long captions wrap to three lines."
+      },
       "fit": {
         "name": "fit",
-        "tooltip": "How images of different sizes fill a cell: fit (scale to fit), original (no scaling), stretch."
+        "tooltip": "How pictures of different sizes fill a cell: fit (whole picture, bars around) · fill (covers the cell, edges cut) · original (no scaling) · stretch (fills the cell, distorted)."
       },
       "cell_size": {
         "name": "cell_size",
@@ -116,6 +120,18 @@
       "path_labels": {
         "name": "path_labels",
         "tooltip": "Label rows with their branch path when there are no row labels or row names."
+      },
+      "columns": {
+        "name": "columns",
+        "tooltip": "0: one row per branch. N: every branch wraps after N cells — a flat list of 20 becomes 4 rows of 5; a branch's label spans all its rows. Column labels are left out when wrapping."
+      },
+      "label_direction": {
+        "name": "label_direction",
+        "tooltip": "Row labels: auto (horizontal while they fit in two lines, otherwise standing up) · horizontal · vertical. Standing up, Chinese stacks upright; other text reads bottom to top."
+      },
+      "caption_style": {
+        "name": "caption_style",
+        "tooltip": "below: under each cell (the sheet grows to fit) · overlay: on a dark bar across the bottom of the picture."
       }
     },
     "outputs": {
@@ -145,9 +161,13 @@
         "name": "col_labels",
         "tooltip": "One label per column — overrides the labels taken from shape."
       },
+      "captions": {
+        "name": "captions",
+        "tooltip": "One caption per cell — e.g. the prompts or seeds of a batch run: a tree shaped like the grid (item by item, branch by branch) or a flat list read cell by cell. Long captions wrap to three lines."
+      },
       "fit": {
         "name": "fit",
-        "tooltip": "How clips of different sizes fill a cell: fit (scale to fit), original (no scaling), stretch."
+        "tooltip": "How clips of different sizes fill a cell: fit (whole clip, bars around) · fill (covers the cell, edges cut) · original (no scaling) · stretch (fills the cell, distorted)."
       },
       "cell_size": {
         "name": "cell_size",
@@ -176,6 +196,18 @@
       "audio": {
         "name": "audio",
         "tooltip": "none: a silent grid · mix: every clip's sound mixed together (loudness kept below clipping)."
+      },
+      "columns": {
+        "name": "columns",
+        "tooltip": "0: one row per branch. N: every branch wraps after N cells — a flat list of 20 becomes 4 rows of 5; a branch's label spans all its rows. Column labels are left out when wrapping."
+      },
+      "label_direction": {
+        "name": "label_direction",
+        "tooltip": "Row labels: auto (horizontal while they fit in two lines, otherwise standing up) · horizontal · vertical. Standing up, Chinese stacks upright; other text reads bottom to top."
+      },
+      "caption_style": {
+        "name": "caption_style",
+        "tooltip": "below: under each cell (the sheet grows to fit) · overlay: on a dark bar across the bottom of the picture."
       }
     },
     "outputs": {
@@ -274,6 +306,42 @@
       "1": {
         "name": "count",
         "tooltip": "How many frames were picked."
+      }
+    }
+  },
+  "Arbor_LoadMedia": {
+    "display_name": "Load Media",
+    "description": "Pick pictures, videos and audio from anywhere on disk and group them into named branches — several Load Image nodes in one, with a browse window and thumbnails. Files are used where they are; nothing is copied.",
+    "inputs": {
+      "folder": {
+        "name": "folder",
+        "tooltip": "Base folder: relative entries in the list are read from here and Browse… starts here. An absolute path; output/… for ComfyUI's output folder; arbor:… for Arbor's sample media; any other relative path is inside input."
+      },
+      "files": {
+        "name": "files",
+        "tooltip": "The list (kept as text): '# name' starts a named group, an empty line a new group, every other line is a file — relative to the folder, or absolute. Edit it in the node's Text view, or fill it with Browse…."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "files",
+        "tooltip": "Everything, one branch per group, named after it — for the Compare Viewer, Save by Path or a Panel."
+      },
+      "1": {
+        "name": "images",
+        "tooltip": "Only the pictures (IMAGE), same groups — go on to Tree to Data → image nodes, or Image Grid."
+      },
+      "2": {
+        "name": "videos",
+        "tooltip": "Only the videos (VIDEO), same groups."
+      },
+      "3": {
+        "name": "audio",
+        "tooltip": "Only the audio clips (AUDIO), same groups."
+      },
+      "4": {
+        "name": "names",
+        "tooltip": "File names without extension, like files — handy as captions or for Save by Path."
       }
     }
   },

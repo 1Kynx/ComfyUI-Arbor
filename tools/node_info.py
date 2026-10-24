@@ -161,16 +161,26 @@ node("Arbor_ImageGrid", en=dict(
             "shape": "XY Lists' shape: pours plain images into rows × columns and labels them (rows by x, columns by y).",
             "row_labels": "One label per row — a list, or a tree with one branch per row. Not needed when the tree or shape names its rows (XY Lists, Prompt Template, Cross Reference).",
             "col_labels": "One label per column — overrides the labels taken from shape (which labels the columns when every row holds the same values, as in XY Lists).",
-            "fit": "How images of different sizes fill a cell: fit (scale to fit), original (no scaling), stretch.",
+            "fit": "How pictures of different sizes fill a cell: fit (whole picture, bars around) · fill (covers the cell, edges cut) · original (no scaling) · stretch (fills the cell, distorted).",
             "cell_size": "Longest side of a cell in pixels; 0 = the largest image's size.",
             "gap": "Space between cells and around the sheet, in pixels.",
             "font_size": "Label font size. Chinese labels render with a CJK font when one is installed.",
             "theme": "Light or dark sheet background.",
-            "path_labels": "Label rows with their branch path when there are no row labels or row names."},
+            "path_labels": "Label rows with their branch path when there are no row labels or row names.",
+            "captions": "One caption per cell — e.g. the prompts or seeds of a batch run: a tree shaped like the grid (item by item, branch by branch) or a flat list read cell by cell. Long captions wrap to three lines.",
+            "columns": "0: one row per branch. N: every branch wraps after N cells — a flat list of 20 becomes 4 rows of 5; a branch's label spans all its rows. Column labels are left out when wrapping.",
+            "label_direction": "Row labels: auto (horizontal while they fit in two lines, otherwise standing up) · horizontal · vertical. Standing up, Chinese stacks upright; other text reads bottom to top.",
+            "caption_style": "below: under each cell (the sheet grows to fit) · overlay: on a dark bar across the bottom of the picture."},
     outputs=["The comparison sheet as one image."],
     doc="""## How to use
 - **After a batch run**: connect the decoded images to *images* and **XY Lists'** *shape* to *shape*. Rows and columns come out right and are labelled — rows with the x values, columns with the y values. Nothing else to connect.
 - **From a tree**: connect any image tree — each branch becomes a row. Use **Reshape Tree** (*flip matrix*) first to swap rows and columns.
+
+## Captions and layout
+- **captions**: one text per cell — connect a Prompt Template, the seeds of an XY run or Load Media's *names*. *caption_style* puts them under the cells or on a bar over the picture.
+- **columns**: wrap long branches (or a flat list) after N cells instead of one very long row.
+- **fit = fill** crops every picture to the cell, so mixed sizes still make an even grid.
+- Long row labels stand up by themselves (*label_direction* auto).
 
 ## Tips
 - Long labels wrap to three lines and are cut with "…".
@@ -182,16 +192,26 @@ node("Arbor_ImageGrid", en=dict(
             "shape": ("结构", "XY 组合列表的结构：把普通图片排成行 × 列并标注（行是 x，列是 y）。"),
             "row_labels": ("行标签", "每行一个标签——列表，或每行一个分支的数据树。数据树或结构自带行名时（XY 组合列表、提示词模板、交叉组合）不用接。"),
             "col_labels": ("列标签", "每列一个标签——会覆盖从结构得到的列标签（结构每行取值都相同时才用来标注列，例如 XY 组合列表）。"),
-            "fit": ("适配", "不同尺寸的图片如何填充格子：fit 缩放适配、original 原尺寸、stretch 拉伸。"),
+            "fit": ("适配", "不同尺寸的图片如何填充格子：fit 完整显示（四周留白）· fill 铺满格子（裁掉多出的边缘）· original 原尺寸 · stretch 拉伸铺满（会变形）。"),
             "cell_size": ("格子尺寸", "格子长边像素；0 = 最大图片的尺寸。"),
             "gap": ("间距", "格子之间以及四周的留白像素。"),
             "font_size": ("字号", "标签字号。系统装有中日韩字体时，中文标签会正常显示。"),
             "theme": ("主题", "浅色或深色背景。"),
-            "path_labels": ("路径作行标签", "既没有行标签也没有行名时，用分支路径作为行标签。")},
+            "path_labels": ("路径作行标签", "既没有行标签也没有行名时，用分支路径作为行标签。"),
+            "captions": ("单元格说明", "每格一句说明——例如批量运行的提示词或种子：与网格结构相同的数据树（每个分支逐项对应），或按格子顺序读取的列表。过长的说明最多折成三行。"),
+            "columns": ("每行列数", "0：每个分支一行。N：每个分支满 N 格换行——20 项的平铺列表变成 4 行 × 5 列；分支的行标签跨越它的所有行。换行排版时不显示列标签。"),
+            "label_direction": ("行标签方向", "auto 自动（两行内放得下就横排，否则竖排）· horizontal 横排 · vertical 竖排。竖排时中文逐字竖排、字保持正立，其它文字从下往上读。"),
+            "caption_style": ("说明位置", "below：格子下方（对比图相应变高）· overlay：叠在画面底部的深色条上。")},
     outputs=[("图像", "合成后的对比图（一张）。")],
     doc="""## 用法
 - **批量运行之后**：解码后的图片接 *图像*，**XY 组合列表** 的 *结构* 接 *结构*，行列自动排好并标注——行是 x 的取值，列是 y 的取值，不用再接别的。
 - **来自数据树**：直接接任意图像数据树，每个分支一行。想交换行列，先接 **重组数据树**（*翻转矩阵*）。
+
+## 单元格说明与排版
+- **单元格说明**：每格一句文字——可以接提示词模板、XY 批量运行的种子，或「加载素材」的文件名。*说明位置* 决定放在格子下方还是叠在画面上。
+- **每行列数**：过长的分支（或平铺列表）满 N 格自动换行，不再排成一长行。
+- **适配选 fill**：每张图裁切铺满格子，尺寸不一的素材也能排得整整齐齐。
+- 行标签过长时会自动竖排（*行标签方向* 为 auto）。
 
 ## 提示
 - 过长的标签最多折成三行，超出部分用「…」省略。
@@ -204,12 +224,16 @@ node("Arbor_VideoGrid", en=dict(
             "shape": "XY Lists' shape: pours plain videos into rows × columns and labels them (rows by x, columns by y).",
             "row_labels": "One label per row — a list, or a tree with one branch per row. Not needed when the tree or shape names its rows.",
             "col_labels": "One label per column — overrides the labels taken from shape.",
-            "fit": "How clips of different sizes fill a cell: fit (scale to fit), original (no scaling), stretch.",
+            "fit": "How clips of different sizes fill a cell: fit (whole clip, bars around) · fill (covers the cell, edges cut) · original (no scaling) · stretch (fills the cell, distorted).",
             "cell_size": "Longest side of a cell in pixels; 0 = the largest clip's size. Keep it modest — the grid video is width × height of all cells.",
             "gap": "Space between cells and around the grid, in pixels.",
             "font_size": "Label font size. Chinese labels render with a CJK font when one is installed.",
             "theme": "Light or dark background.",
             "path_labels": "Label rows with their branch path when there are no row labels or row names.",
+            "captions": "One caption per cell — e.g. the prompts or seeds of a batch run: a tree shaped like the grid (item by item, branch by branch) or a flat list read cell by cell. Long captions wrap to three lines.",
+            "columns": "0: one row per branch. N: every branch wraps after N cells — a flat list of 20 becomes 4 rows of 5; a branch's label spans all its rows. Column labels are left out when wrapping.",
+            "label_direction": "Row labels: auto (horizontal while they fit in two lines, otherwise standing up) · horizontal · vertical. Standing up, Chinese stacks upright; other text reads bottom to top.",
+            "caption_style": "below: under each cell (the sheet grows to fit) · overlay: on a dark bar across the bottom of the picture.",
             "fps": "Frame rate of the grid video; 0 = the highest frame rate among the clips. Every clip keeps its own speed.",
             "audio": "none: a silent grid · mix: every clip's sound mixed together (loudness kept below clipping)."},
     outputs=["The grid as one VIDEO (H.264 MP4 in the temp folder) — save it with Save by Path or Save Video, or compare it in the Compare Viewer."],
@@ -222,6 +246,12 @@ node("Arbor_VideoGrid", en=dict(
 - All clips start together. Each plays at its own frame rate; shorter clips hold their last frame until the longest one ends.
 - Clips are decoded straight at cell size, frame by frame, so long or large videos do not need much memory.
 
+## Captions and layout
+- **captions**: one text per cell — connect a Prompt Template, the seeds of an XY run or Load Media's *names*. *caption_style* puts them under the cells or on a bar over the clip (drawn into every frame).
+- **columns**: wrap long branches (or a flat list) after N cells instead of one very long row.
+- **fit = fill** crops every picture to the cell, so mixed sizes still make an even grid.
+- Long row labels stand up by themselves (*label_direction* auto).
+
 ## Tips
 - Use **Reshape Tree** (*flip matrix*) first to swap rows and columns.
 - For a single pair, the **Compare Viewer** is quicker: it plays both in sync with a wipe divider.
@@ -232,12 +262,16 @@ node("Arbor_VideoGrid", en=dict(
             "shape": ("结构", "XY 组合列表的结构：把普通视频排成行 × 列并标注（行是 x，列是 y）。"),
             "row_labels": ("行标签", "每行一个标签——列表，或每行一个分支的数据树。数据树或结构自带行名时不用接。"),
             "col_labels": ("列标签", "每列一个标签——会覆盖从结构得到的列标签。"),
-            "fit": ("适配", "不同尺寸的视频如何填充格子：fit 缩放适配、original 原尺寸、stretch 拉伸。"),
+            "fit": ("适配", "不同尺寸的视频如何填充格子：fit 完整显示（四周留白）· fill 铺满格子（裁掉多出的边缘）· original 原尺寸 · stretch 拉伸铺满（会变形）。"),
             "cell_size": ("格子尺寸", "格子长边像素；0 = 最大视频的尺寸。别设太大——网格视频的尺寸是所有格子加起来。"),
             "gap": ("间距", "格子之间以及四周的留白像素。"),
             "font_size": ("字号", "标签字号。系统装有中日韩字体时，中文标签会正常显示。"),
             "theme": ("主题", "浅色或深色背景。"),
             "path_labels": ("路径作行标签", "既没有行标签也没有行名时，用分支路径作为行标签。"),
+            "captions": ("单元格说明", "每格一句说明——例如批量运行的提示词或种子：与网格结构相同的数据树（每个分支逐项对应），或按格子顺序读取的列表。过长的说明最多折成三行。"),
+            "columns": ("每行列数", "0：每个分支一行。N：每个分支满 N 格换行——20 项的平铺列表变成 4 行 × 5 列；分支的行标签跨越它的所有行。换行排版时不显示列标签。"),
+            "label_direction": ("行标签方向", "auto 自动（两行内放得下就横排，否则竖排）· horizontal 横排 · vertical 竖排。竖排时中文逐字竖排、字保持正立，其它文字从下往上读。"),
+            "caption_style": ("说明位置", "below：格子下方（对比图相应变高）· overlay：叠在画面底部的深色条上。"),
             "fps": ("帧率", "网格视频的帧率；0 = 各段视频中最高的帧率。每段视频保持自己的播放速度。"),
             "audio": ("音频", "none：无声 · mix：把所有视频的声音混在一起（自动压低音量避免爆音）。")},
     outputs=[("视频", "合成后的网格视频（VIDEO，临时文件夹里的 H.264 MP4）——用「按路径保存」或「保存视频」保存，也可以接「对比查看器」。")],
@@ -250,9 +284,80 @@ node("Arbor_VideoGrid", en=dict(
 - 所有视频同时开始，各自按自己的帧率播放；较短的视频停在最后一帧，直到最长的一段结束。
 - 视频按格子尺寸逐帧解码，长视频或大尺寸视频也不会占用太多内存。
 
+## 单元格说明与排版
+- **单元格说明**：每格一句文字——可以接提示词模板、XY 批量运行的种子，或「加载素材」的文件名。*说明位置* 决定放在格子下方还是叠在画面上（每一帧都会画上）。
+- **每行列数**：过长的分支（或平铺列表）满 N 格自动换行，不再排成一长行。
+- **适配选 fill**：每张图裁切铺满格子，尺寸不一的素材也能排得整整齐齐。
+- 行标签过长时会自动竖排（*行标签方向* 为 auto）。
+
 ## 提示
 - 想交换行列，先接 **重组数据树**（*翻转矩阵*）。
 - 只对比两段时，**对比查看器** 更方便：同步播放，还能左右拖动分割线。
+"""))
+
+node("Arbor_LoadMedia", en=dict(
+    desc="Pick pictures, videos and audio from anywhere on disk and group them into named branches — several Load Image nodes in one, with a browse window and thumbnails. Files are used where they are; nothing is copied.",
+    inputs={"folder": "Base folder: relative entries in the list are read from here and Browse… starts here. An absolute path; output/… for ComfyUI's output folder; arbor:… for Arbor's sample media; any other relative path is inside input.",
+            "files": "The list (kept as text): '# name' starts a named group, an empty line a new group, every other line is a file — relative to the folder, or absolute. Edit it in the node's Text view, or fill it with Browse…."},
+    outputs=["Everything, one branch per group, named after it — for the Compare Viewer, Save by Path or a Panel.",
+             "Only the pictures (IMAGE), same groups — go on to Tree to Data → image nodes, or Image Grid.",
+             "Only the videos (VIDEO), same groups.",
+             "Only the audio clips (AUDIO), same groups.",
+             "File names without extension, like files — handy as captions or for Save by Path."],
+    doc="""## How to use
+- **Browse…** opens a file window: pick files (click to select, double-click to add one) and **Add selected**, or **Add whole folder** — every subfolder becomes a group named after it, like Load Folder.
+- Files go into the group you clicked last; **+ Group** starts a new one. Rename a group in its header, drag thumbnails to reorder or move them between groups, × removes.
+- **Text** shows the list itself — paste paths, write `# name` lines, delete lines.
+
+```
+# Arrival            →  files {0} Arrival: 2 pictures
+0 · Arrival/000.jpg
+0 · Arrival/001.jpg
+
+# Sound              →  files {1} Sound: 1 audio
+C:/music/theme.wav
+```
+
+## Load Media or Load Folder?
+- **Load Media**: exactly the files you picked, in your order, from anywhere — the list is saved with the workflow.
+- **Load Folder**: everything in a folder, re-read on every run — new files are picked up by themselves.
+
+## Tips
+- Browsing anywhere on disk works on the computer ComfyUI runs on. Opened from another computer, only ComfyUI's input / output folders can be browsed (typing paths still works).
+- The templates use `arbor:storyboard`, the sample keyframes that come with Arbor.
+- The node re-runs when a listed file changes.
+"""), zh=dict(
+    name="加载素材",
+    desc="从硬盘任意位置挑选图片、视频和音频，分组成带名字的分支——相当于把多个「加载图像」合成一个节点，带浏览窗口和缩略图。文件原地使用，不复制。",
+    inputs={"folder": ("文件夹", "基准文件夹：列表里的相对路径从这里读取，「浏览…」也从这里打开。绝对路径；output/… 表示 ComfyUI 的 output 文件夹；arbor:… 表示 Arbor 自带的示例素材；其它相对路径都在 input 文件夹里。"),
+            "files": ("文件", "文件列表（以文本保存）：「# 名字」开始一个有名字的分组，空一行开始新分组，其余每行一个文件——相对于文件夹，或绝对路径。可以在节点的「文本」视图里直接编辑，也可以用「浏览…」添加。")},
+    outputs=[("文件", "全部文件，每个分组一个分支，并以分组命名——可以接对比查看器、按路径保存或面板。"),
+             ("图片", "只有图片（IMAGE），分组相同——接「数据树转数据」后给图片节点，或接图像网格。"),
+             ("视频", "只有视频（VIDEO），分组相同。"),
+             ("音频", "只有音频（AUDIO），分组相同。"),
+             ("文件名", "不带扩展名的文件名，结构同「文件」——可作单元格说明，或给「按路径保存」命名。")],
+    doc="""## 用法
+- **浏览…** 打开文件窗口：点击选择文件（双击直接添加一个），再点 **添加选中**；或点 **添加整个文件夹**——每个子文件夹成为一个以它命名的分组，和「加载文件夹」一样。
+- 文件会加到最后点击的分组里；**+ 分组** 新建分组。在分组标题上改名，拖动缩略图调整顺序或移到别的分组，× 移除。
+- **文本** 视图显示列表本身——可以粘贴路径、写「# 名字」、删除行。
+
+```
+# Arrival            →  文件 {0} Arrival：2 张图片
+0 · Arrival/000.jpg
+0 · Arrival/001.jpg
+
+# Sound              →  文件 {1} Sound：1 段音频
+C:/music/theme.wav
+```
+
+## 加载素材还是加载文件夹？
+- **加载素材**：只读你挑选的文件，按你排的顺序，可以来自任何位置——列表随工作流保存。
+- **加载文件夹**：读取文件夹里的全部文件，每次运行都重新读取——新增的文件会自动包含进来。
+
+## 提示
+- 在运行 ComfyUI 的这台电脑上可以浏览整个硬盘；从其它电脑访问时只能浏览 ComfyUI 的 input / output 文件夹（直接输入路径仍然可用）。
+- 模板使用 `arbor:storyboard`，即 Arbor 自带的示例关键帧。
+- 列表中的文件有改动时，节点会自动重新运行。
 """))
 
 node("Arbor_LoadFolder", en=dict(

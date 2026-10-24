@@ -557,6 +557,43 @@ def test_image_grid():
     print("image grid: OK")
 
 
+def test_grid_layout():
+    sheet = lambda **kw: res(run(nodes_image.ImageGrid, **kw))[0]
+    pics = [torch.rand(1, 30, 60, 3) for _ in range(6)]
+    flat = T.DataTree({(0,): pics})
+    one_row = sheet(images=[flat], **grid_kw())
+    wrapped = sheet(images=[flat], **grid_kw(columns=4))
+    assert tuple(one_row.shape[1:3]) == (30 + 2 * 2, 6 * 60 + 7 * 2)
+    assert tuple(wrapped.shape[1:3]) == (2 * 30 + 3 * 2, 4 * 60 + 5 * 2), "6 cells wrap into rows of 4"
+    caps = [f"shot {i}" for i in range(6)]
+    below = sheet(images=[flat], captions=[caps], **grid_kw(columns=4))
+    assert below.shape[1] > wrapped.shape[1] and below.shape[2] == wrapped.shape[2], "captions below add height"
+    over = sheet(images=[flat], captions=[caps], **grid_kw(columns=4, caption_style="overlay"))
+    assert over.shape == wrapped.shape and not torch.equal(over, wrapped), "overlay captions keep the size"
+    assert grid.caption_rows(T.DataTree({(0,): ["a"], (1,): ["b", "c"]}), [2, 2]) == [["a", ""], ["b", "c"]]
+    assert grid.caption_rows(["a", "b", "c"], [2, 2]) == [["a", "b"], ["c", ""]], "a list is read cell by cell"
+
+    # fit keeps the whole picture, fill covers the cell (cut), stretch distorts
+    assert grid.fit_box(160, 90, 100, 100, "fit") == (100, 56, False)
+    assert grid.fit_box(160, 90, 100, 100, "fill") == (178, 100, True)
+    assert grid.fit_box(160, 90, 100, 100, "stretch") == (100, 100, False)
+    black = T.DataTree({(0,): [torch.zeros(1, 30, 60, 3), torch.zeros(1, 60, 30, 3)]})
+    assert sheet(images=[black], **grid_kw(fit="fill", gap=0)).max() < 0.01, "fill leaves no background"
+    assert sheet(images=[black], **grid_kw(fit="fit", gap=0)).max() > 0.99
+
+    # row labels stand up when they would not fit in two lines (auto), short ones stay horizontal
+    long_tree = T.DataTree({(0,): pics[:2], (1,): pics[2:4]},
+                           {(0,): "a very long row label that does not fit in two lines at all", (1,): "b"})
+    auto = sheet(images=[long_tree], **grid_kw())
+    flat_labels = sheet(images=[long_tree], **grid_kw(label_direction="horizontal"))
+    assert auto.shape[2] < flat_labels.shape[2], "a standing label takes less width"
+    short = T.DataTree({(0,): pics[:2], (1,): pics[2:4]}, {(0,): "a", (1,): "b"})
+    assert torch.equal(sheet(images=[short], **grid_kw()), sheet(images=[short], **grid_kw(label_direction="horizontal")))
+    stacked = sheet(images=[T.DataTree({(0,): pics[:2]}, {(0,): "清晨的村庄与石阶小路"})], **grid_kw(label_direction="vertical"))
+    assert stacked.shape[2] < 2 * 60 + 3 * 2 + 60, "Chinese stacks upright in a narrow column"
+    print("grid layout: OK")
+
+
 # ====================================================================== image / file nodes
 
 def test_image_nodes():
@@ -636,11 +673,61 @@ def test_compare_and_video_grid():
             assert silent.get_frame_count() == 6
             with av.open(silent.get_stream_source()) as c:
                 assert not c.streams.audio
+            # one column, cells filled, captions drawn into every frame
+            tall = res(run(nodes_image.VideoGrid, videos=[videos], fit="fill", cell_size=64, gap=4, font_size=12,
+                           theme="light", path_labels=False, fps=0.0, audio="none", columns=1,
+                           captions=[["a", "b", "c"]], caption_style="overlay"))[0]
+            tw, th = tall.get_dimensions()
+            assert th > 1.4 * h and tw < w and tall.get_frame_count() == 12, "3 rows of one clip instead of 2 rows"
             raises(ValueError, run, nodes_image.VideoGrid, videos=[T.DataTree({(0,): ["text"]})], fit="fit",
                    cell_size=64, gap=4, font_size=12, theme="light", path_labels=False, fps=0.0, audio="none")
         finally:
             folder_paths.set_temp_directory(old)
     print("compare viewer / video grid: OK")
+
+
+def test_load_media():
+    import tempfile
+    from fractions import Fraction
+    from PIL import Image
+    from comfy_api.latest import InputImpl, Types
+    from arbor_pkg.arbor import load_media, media
+
+    assert load_media.parse_list("# A\na.png\nb.png\n\nc.png\n# B\n\n# C\nd.wav") == [
+        ("A", ["a.png", "b.png"]), ("", ["c.png"]), ("C", ["d.wav"])], "empty groups are dropped"
+    LM = load_media.LoadMedia
+    with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as elsewhere:
+        os.makedirs(os.path.join(d, "shots"))
+        for k in range(2):
+            Image.new("RGB", (16 + k, 8)).save(os.path.join(d, "shots", f"s{k}.png"))
+        InputImpl.VideoFromComponents(Types.VideoComponents(images=torch.rand(4, 16, 16, 3), audio=None,
+                                                            frame_rate=Fraction(8))).save_to(
+            os.path.join(d, "clip.mp4"), format=Types.VideoContainer.MP4, codec=Types.VideoCodec.AUTO)
+        media.write_flac(torch.zeros(1, 800), 8000, os.path.join(d, "voice.flac"))
+        far = os.path.join(elsewhere, "far.png")
+        Image.new("RGB", (8, 8)).save(far)
+        text = f"# Shots\nshots/s0.png\nshots/s1.png\n\n# Mixed\nclip.mp4\nvoice.flac\n{far}"
+        files, images, videos, audio, names = res(LM.execute(folder=d, files=text))
+        assert files.names == {(0,): "Shots", (1,): "Mixed"} and [len(v) for v in files.branches.values()] == [2, 3]
+        assert images.branches[(0,)][1].shape == (1, 8, 17, 3) and len(images.branches[(1,)]) == 1, "absolute paths work"
+        assert list(videos.branches) == [(1,)] and videos.names == {(1,): "Mixed"}, "each kind keeps its groups"
+        assert videos.branches[(1,)][0].get_frame_count() == 4 and audio.branches[(1,)][0]["sample_rate"] == 8000
+        assert names.branches[(1,)] == ["clip", "voice", "far"]
+        assert LM.fingerprint_inputs(d, text) != LM.fingerprint_inputs(d, text.replace("s1", "s0"))
+        raises(ValueError, LM.execute, folder=d, files="")
+        raises(FileNotFoundError, LM.execute, folder=d, files="missing.png")
+        raises(ValueError, LM.execute, folder=d, files="notes.txt")
+
+        listing = load_media.browse(d)
+        assert listing["dirs"] == ["shots"] and [f["name"] for f in listing["files"]] == ["clip.mp4", "voice.flac"]
+        assert [f["kind"] for f in listing["files"]] == ["video", "audio"]
+        whole = load_media.tree_of(d)
+        assert [g["name"] for g in whole] == [os.path.basename(d), "shots"] and len(whole[1]["files"]) == 2
+        for p in (os.path.join(d, "clip.mp4"), os.path.join(d, "shots", "s0.png")):
+            assert load_media.thumbnail(p, 64)[:4] == b"RIFF", "webp thumbnails of pictures and videos"
+    assert nodes_files.resolve_folder("arbor:storyboard").endswith(os.path.join("example_media", "storyboard"))
+    assert len(load_media.tree_of(nodes_files.resolve_folder("arbor:storyboard"))) == 3, "the sample keyframes ship"
+    print("load media: OK")
 
 
 def test_files():
@@ -807,7 +894,7 @@ def test_example_workflows():
 
 def test_registration():
     ids = [n.define_schema().node_id for n in pkg.NODES]
-    assert len(ids) == len(set(ids)) == 29, (len(ids), len(set(ids)))
+    assert len(ids) == len(set(ids)) == 30, (len(ids), len(set(ids)))
     cats = {}
     for n in pkg.NODES:
         s = n.define_schema()
@@ -823,8 +910,8 @@ def test_registration():
 
 if __name__ == "__main__":
     for test in [test_tree_algebra, test_cross_and_rebuild, test_data_nodes, test_number_slider, test_panel,
-                 test_tree_nodes, test_list_nodes, test_grasshopper_matching, test_nested_trees, test_xy_lists, test_image_grid, test_image_nodes,
-                 test_compare_and_video_grid, test_files,
+                 test_tree_nodes, test_list_nodes, test_grasshopper_matching, test_nested_trees, test_xy_lists, test_image_grid, test_grid_layout, test_image_nodes,
+                 test_compare_and_video_grid, test_load_media, test_files,
                  test_live_preview, test_docs_and_locales, test_example_workflows, test_registration]:
         test()
     print("ALL OK")

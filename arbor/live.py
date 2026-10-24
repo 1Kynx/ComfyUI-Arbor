@@ -29,7 +29,7 @@ CORE_SAFE = {
 }
 # file I/O, heavy image work, or lazy evaluation the in-place evaluator doesn't model
 ARBOR_UNSAFE = {"Arbor_ImageSlider", "Arbor_ImageGrid", "Arbor_VideoGrid", "Arbor_SmartResize", "Arbor_BatchPick",
-                "Arbor_LoadFolder", "Arbor_SaveByPath", "Arbor_IndexSwitch"}
+                "Arbor_LoadFolder", "Arbor_LoadMedia", "Arbor_SaveByPath", "Arbor_IndexSwitch"}
 MAX_NODES = 200
 
 

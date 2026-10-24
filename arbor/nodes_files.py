@@ -35,10 +35,16 @@ def _natural_key(s: str):
     return [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", s)]
 
 
+EXAMPLE_MEDIA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "example_media")
+
+
 def resolve_folder(folder: str) -> str:
-    """Absolute path; 'output/…' is in ComfyUI's output folder, any other relative path in input."""
+    """Absolute path; 'output/…' is in ComfyUI's output folder, 'arbor:…' in Arbor's sample media
+    (what the templates use), any other relative path in input."""
     folder = os.path.expanduser(str(folder or "").strip().strip('"'))
-    if not os.path.isabs(folder):
+    if folder.lower().startswith("arbor:"):
+        folder = os.path.join(EXAMPLE_MEDIA, folder[len("arbor:"):].lstrip("/").lstrip(os.sep))
+    elif not os.path.isabs(folder):
         head, _, rest = folder.replace("\\", "/").partition("/")
         if head.lower() == "output":
             folder = os.path.join(folder_paths.get_output_directory(), rest)
