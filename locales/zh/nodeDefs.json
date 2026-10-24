@@ -351,7 +351,7 @@
     "inputs": {
       "folder": {
         "name": "文件夹",
-        "tooltip": "绝对路径；output/… 表示 ComfyUI 的 output 文件夹；其它相对路径都在 input 文件夹里。"
+        "tooltip": "绝对路径；output/… 表示 ComfyUI 的 output 文件夹；arbor:… 表示 Arbor 自带的示例素材；其它相对路径都在 input 文件夹里。也可以点「浏览…」按钮在窗口中选择。"
       },
       "kind": {
         "name": "类型",

@@ -6,12 +6,13 @@
  * List view: groups of thumbnails — rename a group, drag files to reorder or
  * move them between groups, × to remove. Text view: edit the list directly.
  * Browse…: pick files, or a whole folder (subfolders become groups), from disk
- * through Arbor's /arbor/media routes; files are used where they are.
+ * (media_browser.js); files are used where they are.
  */
 
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { injectStyle, el, isolatePointer, isolateKeys, markChanged, chain, hideWidget, openModal, t, tn, onLocaleChange } from "./arbor_common.js";
+import { injectStyle, el, isolatePointer, isolateKeys, markChanged, chain, hideWidget, t, tn, onLocaleChange } from "./arbor_common.js";
+import { openMediaBrowser } from "./media_browser.js";
 
 const NODE = "Arbor_LoadMedia";
 const KIND_EXT = {
@@ -273,121 +274,15 @@ class MediaView {
     this.render();
   }
 
-  async browse() {
-    let state = null;
-    const selected = new Set();
-    let render;
-    const load = async (path, recursive) => {
-      const q = new URLSearchParams({ folder: this.folder, path: path || "" });
-      if (recursive) q.set("recursive", "1");
-      const r = await api.fetchApi(`/arbor/media/browse?${q}`);
-      const data = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
-      return data;
-    };
-    const go = async (path) => {
-      const data = await load(path);
-      if (data.error) {
-        if (!state) state = { error: data.error, dirs: [], files: [], drives: [] };
-        else state.error = data.error;
-      } else {
-        state = data;
-        selected.clear();
-      }
-      render();
-    };
-    const close = openModal(t("browseTitle"), (body, extra) => {
-      body.classList.add("arb-br-body");
-      const nav = body.appendChild(el("div", "arb-bar"));
-      const up = nav.appendChild(el("button", "arb-btn"));
-      const pathIn = nav.appendChild(el("input", "arb-br-path"));
-      const drives = nav.appendChild(el("select", "arb-btn arb-br-drives"));
-      isolateKeys(pathIn);
-      pathIn.addEventListener("keydown", (e) => { if (e.key === "Enter") go(pathIn.value.trim()); });
-      up.addEventListener("click", () => state?.parent && go(state.parent));
-      drives.addEventListener("change", () => drives.value && go(drives.value));
-      const err = body.appendChild(el("div", "arb-err"));
-      const panes = body.appendChild(el("div", "arb-br-panes"));
-      const dirs = panes.appendChild(el("div", "arb-br-dirs"));
-      const files = panes.appendChild(el("div", "arb-br-files"));
-      const foot = body.appendChild(el("div", "arb-bar"));
-      const all = foot.appendChild(el("button", "arb-btn"));
-      foot.appendChild(el("span", "arb-sp"));
-      const addFolder = foot.appendChild(el("button", "arb-btn"));
-      const addSel = foot.appendChild(el("button", "arb-btn arb-btn-main"));
-
-      all.addEventListener("click", () => {
-        const names = state?.files?.map((f) => f.name) || [];
-        if (selected.size === names.length) selected.clear();
-        else names.forEach((n) => selected.add(n));
-        render();
-      });
-      const absOf = (name) => `${state.path.replace(/[\\/]+$/, "")}${state.path.includes("\\") ? "\\" : "/"}${name}`;
-      addSel.addEventListener("click", () => {
-        if (!state || !selected.size) return;
-        const order = state.files.map((f) => f.name).filter((n) => selected.has(n));
-        this.add(order.map((n) => entryFor(absOf(n), state.base)));
-        close();
-      });
-      addFolder.addEventListener("click", async () => {
-        if (!state?.path) return;
-        const data = await load(state.path, true);
-        if (data.error) { state.error = data.error; render(); return; }
-        for (const g of data.groups) this.add(g.files.map((f) => entryFor(f, state.base)), g.name);
-        close();
-      });
-
-      render = () => {
-        up.textContent = t("up");
-        up.disabled = !state?.parent;
-        all.textContent = t("selectAll");
-        addFolder.textContent = t("addFolder");
-        addFolder.title = t("addFolderTip");
-        addSel.textContent = t("addSelected", { n: selected.size });
-        addSel.disabled = !selected.size;
-        err.textContent = state?.error || "";
-        err.style.display = state?.error ? "" : "none";
-        if (!state) return;
-        state.error = "";
-        pathIn.value = state.path || "";
-        drives.textContent = "";
-        drives.style.display = state.drives?.length > 1 ? "" : "none";
-        drives.appendChild(el("option")).textContent = t("drives");
-        for (const d of state.drives || []) drives.appendChild(Object.assign(el("option"), { value: d, textContent: d }));
-        dirs.textContent = "";
-        for (const d of state.dirs || []) {
-          const row = dirs.appendChild(el("div", "arb-br-dir"));
-          row.textContent = d;
-          row.title = d;
-          row.addEventListener("click", () => go(absOf(d)));
-        }
-        files.textContent = "";
-        if (!state.files?.length) files.appendChild(el("div", "arb-empty")).textContent = t("noMedia");
-        for (const f of state.files || []) {
-          const tile = files.appendChild(el("div", `arb-media-tile k-${f.kind}` + (selected.has(f.name) ? " sel" : "")));
-          tile.title = f.name;
-          if (f.kind !== "audio") {
-            const img = tile.appendChild(el("img"));
-            img.loading = "lazy";
-            const q = new URLSearchParams({ path: absOf(f.name), size: "160" });
-            img.src = api.apiURL(`/arbor/media/thumb?${q}`);
-            img.addEventListener("error", () => { img.remove(); tile.classList.add("noimg"); });
-          }
-          tile.appendChild(el("span", "arb-media-badge")).textContent = f.kind === "video" ? "▶" : f.kind === "audio" ? "♪" : "";
-          tile.appendChild(el("span", "arb-media-fn")).textContent = f.name;
-          tile.addEventListener("click", () => {
-            selected.has(f.name) ? selected.delete(f.name) : selected.add(f.name);
-            render();
-          });
-          tile.addEventListener("dblclick", () => {
-            this.add([entryFor(absOf(f.name), state.base)]);
-            close();
-          });
-        }
-        extra.textContent = state.local === false ? t("remoteBrowse") : "";
-      };
-      render();
+  browse() {
+    openMediaBrowser({
+      folder: this.folder,
+      mode: "files",
+      onFiles: (paths, info) => this.add(paths.map((p) => entryFor(p, info.base))),
+      onGroups: (groups, info) => {
+        for (const g of groups) this.add(g.files.map((p) => entryFor(p, info.base)), g.name);
+      },
     });
-    await go("");
   }
 }
 

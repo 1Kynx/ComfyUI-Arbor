@@ -248,6 +248,8 @@ def register_routes():
         except OSError as e:
             return web.json_response({"error": str(e)}, status=400)
         data["base"] = base
+        data["input"] = folder_paths.get_input_directory()  # so a picked folder can be written short
+        data["output"] = folder_paths.get_output_directory()
         data["local"] = request.remote in ("127.0.0.1", "::1", "localhost")
         return web.json_response(data)
 

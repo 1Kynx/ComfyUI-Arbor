@@ -149,6 +149,7 @@ const CSS = `
 .arb-br-dir:hover{background:var(--arb-hover);}
 .arb-br-files{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;align-content:start;}
 .arb-br-files .arb-media-tile{cursor:pointer;}
+.arb-br-files.preview .arb-media-tile{cursor:default;}
 
 /* ------------------------------------------------------------- number slider */
 .arb-num{gap:4px;justify-content:center;}
@@ -310,7 +311,8 @@ const STRINGS = {
     playTip: "Play (Space)", pauseTip: "Pause (Space)", loopTip: "Loop",
     muteTip: "Sound on / off — in Wipe you hear the side that shows more, or the half under the pointer",
     browse: "Browse…", browseTip: "Pick pictures, videos or audio — or a whole folder — from disk; files are used where they are",
-    browseTitle: "Browse", up: "Up", drives: "Drive", selectAll: "Select all",
+    browseTitle: "Browse", up: "Up", browseFolder: "Browse…", browseFolderTitle: "Choose a folder",
+    useFolder: "Use this folder", mediaHere: "{n} media files at this level", drives: "Drive", selectAll: "Select all",
     addSelected: "Add selected ({n})", addFolder: "Add whole folder",
     addFolderTip: "Every media file in this folder and its subfolders; each folder becomes a group",
     noMedia: "No pictures, videos or audio here",
@@ -360,7 +362,8 @@ const STRINGS = {
     playTip: "播放（空格）", pauseTip: "暂停（空格）", loopTip: "循环播放",
     muteTip: "声音开 / 关——对比模式下听到占画面更多的一侧，或鼠标所在的那一半",
     browse: "浏览…", browseTip: "从硬盘选择图片、视频或音频，也可以整个文件夹；文件原地使用，不复制",
-    browseTitle: "浏览", up: "上一级", drives: "磁盘", selectAll: "全选",
+    browseTitle: "浏览", up: "上一级", browseFolder: "浏览…", browseFolderTitle: "选择文件夹",
+    useFolder: "使用这个文件夹", mediaHere: "这一层有 {n} 个媒体文件", drives: "磁盘", selectAll: "全选",
     addSelected: "添加选中（{n}）", addFolder: "添加整个文件夹",
     addFolderTip: "这个文件夹及其子文件夹里的所有媒体文件；每个文件夹成为一个分组",
     noMedia: "这里没有图片、视频或音频",
