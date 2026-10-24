@@ -21,13 +21,17 @@ class Unavailable(RuntimeError):
     """No system dialog can be shown here."""
 
 
-def pick(mode: str, start: str = "", title: str = "", filters: list[tuple[str, str]] | None = None) -> list[str]:
-    """mode 'files' (several files) or 'folder'. Returns the chosen paths, [] when cancelled."""
+def pick(mode: str, start: str = "", title: str = "", filters: list[tuple[str, str]] | None = None,
+         ok_label: str = "", this_folder: str = "") -> list[str]:
+    """mode 'files' (several files), 'folder', or 'any': files, or — on Windows — the folder the dialog is in
+    when you press OK without picking a file (the file name box then holds `this_folder`, which comes back
+    as <folder>/<this_folder>; see folder_of). Returns the chosen paths, [] when cancelled."""
     if not _lock.acquire(blocking=False):
         raise Unavailable("A file dialog is already open")
     try:
         if os.name == "nt":
-            return _windows(mode, start, title, filters or [])
+            return _windows(mode, start, title, filters or [], ok_label, this_folder)
+        mode = "files" if mode == "any" else mode  # the macOS / Linux dialogs pick files or folders, not both
         if sys.platform == "darwin":
             return _mac(mode, start, title)
         return _linux(mode, start, title, filters or [])
@@ -35,9 +39,17 @@ def pick(mode: str, start: str = "", title: str = "", filters: list[tuple[str, s
         _lock.release()
 
 
+def folder_of(path: str, this_folder: str) -> str | None:
+    """The folder meant by an 'any' answer of <folder>/<this_folder>, else None."""
+    if this_folder and os.path.basename(path) == this_folder and not os.path.exists(path):
+        parent = os.path.dirname(path)
+        return parent if os.path.isdir(parent) else None
+    return None
+
+
 # ------------------------------------------------------------------ Windows (IFileOpenDialog)
 
-def _windows(mode, start, title, filters):
+def _windows(mode, start, title, filters, ok_label="", this_folder=""):
     import ctypes
     from ctypes import wintypes as wt
 
@@ -84,10 +96,19 @@ def _windows(mode, start, title, filters):
         opts = ctypes.c_ulong()
         method(dialog, 10, ctypes.POINTER(ctypes.c_ulong))(dialog, ctypes.byref(opts))
         flags = opts.value | 0x40 | 0x800  # file system only, path must exist
-        flags |= 0x20 if mode == "folder" else (0x200 | 0x1000)  # pick folders | multi-select, file must exist
+        if mode == "folder":
+            flags |= 0x20  # pick folders
+        elif mode == "any":
+            flags = (flags | 0x200) & ~0x1000  # multi-select; a name that is no file means "this folder"
+        else:
+            flags |= 0x200 | 0x1000  # multi-select, file must exist
         method(dialog, 9, ctypes.c_ulong)(dialog, flags)
         if title:
             method(dialog, 17, wt.LPCWSTR)(dialog, title)
+        if ok_label:
+            method(dialog, 18, wt.LPCWSTR)(dialog, ok_label)  # SetOkButtonLabel
+        if mode == "any" and this_folder:
+            method(dialog, 15, wt.LPCWSTR)(dialog, this_folder)  # SetFileName
         if mode != "folder" and filters:
             specs = (FILTERSPEC * len(filters))(*[FILTERSPEC(n, s) for n, s in filters])
             method(dialog, 4, ctypes.c_uint, ctypes.POINTER(FILTERSPEC))(dialog, len(filters), specs)

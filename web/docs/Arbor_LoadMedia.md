@@ -21,8 +21,8 @@ Pick pictures, videos and audio from anywhere on disk and group them into named 
   File names without extension, like files — handy as captions or for Save by Path.
 
 ## How to use
-- **Add…** → **Files…** opens the system's file dialog — select one or several pictures, videos or audio files.
-- **Add…** → **Folder…** opens the system's folder dialog and adds every media file in it — each subfolder becomes a group named after it, like Load Folder.
+- **Add…** opens the system's file dialog. Select one or several pictures, videos or audio files and press **Add** — they go into the selected group.
+- To take a **whole folder**, go into it and press **Add** without selecting anything (the name box says *(add this folder)*): every media file in it is added, each subfolder becoming a group named after it, like Load Folder.
 - Files go into the group you clicked last; **+ Group** starts a new one. Rename a group in its header, drag thumbnails to reorder or move them between groups, × removes.
 - **Text** shows the list itself — paste paths, write `# name` lines, delete lines.
 
@@ -40,7 +40,7 @@ C:/music/theme.wav
 - **Load Folder**: everything in a folder, re-read on every run — new files are picked up by themselves.
 
 ## Tips
-- The dialog opens on the computer ComfyUI runs on and hands back real paths, so nothing is copied; it opens where you picked last. Opened from another computer, type the paths in the Text view instead.
+- The dialog opens on the computer ComfyUI runs on and hands back real paths, so nothing is copied; it opens where you picked last. On macOS / Linux it picks files only — type folders in the Text view. Opened from another computer, type the paths in the Text view instead.
 - Paths inside ComfyUI's output or input folder are written short (`output/…`, relative), so the workflow still works when ComfyUI moves.
 - The templates use `arbor:storyboard/…`, the sample keyframes that come with Arbor.
 - The node re-runs when a listed file changes.

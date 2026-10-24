@@ -16,16 +16,17 @@ function notify(detail) {
   else window.alert(detail);
 }
 
-/* mode: "files" | "folder" | "tree" (a folder, read back as groups); start: where the dialog
- * opens (any path the nodes accept). Resolves to the server's answer — {paths, entries (the same,
+/* mode: "files" | "folder" | "tree" (a folder, read back as groups) | "any" (files, or the folder
+ * the dialog is in when OK is pressed without a file); start: where the dialog opens (any path
+ * the nodes accept); extra: { ok_label, this_folder }. Resolves to the server's answer — {paths, entries (the same,
  * written short: output/…, arbor:…, relative to input), dir, groups?} — or null when cancelled. */
-export async function systemDialog(mode, start, title) {
+export async function systemDialog(mode, start, title, extra = {}) {
   let r;
   try {
     r = await api.fetchApi("/arbor/media/pick", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode, start: start || "", title: title || "" }),
+      body: JSON.stringify({ mode, start: start || "", title: title || "", ...extra }),
     });
   } catch (e) {
     notify(String(e));

@@ -117,8 +117,8 @@ Names: `x`, `y` (matched like Grasshopper: branches in order, items longest-list
 `b` branch index, `n` branch length, `name` the branch's name.
 A safe evaluator: no attribute access or imports.
 
-**Load Media** — several Load Image nodes in one, for pictures, videos and audio: **Add…** (*Files…* / *Folder…*) opens the system's
-own file dialog (a whole folder: subfolders become groups); files are used where they are, shown as thumbnails. Groups are named branches (`# name` in the list, editable as text); drag thumbnails to reorder.
+**Load Media** — several Load Image nodes in one, for pictures, videos and audio: **Add…** opens the system's own file dialog: pick
+files, or press Add inside a folder to take all of it (subfolders become groups); files are used where they are, shown as thumbnails. Groups are named branches (`# name` in the list, editable as text); drag thumbnails to reorder.
 Outputs everything plus one tree per kind, with the same groups.
 
 **Load Folder / Save by Path** — pictures, videos and audio by tree. Subfolders become branches on the way

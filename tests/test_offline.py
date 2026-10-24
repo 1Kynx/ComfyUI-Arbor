@@ -726,6 +726,10 @@ def test_load_media():
         for p in (os.path.join(d, "clip.mp4"), os.path.join(d, "shots", "s0.png")):
             assert load_media.thumbnail(p, 64)[:4] == b"RIFF", "webp thumbnails of pictures and videos"
     assert nodes_files.resolve_folder("arbor:storyboard").endswith(os.path.join("example_media", "storyboard"))
+    from arbor_pkg.arbor import dialogs
+    here = nodes_files.resolve_folder("arbor:storyboard")
+    assert dialogs.folder_of(os.path.join(here, "(add this folder)"), "(add this folder)") == here, "OK inside a folder"
+    assert dialogs.folder_of(os.path.join(here, "0 · Arrival"), "(add this folder)") is None
     samples = load_media.tree_of(nodes_files.resolve_folder("arbor:storyboard"))
     assert len(samples) == 3 and samples[0]["files"][0] == "arbor:storyboard/0 · Arrival/000.jpg", "written short"
     # paths are written the short way and read back the same

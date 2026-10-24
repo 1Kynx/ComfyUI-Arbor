@@ -5,13 +5,14 @@
  * line is a file: absolute, output/…, arbor:… or relative to ComfyUI's input folder.
  * List view: groups of thumbnails — rename a group, drag files to reorder or
  * move them between groups, × to remove. Text view: edit the list directly.
- * Add… → Files… / Folder…: the system's own dialog (system_dialog.js) picks files, or a
- * whole folder whose subfolders become groups; files are used where they are.
+ * Add…: one system dialog (system_dialog.js) — pick files, or go into a folder and press Add
+ * without picking any to take the whole folder (subfolders become groups). Files are used where
+ * they are.
  */
 
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
-import { injectStyle, el, isolatePointer, isolateKeys, markChanged, chain, hideWidget, showMenu, t, tn, onLocaleChange } from "./arbor_common.js";
+import { injectStyle, el, isolatePointer, isolateKeys, markChanged, chain, hideWidget, t, tn, onLocaleChange } from "./arbor_common.js";
 import { systemDialog } from "./system_dialog.js";
 
 const NODE = "Arbor_LoadMedia";
@@ -67,10 +68,7 @@ class MediaView {
     const root = (this.root = el("div", "arb arb-media"));
     const bar = el("div", "arb-bar");
     this.pickBtn = el("button", "arb-btn arb-btn-main");
-    this.pickBtn.addEventListener("click", () => showMenu(this.pickBtn, [
-      { label: t("pickFiles"), pick: () => this.pickFiles() },
-      { label: t("pickFolder"), pick: () => this.pickFolder() },
-    ]));
+    this.pickBtn.addEventListener("click", () => this.pick());
     this.seg = el("div", "arb-seg", `<button data-m="list"></button><button data-m="text"></button>`);
     this.seg.addEventListener("click", (e) => {
       const m = e.target?.dataset?.m;
@@ -276,16 +274,13 @@ class MediaView {
     if (r?.dir) this.node.properties.arbor_dir = r.dir;
   }
 
-  async pickFiles() {
-    const r = await systemDialog("files", this.start, t("dialogFiles"));
+  /* files go into the selected group; a folder comes back as its own named groups */
+  async pick() {
+    const r = await systemDialog("any", this.start, t("dialogAdd"), { ok_label: t("dialogOk"), this_folder: t("thisFolder") });
     this.remember(r);
-    if (r) this.add(r.entries);
-  }
-
-  async pickFolder() {
-    const r = await systemDialog("tree", this.start, t("dialogFolder"));
-    this.remember(r);
-    for (const g of r?.groups || []) this.add(g.files, g.name);
+    if (!r) return;
+    if (r.entries.length) this.add(r.entries);
+    for (const g of r.groups || []) this.add(g.files, g.name);
   }
 }
 

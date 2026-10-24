@@ -304,8 +304,8 @@ node("Arbor_LoadMedia", en=dict(
              "Only the audio clips (AUDIO), same groups.",
              "File names without extension, like files — handy as captions or for Save by Path."],
     doc="""## How to use
-- **Add…** → **Files…** opens the system's file dialog — select one or several pictures, videos or audio files.
-- **Add…** → **Folder…** opens the system's folder dialog and adds every media file in it — each subfolder becomes a group named after it, like Load Folder.
+- **Add…** opens the system's file dialog. Select one or several pictures, videos or audio files and press **Add** — they go into the selected group.
+- To take a **whole folder**, go into it and press **Add** without selecting anything (the name box says *(add this folder)*): every media file in it is added, each subfolder becoming a group named after it, like Load Folder.
 - Files go into the group you clicked last; **+ Group** starts a new one. Rename a group in its header, drag thumbnails to reorder or move them between groups, × removes.
 - **Text** shows the list itself — paste paths, write `# name` lines, delete lines.
 
@@ -323,7 +323,7 @@ C:/music/theme.wav
 - **Load Folder**: everything in a folder, re-read on every run — new files are picked up by themselves.
 
 ## Tips
-- The dialog opens on the computer ComfyUI runs on and hands back real paths, so nothing is copied; it opens where you picked last. Opened from another computer, type the paths in the Text view instead.
+- The dialog opens on the computer ComfyUI runs on and hands back real paths, so nothing is copied; it opens where you picked last. On macOS / Linux it picks files only — type folders in the Text view. Opened from another computer, type the paths in the Text view instead.
 - Paths inside ComfyUI's output or input folder are written short (`output/…`, relative), so the workflow still works when ComfyUI moves.
 - The templates use `arbor:storyboard/…`, the sample keyframes that come with Arbor.
 - The node re-runs when a listed file changes.
@@ -337,8 +337,8 @@ C:/music/theme.wav
              ("音频", "只有音频（AUDIO），分组相同。"),
              ("文件名", "不带扩展名的文件名，结构同「文件」——可作单元格说明，或给「按路径保存」命名。")],
     doc="""## 用法
-- **添加…** → **文件…**：打开系统的文件窗口，可以选一个或多个图片、视频、音频文件。
-- **添加…** → **文件夹…**：打开系统的文件夹窗口，添加其中所有媒体文件——每个子文件夹成为一个以它命名的分组，和「加载文件夹」一样。
+- **添加…** 打开系统的文件窗口：选中一个或多个图片、视频、音频文件，点 **添加**——它们会放进选中的分组。
+- 想添加**整个文件夹**：进入这个文件夹，不选任何文件直接点 **添加**（文件名框里是「（添加当前文件夹）」）——其中所有媒体文件都会加入，每个子文件夹成为一个以它命名的分组，和「加载文件夹」一样。
 - 文件会加到最后点击的分组里；**+ 分组** 新建分组。在分组标题上改名，拖动缩略图调整顺序或移到别的分组，× 移除。
 - **文本** 视图显示列表本身——可以粘贴路径、写「# 名字」、删除行。
 
@@ -356,7 +356,7 @@ C:/music/theme.wav
 - **加载文件夹**：读取文件夹里的全部文件，每次运行都重新读取——新增的文件会自动包含进来。
 
 ## 提示
-- 系统窗口在运行 ComfyUI 的电脑上打开，返回真实路径，所以不需要复制文件；会从上次选择的位置打开。从其它电脑访问时，请在「文本」视图里直接输入路径。
+- 系统窗口在运行 ComfyUI 的电脑上打开，返回真实路径，所以不需要复制文件；会从上次选择的位置打开。macOS / Linux 上只能选文件——文件夹请在「文本」视图里输入。从其它电脑访问时，请在「文本」视图里直接输入路径。
 - 位于 ComfyUI output 或 input 文件夹里的文件会写成短路径（`output/…`、相对路径），ComfyUI 换位置后工作流仍然可用。
 - 模板使用 `arbor:storyboard/…`，即 Arbor 自带的示例关键帧。
 - 列表中的文件有改动时，节点会自动重新运行。

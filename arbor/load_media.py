@@ -187,7 +187,8 @@ def register_routes():
 
     @routes.post("/arbor/media/pick")
     async def _pick(request):
-        """Open the system dialog on this computer. mode: files | folder | tree (a folder, read as groups)."""
+        """Open the system dialog on this computer. mode: files | folder | tree (a folder, read as groups) |
+        any (files, or the folder the dialog is in — Load Media's Add…)."""
         import asyncio
         from . import dialogs
 
@@ -198,19 +199,30 @@ def register_routes():
         start = resolve_path(q.get("start", "")) if q.get("start") else folder_paths.get_input_directory()
         if not os.path.isdir(start):  # a file: start in its folder
             start = os.path.dirname(start) if os.path.isdir(os.path.dirname(start)) else folder_paths.get_input_directory()
+        this_folder = q.get("this_folder", "") if mode == "any" else ""
+        kind = {"files": "files", "any": "any"}.get(mode, "folder")
         try:
-            paths = await asyncio.to_thread(dialogs.pick, "files" if mode == "files" else "folder", start,
-                                            q.get("title", ""), FILTERS)
+            paths = await asyncio.to_thread(dialogs.pick, kind, start, q.get("title", ""), FILTERS,
+                                            q.get("ok_label", ""), this_folder)
         except dialogs.Unavailable as e:
             return web.json_response({"error": str(e)}, status=409)
         except Exception as e:  # pragma: no cover - a broken system dialog
             return web.json_response({"error": f"The system dialog failed: {e}"}, status=500)
-        # entries / folder written the short way (output/…, arbor:…, relative to input) where possible;
+        # entries / groups written the short way (output/…, arbor:…, relative to input) where possible;
         # dir = where the next dialog should start
-        out = {"paths": paths, "entries": [short_path(p) for p in paths],
-               "dir": paths[0] if mode != "files" else (os.path.dirname(paths[0]) if paths else "")}
-        if mode == "tree" and paths:
-            out["groups"] = tree_of(paths[0])
+        files, folders = [], []
+        for p in paths:
+            folder = dialogs.folder_of(p, this_folder) or (p if os.path.isdir(p) else None)
+            if folder:
+                folders.append(folder)
+            elif kind != "folder" and os.path.isfile(p):
+                files.append(p)
+        if kind == "folder":
+            folders = paths
+        out = {"paths": paths, "entries": [short_path(p) for p in (files if kind != "folder" else paths)],
+               "dir": folders[0] if folders else (os.path.dirname(files[0]) if files else "")}
+        if mode in ("tree", "any"):
+            out["groups"] = [g for f in folders for g in tree_of(f)]
         return web.json_response(out)
 
     @routes.get("/arbor/media/thumb")
