@@ -183,7 +183,8 @@ class PromptTemplate(IO.ComfyNode):
         return schema(
             "Arbor_PromptTemplate", "Prompt Template", CAT_DATA,
             "Fill {a} {b} … in a template from trees. Cross: every combination, as a grid-ready tree "
-            "(rows = a, columns = last variable). Zip: item by item.",
+            "(rows = a, columns = last variable). Zip: item by item, branches paired like Grasshopper "
+            "(in order, longest list); {name} is the branch's name.",
             [IO.String.Input("template", multiline=True, default="a photo of {a}, {b}"),
              IO.Combo.Input("mode", options=["cross", "zip"], default="cross"),
              IO.Autogrow.Input("vars", template=vars_, optional=True)],
@@ -205,9 +206,17 @@ class PromptTemplate(IO.ComfyNode):
         if not filled:
             return both(T.DataTree({(0,): [fill({})]}))
         if unwrap(mode) == "zip":
-            n = max(len(lists[k]) for k in filled)
-            return both(T.DataTree({(0,): [fill({k: lists[k][min(i, len(lists[k]) - 1)] for k in filled})
-                                           for i in range(n)]}))
+            # branches pair in order, items longest-list (Expression's matching); the tree keeps the
+            # branches and names of the input with the longest paths, and {name} is the branch's name
+            pairs, master = T.match_branches(*(given[k] for k in filled))
+            out = {}
+            for path, branches in pairs:
+                lengths = [len(b) if b else 0 for b in branches]
+                n = 0 if 0 in lengths else max(lengths)
+                name = master.label(path, label_of) or ""
+                out[path] = [fill({k: label_of(b[min(i, len(b) - 1)]) for k, b in zip(filled, branches)})
+                             .replace("{name}", name) for i in range(n)]
+            return both(T.DataTree(out, master.names))
         total = math.prod(len(lists[k]) for k in filled)
         if total > MAX_COMBOS:
             raise ValueError(f"Prompt Template: {total} combinations (max {MAX_COMBOS})")

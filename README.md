@@ -23,7 +23,7 @@ Panel (prompts) ────y──┘                ├─ y ──► CLIP Te
 per combination — plus the **shape** of the runs. **Image Grid** takes the decoded images and that shape and
 draws the sheet as rows × columns, already labelled: the shape names every row after its x value and holds
 the y values as columns.
-Open *Templates → ComfyUI-Arbor → arbor_xy_sampler* and pick your checkpoint.
+Open *Templates → ComfyUI-Arbor → arbor_xy_sampler* for a seed × prompt plot (or *arbor_xy_demo*, no model needed).
 
 ### Trees and plain data
 
@@ -160,10 +160,11 @@ so they run straight after installing; swap in your own with Load Media's **Add�
 
 | Workflow | Shows | Run |
 |---|---|---|
-| `arbor_qwen_storyboard` | A **Panel** storyboard (`# scene` lines, one shot per line) → **Expression** adds the style → **Tree to Data** flattens it for the sampler → **Image Grid** with one row per scene; **Construct Tree** + **Save by Path** write one folder per scene. | 6 images, 30 s |
+| `arbor_qwen_storyboard` | A **Panel** storyboard (`# scene` lines, one shot per line) → **Expression** adds the style → **Tree to Data** flattens it for the sampler → **Image Grid** with one row per scene, every frame captioned with its shot; **Construct Tree** + **Save by Path** write one folder per scene. | 6 images, 30 s |
 | `arbor_qwen_edit_by_scene` | Pictures × instructions as one tree: **Load Media** gives the frames per scene (Arbor's sample keyframes — Add… for your own), a **Panel** gives each scene its *own* edits (2 / 1 / 2). **Cross Reference** pairs them per shot, **XY Lists** in *zip* mode flattens both side by side for the edit model, **Construct Tree** + **Merge** put each original in front of its edits. | 10 edits, 75 s |
-| `arbor_h3_storyboard_video` | Keyframes (images), a motion line per shot and a sound line per scene (text) drive MiniMax H3 image-to-video **with audio**. Motion and sound are both one branch per scene, so the scene's sound line repeats for each of its shots (longest list); **Construct Tree** + **Save by Path** file the clips one folder per scene (`h3/0 · Arrival/000.mp4`), ready for **Load Folder** (*videos*); **Batch Pick** + **Construct Tree** make a contact sheet per scene, and **Video Grid** plays every clip at once, a row per scene. | 6 clips, 110 s |
+| `arbor_h3_storyboard_video` | Keyframes (images), a motion line per shot and a sound line per scene (text) drive **FastH3 OmniRef** (MiniMax H3 reference to video, 8 steps) **with audio**: every keyframe is the reference picture of its own clip. **Prompt Template** in *zip* mode writes the structured prompt per shot — motion and sound are both one branch per scene, so the scene's sound line repeats for each of its shots; **Construct Tree** + **Save by Path** file the clips one folder per scene (`h3/0 · Arrival/000.mp4`), **Video Grid** plays every clip at once, **Batch Pick** + **Construct Tree** make a contact sheet per scene. | 6 clips of 5 s, 5 min |
 | `arbor_folder_review` | No model: **Load Folder** reads the folders back as a named tree; contact sheet, **List Item** picks, **Reshape Tree** (flip matrix) compares shot by shot, **Compare Viewer** flips through. | — |
+| `arbor_qwen_slides` | A slide deck as pictures: a **Panel** with one `# page` per slide (the exact text in quotes, the layout, the picture) and one **Style** line that every page shares. Each page is drawn as a 16:9 slide, **Save by Path** saves the pages in order and **Image Grid** (*columns* 1) stacks them into one long picture of the deck. | 5 slides, 30 s |
 | `arbor_qwen_character_sheet` | Three uneven levels — character → outfit → pose (Mira 3 outfits, Theo 2). **List Item** splits description from outfits per branch, **Cross Reference** nests the poses and hands every outfit its character's description, **Expression** pairs them branch by branch (Grasshopper's matching), **Reshape Tree** *shift paths −1* folds outfits back into one row per character. | 15 images, 65 s |
 
 **Grids and sweeps:**
@@ -172,12 +173,12 @@ so they run straight after installing; swap in your own with Load Media's **Add�
 |---|---|---|
 | `arbor_qwen_prompt_matrix` | **Prompt Template** crosses 3 subjects × 3 styles; **Image Grid** lays the results out with the template's tree — rows named after the subjects. | 9 images, 50 s |
 | `arbor_qwen_lora_sweep` | **XY Lists** drives LoRA strength (from **Number Sequence**) against subjects (expanded by **Prompt Template** in zip mode); the seed is a **Number Slider**. | 9 images, 35 s |
-| `arbor_xy_demo` | No model: the XY idea with plain coloured images. | — |
-| `arbor_xy_sampler` | A classic XY plot for any SD-style checkpoint. | — |
+| `arbor_xy_demo` | No model: the XY idea with plain coloured pictures — **Number Sequence** × **Number Sequence** → **XY Lists** → **Image Grid**. | — |
+| `arbor_xy_sampler` | The classic XY plot: seeds × prompts through **XY Lists**, the sheet labelled by itself. | 9 images, 35 s |
 
 Models used:
 - **Qwen Image 2.1 Turbo** (`arbor_qwen_*`): `qwen_image_2.1_turbo_int8_convrot.safetensors` (diffusion_models), `qwen3vl_8b_int8_convrot.safetensors` (text_encoders), `texture_fix_vae_for_qwen_image_2.1_bf16.safetensors` for generating and `qwen_image_2.1_vae_bf16.safetensors` for editing (vae); text to image uses 8 steps, editing 6. The sweep uses the LoRA `Qwen-2.1\mj_aesthetic_qwen21_turbo_v2_632_r32.safetensors` — swap in any LoRA you have. Editing works best with concrete, local instructions (add, remove or recolor something).
-- **MiniMax H3** (`arbor_h3_*`): `minimax_h3_fl2va_pruned_int8_convrot.safetensors` (diffusion_models) + the LoRA `minimax h3\turbo\minimax_h3_turbo_v4_step600_ema_pruned_comfyui.safetensors` (6 steps), `qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors` (text_encoders, type *minimax*), `minimax_h3_video_vae_int8_convrot.safetensors` and `minimax_h3_audio_vae_fp32.safetensors` (vae). The demo renders 56 frames at 0.3 MP; raise both for real shots.
+- **FastH3 OmniRef** (`arbor_h3_*`): `fasth3_omniref_8step_pruned_int8_convrot.safetensors` (diffusion_models, from FastVideo/FastH3-OmniRef-Comfy; 8 steps, keep *Model Sparse Attention* on vsa and *SigmaShift* at 12 / 3), `qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors` (text_encoders, type *minimax*), `minimax_h3_video_vae_int8_convrot.safetensors` and `minimax_h3_audio_vae_fp32.safetensors` (vae). The demo renders 124 frames (~5 s) at 0.4 MP; raise the resolution for real shots.
 
 ## Install
 

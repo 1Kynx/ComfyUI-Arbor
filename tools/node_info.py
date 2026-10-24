@@ -619,9 +619,9 @@ node("Arbor_NumberSlider", en=dict(
 """))
 
 node("Arbor_PromptTemplate", en=dict(
-    desc="Fill {a} {b} … in a template from trees. Cross builds every combination as a grid-ready tree; zip pairs items one by one.",
-    inputs={"template": "Text with placeholders {a} … {f}. Placeholders without a connected value stay as they are.",
-            "mode": "cross: every combination — rows = {a}, columns = the last variable used. zip: item by item (longest list).",
+    desc="Fill {a} {b} … in a template from trees. Cross builds every combination as a grid-ready tree; zip pairs them branch by branch and item by item, like Grasshopper.",
+    inputs={"template": "Text with placeholders {a} … {f} (and, in zip mode, {name} — the branch's name). Placeholders without a connected value stay as they are. Several lines are fine.",
+            "mode": "cross: every combination — rows = {a}, columns = the last variable used. zip: branches paired in order, items one by one (longest list), the tree keeps its branches and names.",
             "vars": "Values for {a}, {b}, … — a tree, a list or a single value. Each connection adds the next letter."},
     outputs=["Every filled prompt as plain data — connect straight to a text encoder (it runs once per prompt).",
              "The prompts as a tree (cross: one branch per combination of the outer variables — ready for Image Grid)."],
@@ -633,14 +633,24 @@ Template `a photo of {a}, {b} style`, a = `cat, dog`, b = `oil, ink`:
 | cross | `{0}: cat·oil, cat·ink` · `{1}: dog·oil, dog·ink` |
 | zip | `{0}: cat·oil, dog·ink` |
 
+## Zip with branches
+Zip matches like **Expression**: branch by branch in order, item by item, the shorter list repeating its last item. Two shots per scene against one sound line per scene:
+```
+a = {0} Arrival: door, map · {1} Village: mist, steps
+b = {0}: horn · {1}: bells          template "{name}: {a} + {b}"
+→ {0} Arrival: "Arrival: door + horn", "Arrival: map + horn"
+  {1} Village: "Village: mist + bells", "Village: steps + bells"
+```
+`{name}` is the branch's name (a scene, a page). Template: *arbor_h3_storyboard_video* writes a structured video prompt per shot this way.
+
 ## Tips
 - Type the values in **Panels** (one per line) and connect their *data* output (or *tree*, to keep branches).
 - Connect *data* to a text encoder: the sampler runs once per prompt. Connect *tree* to **Image Grid**'s *shape* to lay the images out in the same rows. Up to 10 000 combinations.
 """), zh=dict(
     name="提示词模板",
-    desc="用数据树填充模板中的 {a} {b} ……。交叉：生成所有组合，直接得到可做网格的数据树；配对：逐项对应。",
-    inputs={"template": ("模板", "带占位符 {a} … {f} 的文本；没接值的占位符保持原样。"),
-            "mode": ("模式", "cross 交叉：所有组合——行 = {a}，列 = 最后一个用到的变量。zip 配对：逐项对应（最长列表）。"),
+    desc="用数据树填充模板中的 {a} {b} ……。交叉：生成所有组合，直接得到可做网格的数据树；配对：像 Grasshopper 一样按分支、逐项对应。",
+    inputs={"template": ("模板", "带占位符 {a} … {f} 的文本（配对模式下还有 {name}——分支的名字）；没接值的占位符保持原样。可以写多行。"),
+            "mode": ("模式", "cross 交叉：所有组合——行 = {a}，列 = 最后一个用到的变量。zip 配对：按顺序配对分支、逐项对应（最长列表），结果保留分支和名字。"),
             "vars": ("变量", "{a}、{b} …… 的取值——数据树、列表或单个值。每接一个就多出下一个字母。")},
     outputs=[("数据", "所有填好的提示词（普通数据）——可直接接文本编码器，每个提示词运行一次。"),
              ("数据树", "提示词数据树（交叉模式下，外层变量的每种组合一个分支——可直接做图像网格）。")],
@@ -651,6 +661,16 @@ Template `a photo of {a}, {b} style`, a = `cat, dog`, b = `oil, ink`:
 |---|---|
 | cross 交叉 | `{0}: cat·oil, cat·ink` · `{1}: dog·oil, dog·ink` |
 | zip 配对 | `{0}: cat·oil, dog·ink` |
+
+## 按分支配对
+配对模式与 **表达式** 的匹配方式相同：分支按顺序配对，分支内逐项对应，较短的列表重复最后一项。每个场景两个镜头，配上每个场景一句声音描述：
+```
+a = {0} Arrival: door, map · {1} Village: mist, steps
+b = {0}: horn · {1}: bells          模板 "{name}: {a} + {b}"
+→ {0} Arrival: "Arrival: door + horn", "Arrival: map + horn"
+  {1} Village: "Village: mist + bells", "Village: steps + bells"
+```
+`{name}` 是分支的名字（场景、页面）。模板 *arbor_h3_storyboard_video* 就是这样为每个镜头写结构化的视频提示词。
 
 ## 提示
 - 在 **面板** 里逐行输入取值，接它的 *数据* 输出（想保留分支就接 *数据树*）。

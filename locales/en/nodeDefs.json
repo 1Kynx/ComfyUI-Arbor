@@ -551,15 +551,15 @@
   },
   "Arbor_PromptTemplate": {
     "display_name": "Prompt Template",
-    "description": "Fill {a} {b} … in a template from trees. Cross builds every combination as a grid-ready tree; zip pairs items one by one.",
+    "description": "Fill {a} {b} … in a template from trees. Cross builds every combination as a grid-ready tree; zip pairs them branch by branch and item by item, like Grasshopper.",
     "inputs": {
       "template": {
         "name": "template",
-        "tooltip": "Text with placeholders {a} … {f}. Placeholders without a connected value stay as they are."
+        "tooltip": "Text with placeholders {a} … {f} (and, in zip mode, {name} — the branch's name). Placeholders without a connected value stay as they are. Several lines are fine."
       },
       "mode": {
         "name": "mode",
-        "tooltip": "cross: every combination — rows = {a}, columns = the last variable used. zip: item by item (longest list)."
+        "tooltip": "cross: every combination — rows = {a}, columns = the last variable used. zip: branches paired in order, items one by one (longest list), the tree keeps its branches and names."
       },
       "vars": {
         "name": "vars",

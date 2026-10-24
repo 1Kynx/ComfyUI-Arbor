@@ -139,7 +139,15 @@ def test_data_nodes():
     assert data == cross.flat(), "data = every prompt, flat"
     z = res(run(nodes_data.PromptTemplate, template="{a}/{b}/{c}", mode="zip", vars={"a": [a], "b": [b]}))[1]
     assert z.branches == {(0,): ["cat/oil/{c}", "dog/ink/{c}", "dog/pixel/{c}"]}, z.branches
-    one = res(run(nodes_data.PromptTemplate, template="{a}!", mode="cross", vars={"a": [7, 8]}))[1]
+    # zip pairs branches like Grasshopper: two shots per scene, one sound line per scene, {name} = scene
+    shots = T.DataTree({(0,): ["door", "map"], (1,): ["mist", "steps"]}, {(0,): "Arrival", (1,): "Village"})
+    sounds = T.DataTree({(0,): ["horn"], (1,): ["bells"]})
+    sz = res(run(nodes_data.PromptTemplate, template="{name}: {a} + {b}", mode="zip",
+                 vars={"a": [shots], "b": [sounds]}))[1]
+    assert sz.branches == {(0,): ["Arrival: door + horn", "Arrival: map + horn"],
+                           (1,): ["Village: mist + bells", "Village: steps + bells"]}, sz.branches
+    assert sz.names == shots.names
+    one =res(run(nodes_data.PromptTemplate, template="{a}!", mode="cross", vars={"a": [7, 8]}))[1]
     assert one.branches == {(0,): ["7!", "8!"]}
     # the trailing empty Autogrow slot arrives as [None] in a real run
     pt = res(run(nodes_data.PromptTemplate, template="{a}-{b}", mode="cross",
