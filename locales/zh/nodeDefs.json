@@ -399,7 +399,7 @@
       },
       "filename_prefix": {
         "name": "文件名前缀",
-        "tooltip": "output 文件夹内的目录 / 前缀（和「保存图像」一样不能存到 output 以外），支持 %date% 等变量。"
+        "tooltip": "保存位置：output 文件夹内的目录 / 前缀（arbor/run）、output/…，或绝对路径如 D:/renders/run——点输入框末尾的文件夹图标可以选择文件夹。只有 ComfyUI 只在本机监听时才能存到 output 以外。支持 %date% 等变量。"
       },
       "layout": {
         "name": "布局",

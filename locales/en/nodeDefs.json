@@ -399,7 +399,7 @@
       },
       "filename_prefix": {
         "name": "filename_prefix",
-        "tooltip": "Folder / prefix inside ComfyUI's output folder (saving outside it is not allowed, as with Save Image). Supports %date%-style variables."
+        "tooltip": "Where to save: a folder / prefix inside ComfyUI's output folder (arbor/run), output/…, or an absolute path such as D:/renders/run — the folder icon at the end of the box picks the folder. Outside the output folder only while ComfyUI listens on this computer alone. Supports %date%-style variables."
       },
       "layout": {
         "name": "layout",

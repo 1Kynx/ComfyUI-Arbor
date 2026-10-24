@@ -223,6 +223,12 @@ def register_routes():
                "dir": folders[0] if folders else (os.path.dirname(files[0]) if files else "")}
         if mode in ("tree", "any"):
             out["groups"] = [g for f in folders for g in tree_of(f)]
+        if kind == "folder" and paths:  # for Save by Path: the folder relative to output, when it is inside
+            out_dir = os.path.realpath(folder_paths.get_output_directory())
+            real = os.path.realpath(paths[0])
+            if _inside(real, out_dir):
+                rel = os.path.relpath(real, out_dir)
+                out["output_rel"] = "" if rel == "." else rel.replace(os.sep, "/")
         return web.json_response(out)
 
     @routes.get("/arbor/media/thumb")

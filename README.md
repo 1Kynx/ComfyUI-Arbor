@@ -125,7 +125,9 @@ Outputs everything plus one tree per kind, with the same groups.
 in, named after the folder; branches become subfolders (or filename parts) on the way out — `prefix/0-1/000.png`,
 or `prefix/0 · Arrival/…` for a named branch — with optional names per file. Pictures are saved as PNG, videos
 as MP4, audio as FLAC, text as TXT. Saved trees load back with their names; `output/…` paths read from
-ComfyUI's output folder, `arbor:…` from Arbor's sample media (what the templates use).
+ComfyUI's output folder, `arbor:…` from Arbor's sample media (what the templates use). Both path boxes have a
+folder icon (system dialog); Save by Path also takes absolute paths — outside the output folder only while
+ComfyUI listens on this computer alone (or with `ARBOR_SAVE_ANYWHERE=1`).
 
 **Smart Resize** — longest / shortest side, megapixels, fit, fill & crop or scale; snaps to multiples of
 8/16/32/64. Only the fields for the chosen mode are shown.

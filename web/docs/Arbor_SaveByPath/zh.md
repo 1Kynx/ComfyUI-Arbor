@@ -7,7 +7,7 @@
 - **数据树** `tree` · *任意*  
   要保存的内容——数据树、列表或单个值。图片批次逐帧保存，音频批次逐段保存；其它类型的值会跳过。
 - **文件名前缀** `filename_prefix` · *STRING*  
-  output 文件夹内的目录 / 前缀（和「保存图像」一样不能存到 output 以外），支持 %date% 等变量。
+  保存位置：output 文件夹内的目录 / 前缀（arbor/run）、output/…，或绝对路径如 D:/renders/run——点输入框末尾的文件夹图标可以选择文件夹。只有 ComfyUI 只在本机监听时才能存到 output 以外。支持 %date% 等变量。
 - **布局** `layout` · *COMBO (subfolders · flat)*  
   subfolders：前缀/0-1/000.png（有名字的分支：前缀/0-1 · 名字/000.png）· flat：前缀_0-1_000.png
 - **文件名** `names` · *任意，可选*  
@@ -27,6 +27,13 @@ output/arbor/h3/1 · Village/000.mp4
 图片存为 `000.png ……`，音频 `000.flac ……`，文字 `000.txt ……`——同一个分支里可以混合。**加载文件夹** 读取 `output/arbor/h3`（类型选 *videos*）就能把数据树连同名字读回来。模板：*arbor_h3_storyboard_video*。
 
 接入 *文件名* 后，文件按名字命名（`cat.png`、`dog.png`……）。
+
+## 保存到任意位置
+点前缀输入框末尾的 **文件夹图标**，用系统的文件夹窗口选择保存位置——前缀的最后一段（`run`、`batch`）保留为文件名部分。绝对路径前缀（`D:/renders/run`）会保存到 ComfyUI 的 output 文件夹以外：
+- ComfyUI 只在本机监听时（默认，没有 `--listen`）允许；
+- ComfyUI 对局域网开放时（`--listen`）拒绝，因为那样任何能提交工作流的人都能往你的硬盘任意位置写文件——如确实需要，设置环境变量 `ARBOR_SAVE_ANYWHERE=1` 即可允许。
+
+保存在 output 以外的文件，预览会从临时文件夹里的副本显示。
 
 ## 提示
 - 永远不会覆盖已有文件：会自动加 `_2`、`_3`…… 后缀。

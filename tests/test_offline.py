@@ -818,6 +818,31 @@ def test_files():
             with open(files.branches[(1,)][1], encoding="utf-8") as f:
                 assert f.read() == "a caption"
             raises(ValueError, save, T.DataTree({(0,): [123]}), "media/none")  # nothing it can save
+
+            # anywhere on disk: an absolute prefix, allowed while ComfyUI listens on this computer alone
+            from comfy.cli_args import args
+            assert nodes_files.save_root("arbor/run")[1:] == ("arbor/run", False)
+            assert nodes_files.save_root("output/arbor/run")[1:] == ("arbor/run", False)
+            assert nodes_files.save_root(os.path.join(out, "x", "run"))[1:] == (os.path.join("x", "run"), False)
+            elsewhere = os.path.join(d, "renders")
+            assert nodes_files.save_root(os.path.join(elsewhere, "run"))[2], "outside output"
+            listen, env = args.listen, os.environ.pop("ARBOR_SAVE_ANYWHERE", None)
+            try:
+                args.listen = "127.0.0.1"
+                far = save(imgs, os.path.join(elsewhere, "run"))
+                first = res(far)[0].branches[(1,)][0]
+                assert first.startswith(elsewhere) and os.path.exists(first), first
+                assert far.ui["images"][0]["type"] == "temp", "previews of files outside output go through temp"
+                args.listen = "0.0.0.0,::"
+                raises(PermissionError, save, imgs, os.path.join(elsewhere, "lan"))
+                os.environ["ARBOR_SAVE_ANYWHERE"] = "1"
+                assert os.path.exists(res(save(imgs, os.path.join(elsewhere, "lan")))[0].branches[(0,)][0])
+                assert res(save(imgs, "inside/run"))[0].branches[(0,)][0].startswith(out), "output still works"
+            finally:
+                args.listen = listen
+                os.environ.pop("ARBOR_SAVE_ANYWHERE", None)
+                if env is not None:
+                    os.environ["ARBOR_SAVE_ANYWHERE"] = env
         finally:
             folder_paths.set_output_directory(old)
     print("load / save: OK")

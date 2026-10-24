@@ -290,6 +290,59 @@ def write_txt(text: str, path: str, _meta: dict):
 WRITERS = {"png": write_png, "mp4": write_mp4, "flac": write_flac, "txt": write_txt}
 
 
+def _inside(path: str, root: str) -> bool:
+    try:
+        return os.path.commonpath([os.path.realpath(path), os.path.realpath(root)]) == os.path.realpath(root)
+    except ValueError:  # another drive
+        return False
+
+
+def save_root(prefix: str) -> tuple[str, str, bool]:
+    """(base folder, prefix relative to it, outside output?) for a filename prefix: relative or
+    output/… → inside ComfyUI's output folder; absolute → anywhere (the drive is the base, so %date%
+    style variables work in every part of the path)."""
+    out_dir = folder_paths.get_output_directory()
+    prefix = os.path.expanduser(str(prefix or "").strip().strip('"')) or "arbor/batch"
+    head, _, rest = prefix.replace("\\", "/").partition("/")
+    if head.lower() == "output" and not os.path.isabs(prefix):
+        prefix = rest or "batch"
+    if not os.path.isabs(prefix):
+        return out_dir, prefix, False
+    full = os.path.normpath(prefix)
+    if prefix.replace("\\", "/").endswith("/"):  # a folder: files are named by the branches only
+        full = os.path.join(full, "batch")
+    if _inside(full, out_dir):
+        return out_dir, os.path.relpath(full, out_dir), False
+    anchor = os.path.splitdrive(full)[0] + os.sep if os.name == "nt" else os.sep
+    return anchor, os.path.relpath(full, anchor), True
+
+
+def may_save_outside() -> bool:
+    """Outside the output folder only while ComfyUI listens on this computer alone (the default),
+    or when ARBOR_SAVE_ANYWHERE=1 says so — otherwise anyone who can queue a workflow could write
+    anywhere on the disk."""
+    if os.environ.get("ARBOR_SAVE_ANYWHERE", "").strip() in ("1", "true", "yes"):
+        return True
+    from comfy.cli_args import args
+    hosts = [h.strip() for h in str(getattr(args, "listen", "127.0.0.1") or "").split(",") if h.strip()]
+    return bool(hosts) and all(h in ("127.0.0.1", "localhost", "::1") for h in hosts)
+
+
+def _preview(target: str, kind: str, out_dir: str, payload) -> dict | None:
+    """/view reference for a saved file; files outside output (the page cannot open them) get a
+    copy in temp — a small picture for images, the file itself for video and audio."""
+    if _inside(target, out_dir):
+        sub = os.path.relpath(os.path.dirname(target), out_dir)
+        return {"filename": os.path.basename(target), "subfolder": "" if sub == "." else sub, "type": "output"}
+    from .preview import save_temp
+    if kind == "images":
+        return save_temp(to_pil(payload), "saved", max_px=1024, fmt="webp")
+    import shutil
+    path, ref = media.temp_file("saved", os.path.splitext(target)[1].lstrip("."))
+    shutil.copyfile(target, path)
+    return ref
+
+
 class SaveByPath(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
@@ -300,7 +353,9 @@ class SaveByPath(IO.ComfyNode):
             "audio as FLAC, text as TXT. Optional names give each file a readable name.",
             [tree_in("tree", tooltip="Pictures, videos, audio or text — a tree, a list or a single value"),
              IO.String.Input("filename_prefix", default="arbor/batch",
-                             tooltip="Folder / prefix inside the output folder; supports %date% style vars"),
+                             tooltip="Where to save: a folder / prefix inside the output folder, output/…, or an "
+                                     "absolute path such as D:/renders/run (outside output only while ComfyUI "
+                                     "listens on this computer alone). Supports %date% style vars"),
              IO.Combo.Input("layout", options=["subfolders", "flat"], default="subfolders",
                             tooltip="subfolders: prefix/0-1/000.png (named: prefix/0-1 · name/000.png) · "
                                     "flat: prefix_0-1_000.png"),
@@ -323,8 +378,12 @@ class SaveByPath(IO.ComfyNode):
         elif first[0] == "mp4":
             w, h = first[1].get_dimensions()
         out_dir = folder_paths.get_output_directory()
-        folder, filename, *_ = folder_paths.get_save_image_path(
-            str(unwrap(filename_prefix, "arbor/batch")), out_dir, w, h)
+        base, rel, outside = save_root(unwrap(filename_prefix, "arbor/batch"))
+        if outside and not may_save_outside():
+            raise PermissionError(
+                "Save by Path: saving outside the output folder is only allowed while ComfyUI listens on this "
+                "computer alone (no --listen). Set ARBOR_SAVE_ANYWHERE=1 to allow it anyway.")
+        folder, filename, *_ = folder_paths.get_save_image_path(rel, base, w, h)
         flat = unwrap(layout) == "flat"
         meta = _metadata(cls.hidden)
 
@@ -345,9 +404,7 @@ class SaveByPath(IO.ComfyNode):
                 row.append(target)
                 kind = {"png": "images", "mp4": "video", "flac": "audio"}.get(ext)
                 if kind and len(previews[kind]) < MAX_PREVIEWS:
-                    sub = os.path.relpath(os.path.dirname(target), out_dir)
-                    previews[kind].append({"filename": os.path.basename(target),
-                                           "subfolder": "" if sub == "." else sub, "type": "output"})
+                    previews[kind].append(_preview(target, kind, out_dir, payload))
             saved[path] = row
         ui = {}
         if previews["images"]:

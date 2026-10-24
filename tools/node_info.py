@@ -426,7 +426,7 @@ shots/             →  文件 {0}：2 个视频   文件夹：shots
 node("Arbor_SaveByPath", en=dict(
     desc="Save a tree keeping its structure — pictures as PNG, videos as MP4, audio as FLAC, text as TXT: one subfolder (or filename part) per branch, named after the branch when it has a name, with optional names per file.",
     inputs={"tree": "What to save — a tree, a list or a single value. Picture batches are saved frame by frame, audio batches clip by clip; other values are skipped.",
-            "filename_prefix": "Folder / prefix inside ComfyUI's output folder (saving outside it is not allowed, as with Save Image). Supports %date%-style variables.",
+            "filename_prefix": "Where to save: a folder / prefix inside ComfyUI's output folder (arbor/run), output/…, or an absolute path such as D:/renders/run — the folder icon at the end of the box picks the folder. Outside the output folder only while ComfyUI listens on this computer alone. Supports %date%-style variables.",
             "layout": "subfolders: prefix/0-1/000.png (a named branch: prefix/0-1 · name/000.png) · flat: prefix_0-1_000.png",
             "names": "Optional file names, matched to the files item by item (e.g. Load Folder's names or a Prompt Template)."},
     outputs=["Saved file paths, in the same tree layout (and with the same names)."],
@@ -440,6 +440,13 @@ Pictures become `000.png …`, audio `000.flac …`, text `000.txt …` — a br
 
 With *names* connected the files are called after the names instead (`cat.png`, `dog.png`, …).
 
+## Saving anywhere
+Click the **folder icon** at the end of the prefix box to pick the destination with the system's folder dialog — the last part of the prefix (`run`, `batch`) is kept as the file name part. An absolute prefix (`D:/renders/run`) saves outside ComfyUI's output folder:
+- allowed while ComfyUI listens on this computer alone (the default, no `--listen`);
+- refused when ComfyUI is opened to the network (`--listen`), because anyone who can queue a workflow could then write anywhere on your disk — set the environment variable `ARBOR_SAVE_ANYWHERE=1` to allow it anyway.
+
+Previews of files saved outside the output folder are shown from a copy in the temp folder.
+
 ## Tips
 - Existing files are never overwritten: a `_2`, `_3`, … suffix is added.
 - The workflow is embedded in every PNG, MP4 and FLAC, like ComfyUI's own save nodes.
@@ -447,7 +454,7 @@ With *names* connected the files are called after the names instead (`cat.png`, 
     name="按路径保存",
     desc="按数据树结构保存——图片存 PNG、视频存 MP4、音频存 FLAC、文字存 TXT：每个分支一个子文件夹（或文件名的一部分），有名字的分支用名字命名，可选为每个文件命名。",
     inputs={"tree": ("数据树", "要保存的内容——数据树、列表或单个值。图片批次逐帧保存，音频批次逐段保存；其它类型的值会跳过。"),
-            "filename_prefix": ("文件名前缀", "output 文件夹内的目录 / 前缀（和「保存图像」一样不能存到 output 以外），支持 %date% 等变量。"),
+            "filename_prefix": ("文件名前缀", "保存位置：output 文件夹内的目录 / 前缀（arbor/run）、output/…，或绝对路径如 D:/renders/run——点输入框末尾的文件夹图标可以选择文件夹。只有 ComfyUI 只在本机监听时才能存到 output 以外。支持 %date% 等变量。"),
             "layout": ("布局", "subfolders：前缀/0-1/000.png（有名字的分支：前缀/0-1 · 名字/000.png）· flat：前缀_0-1_000.png"),
             "names": ("文件名", "可选，与文件逐项对应的文件名（例如「加载文件夹」的文件名或提示词模板的输出）。")},
     outputs=[("路径", "已保存文件的路径，结构（和分支名）与输入相同。")],
@@ -460,6 +467,13 @@ output/arbor/h3/1 · Village/000.mp4
 图片存为 `000.png ……`，音频 `000.flac ……`，文字 `000.txt ……`——同一个分支里可以混合。**加载文件夹** 读取 `output/arbor/h3`（类型选 *videos*）就能把数据树连同名字读回来。模板：*arbor_h3_storyboard_video*。
 
 接入 *文件名* 后，文件按名字命名（`cat.png`、`dog.png`……）。
+
+## 保存到任意位置
+点前缀输入框末尾的 **文件夹图标**，用系统的文件夹窗口选择保存位置——前缀的最后一段（`run`、`batch`）保留为文件名部分。绝对路径前缀（`D:/renders/run`）会保存到 ComfyUI 的 output 文件夹以外：
+- ComfyUI 只在本机监听时（默认，没有 `--listen`）允许；
+- ComfyUI 对局域网开放时（`--listen`）拒绝，因为那样任何能提交工作流的人都能往你的硬盘任意位置写文件——如确实需要，设置环境变量 `ARBOR_SAVE_ANYWHERE=1` 即可允许。
+
+保存在 output 以外的文件，预览会从临时文件夹里的副本显示。
 
 ## 提示
 - 永远不会覆盖已有文件：会自动加 `_2`、`_3`…… 后缀。
