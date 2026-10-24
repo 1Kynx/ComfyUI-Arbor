@@ -36,7 +36,7 @@ Panel (text)─y─┘               └─ shape ──────────
 2. Connect *x* / *y* to the inputs you want to vary — ordinary nodes run once per combination.
 3. Connect the decoded images and *shape* to **Image Grid**. It lays them out as rows × columns and labels both: the rows are named after x, the columns are the y values.
 
-Example template: *Templates → ComfyUI-Arbor → arbor_xy_sampler*.
+Example template: *Templates → ComfyUI-Arbor → arbor_qwen_lora_sweep*.
 
 ## Flatten any tree
 Connect a tree to *x* only: *x* becomes its items as plain data (ordinary nodes run once per item) and *shape* is the tree itself. Run something per item, then put the results back with **Construct Tree** (*shape* = this shape). **Tree to Data** does the same in a smaller node.

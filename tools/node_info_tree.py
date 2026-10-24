@@ -36,7 +36,7 @@ Panel (text)─y─┘               └─ shape ──────────
 2. Connect *x* / *y* to the inputs you want to vary — ordinary nodes run once per combination.
 3. Connect the decoded images and *shape* to **Image Grid**. It lays them out as rows × columns and labels both: the rows are named after x, the columns are the y values.
 
-Example template: *Templates → ComfyUI-Arbor → arbor_xy_sampler*.
+Example template: *Templates → ComfyUI-Arbor → arbor_qwen_lora_sweep*.
 
 ## Flatten any tree
 Connect a tree to *x* only: *x* becomes its items as plain data (ordinary nodes run once per item) and *shape* is the tree itself. Run something per item, then put the results back with **Construct Tree** (*shape* = this shape). **Tree to Data** does the same in a smaller node.
@@ -68,7 +68,7 @@ Two trees of the same layout — pictures and their edit instructions from **Cro
 2. 把 *x* / *y* 接到想要变化的参数上——普通节点会对每种组合各运行一次。
 3. 解码后的图片和 *结构* 一起接 **图像网格**：自动排成行 × 列，行和列都自动标注——行以 x 命名，列是 y 的取值。
 
-示例模板：*模板 → ComfyUI-Arbor → arbor_xy_sampler*。
+示例模板：*模板 → ComfyUI-Arbor → arbor_qwen_lora_sweep*。
 
 ## 展开任意数据树
 只接 *x*：*x* 输出它的所有项（普通数据，普通节点逐项运行），*结构* 就是这棵树本身。逐项处理后，用 **构建数据树**（*结构* 接这里）把结果收回原来的分支。**数据树转数据** 用更小的节点做同样的事。

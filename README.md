@@ -23,7 +23,7 @@ Panel (prompts) ────y──┘                ├─ y ──► CLIP Te
 per combination — plus the **shape** of the runs. **Image Grid** takes the decoded images and that shape and
 draws the sheet as rows × columns, already labelled: the shape names every row after its x value and holds
 the y values as columns.
-Open *Templates → ComfyUI-Arbor → arbor_xy_sampler* for a seed × prompt plot (or *arbor_xy_demo*, no model needed).
+Open *Templates → ComfyUI-Arbor → arbor_qwen_lora_sweep* for an XY plot of LoRA strength × subject.
 
 ### Trees and plain data
 
@@ -170,10 +170,7 @@ so they run straight after installing; swap in your own with Load Media's **Add�
 
 | Workflow | Shows | Run |
 |---|---|---|
-| `arbor_qwen_prompt_matrix` | **Prompt Template** crosses 3 subjects × 3 styles; **Image Grid** lays the results out with the template's tree — rows named after the subjects. | 9 images, 50 s |
 | `arbor_qwen_lora_sweep` | **XY Lists** drives LoRA strength (from **Number Sequence**) against subjects (expanded by **Prompt Template** in zip mode); the seed is a **Number Slider**. | 9 images, 35 s |
-| `arbor_xy_demo` | No model: the XY idea with plain coloured pictures — **Number Sequence** × **Number Sequence** → **XY Lists** → **Image Grid**. | — |
-| `arbor_xy_sampler` | The classic XY plot: seeds × prompts through **XY Lists**, the sheet labelled by itself. | 9 images, 35 s |
 
 Models used:
 - **Qwen Image 2.1 Turbo** (`arbor_qwen_*`): `qwen_image_2.1_turbo_int8_convrot.safetensors` (diffusion_models), `qwen3vl_8b_int8_convrot.safetensors` (text_encoders), `texture_fix_vae_for_qwen_image_2.1_bf16.safetensors` for generating and `qwen_image_2.1_vae_bf16.safetensors` for editing (vae); text to image uses 8 steps, editing 6. The sweep uses the LoRA `Qwen-2.1\mj_aesthetic_qwen21_turbo_v2_632_r32.safetensors` — swap in any LoRA you have. Editing works best with concrete, local instructions (add, remove or recolor something).
