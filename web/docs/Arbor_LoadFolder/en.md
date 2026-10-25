@@ -41,7 +41,7 @@ Videos go on to **Tree to Data** → any node with a VIDEO input (Get Video Comp
 The **folder icon** at the end of the folder box opens the system's folder dialog. A folder inside ComfyUI's output folder is written as `output/…`. The dialog opens on the computer ComfyUI runs on; from another computer, type the path.
 
 ## Round trip
-Folders saved by **Save by Path** from named branches (`0 · Arrival`, `1 · The village`) load back with their names (*Arrival*, *The village*) and in their order. Template: *arbor_folder_review*.
+Folders saved by **Save by Path** from named branches (`0 · Arrival`, `1 · The village`) load back with their names (*Arrival*, *The village*) and in their order.
 
 ## Tips
 - The node re-runs automatically when files are added, removed or changed.

@@ -6,6 +6,8 @@ Compare images, videos and audio of any size: flip through them with the slider,
 
 - **images** · *IMAGE / VIDEO / AUDIO / TREE × N, optional, grows as you connect*  
   What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name.
+- **labels** · *any, optional*  
+  Optional: a label for every item, matched branch by branch and item by item — one list serves every branch. It follows the branch name: Mei · Back, Kai · Close-up.
 
 ## How to use
 - Connect one or more inputs: pictures, videos (e.g. Load Folder with kind *videos*, Create Video) or audio. They can be mixed.
@@ -15,6 +17,9 @@ Compare images, videos and audio of any size: flip through them with the slider,
 - Audio shows its waveform; click it to jump.
 - **Real** keeps relative sizes (a 512 px image looks half as big as a 1024 px one); **Fit** scales every picture to fill the stage.
 - Double-click the stage (or the ↗ button) to open the current file in a new tab.
+
+## Labels
+Slides take the name of their branch. Connect *labels* to name the items too: a tree of pictures by person (`Mei`, `Kai`) with the labels `original, 3/4 left, profile, back …` flips through as *Mei · original*, *Mei · 3/4 left* … *Kai · back*. Template: *arbor_qwen_camera_angles*.
 
 ## Tips
 - Feed it a native list (e.g. the per-item results of an XY run): it receives the whole list at once instead of running per item.

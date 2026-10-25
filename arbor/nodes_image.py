@@ -18,16 +18,20 @@ MAX_SLIDES = 64
 
 # ======================================================================= Compare Viewer
 
-def _slides(slot: str, value) -> list[tuple[str, object, str]]:
+def _slides(slot: str, value, labels: T.DataTree | None = None) -> list[tuple[str, object, str]]:
     """(kind, value, label) for everything a socket value holds that can be compared: every frame
     of an image batch, every video, every clip of an audio batch — a batch, a list or a tree.
-    Items of a named branch are labelled with its name, the rest with the slot name;
-    a label shared by several slides is numbered."""
+    Items of a named branch are labelled with its name, the rest with the slot name; with
+    ``labels`` (matched branch by branch, item by item) an item's label follows the branch name.
+    A label shared by several slides is numbered."""
     tree = to_tree(value)
     found = []
-    for p, items in tree.items():
-        lab = tree.label(p, label_of) or slot
-        for v in items:
+    for b, (p, items) in enumerate(tree.items()):
+        branch = tree.label(p, label_of)
+        for j, v in enumerate(items):
+            own = T.match_item(labels, b, j) if labels else None
+            own = label_of(own) if own is not None else None
+            lab = " · ".join(x for x in (branch, own) if x) or slot
             if is_image(v):
                 found += [("image", v[i], lab) for i in range(v.shape[0])]
             elif is_video(v):
@@ -71,16 +75,21 @@ class ImageSlider(IO.ComfyNode):
             "Arbor_ImageSlider", "Compare Viewer", CAT_MEDIA,
             "Compare images, videos and audio of any size. Flip through them with the slider, or wipe A against B; "
             "videos and audio play in sync and keep their place when you switch.",
-            [IO.Autogrow.Input("images", template=items, optional=True)], [],
+            [IO.Autogrow.Input("images", template=items, optional=True),
+             tree_in("labels", optional=True,
+                     tooltip="Optional: a label per item, matched branch by branch and item by item (one list "
+                             "serves every branch); shown after the branch name — 'Mei · Back'")],
+            [],
             ["image compare", "video compare", "audio compare", "compare", "before after", "ab test",
              "image slider", "image viewer", "video viewer", "flipbook"],
             is_output_node=True)
 
     @classmethod
-    def execute(cls, images: IO.Autogrow.Type = None) -> IO.NodeOutput:
+    def execute(cls, images: IO.Autogrow.Type = None, labels=None) -> IO.NodeOutput:
+        label_tree = to_tree(labels) if connected(labels) else None
         slides = []
         for name, value in (images or {}).items():
-            for kind, v, label in _slides(name, value)[:MAX_SLIDES - len(slides)]:
+            for kind, v, label in _slides(name, value, label_tree)[:MAX_SLIDES - len(slides)]:
                 slides.append(_slide(kind, v, label))
         return IO.NodeOutput(ui={"arbor_slider": [{"slides": slides}]})
 

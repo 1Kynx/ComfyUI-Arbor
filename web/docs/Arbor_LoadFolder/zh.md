@@ -41,7 +41,7 @@ shots/             →  文件 {0}：2 个视频   文件夹：shots
 点文件夹输入框末尾的 **文件夹图标** 打开系统的文件夹窗口。位于 ComfyUI output 文件夹里的文件夹会写成 `output/…`。窗口在运行 ComfyUI 的电脑上打开；从其它电脑访问时请直接输入路径。
 
 ## 往返
-**按路径保存** 按有名字的分支保存的文件夹（`0 · Arrival`、`1 · The village`）读回来时会恢复名字（*Arrival*、*The village*）和顺序。模板：*arbor_folder_review*。
+**按路径保存** 按有名字的分支保存的文件夹（`0 · Arrival`、`1 · The village`）读回来时会恢复名字（*Arrival*、*The village*）和顺序。
 
 ## 提示
 - 文件有增删改时，节点会自动重新读取。

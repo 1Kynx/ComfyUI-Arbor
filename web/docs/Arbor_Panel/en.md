@@ -51,4 +51,4 @@ paper map
 # The village
 misty roofs
 ```
-→ `{0} Arrival: [night train, paper map]`, `{1} The village: [misty roofs]` — a storyboard (template *arbor_qwen_storyboard*).
+→ `{0} Arrival: [night train, paper map]`, `{1} The village: [misty roofs]` — a storyboard.

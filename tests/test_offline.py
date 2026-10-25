@@ -636,6 +636,10 @@ def test_image_nodes():
     tree_ui = run(nodes_image.ImageSlider, images={"image0": [scenes]}).ui
     assert [s["label"] for s in tree_ui["arbor_slider"][0]["slides"]] == [
         "Arrival", "Village · 1/2", "Village · 2/2", "image0"], "an image tree works too, named branches label it"
+    angles = T.DataTree({(0,): [img[:1], img[1:]], (1,): [img[:1], img[1:]]}, {(0,): "Mei", (1,): "Kai"})
+    labelled = run(nodes_image.ImageSlider, images={"image0": [angles]}, labels=["original", "back"]).ui
+    assert [s["label"] for s in labelled["arbor_slider"][0]["slides"]] == [
+        "Mei · original", "Mei · back", "Kai · original", "Kai · back"], "one label list serves every branch"
     slot = nodes_image.ImageSlider.define_schema().inputs[0].template.input
     assert "IMAGE" in slot.get_io_type() and "ARBOR_TREE" in slot.get_io_type()
 

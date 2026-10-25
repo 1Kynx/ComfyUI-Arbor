@@ -239,7 +239,7 @@ node("Arbor_ListItem", en=dict(
 `:-1` and `1:` pair every item with the next one (a → b, b → c, c → d): *arbor_h3_continuous_shots* takes its first and last frames this way. The same syntax picks frames in **Batch Pick**.
 
 ## One pick per branch
-Connect a tree of indices to *index*: `{0}: 2 · {1}: 0 · {2}: 1, 3` takes item 2 of the first branch, item 0 of the second and items 1 and 3 of the third. Type the picks in a **Panel** one line per branch and **Reshape Tree** *graft* them — *arbor_qwen_pick_takes* chooses the best take of every shot this way.
+Connect a tree of indices to *index*: `{0}: 2 · {1}: 0 · {2}: 1, 3` takes item 2 of the first branch, item 0 of the second and items 1 and 3 of the third. Type the picks in a **Panel** one line per branch and **Reshape Tree** *graft* them — to keep the best take of every shot, for instance.
 """), zh=dict(
     name="列表取项",
     desc="按序号、列表、范围或切片从每个分支取项——一个节点包含 Grasshopper 的 List Item 和 Sub List。",
@@ -262,7 +262,7 @@ Connect a tree of indices to *index*: `{0}: 2 · {1}: 0 · {2}: 1, 3` takes item
 `:-1` 和 `1:` 能把每一项和下一项配成对（a → b、b → c、c → d）：模板 *arbor_h3_continuous_shots* 就这样取首帧和尾帧。**批次挑选** 用的是同样的写法。
 
 ## 每个分支各取各的
-给 *序号* 接一棵序号数据树：`{0}: 2 · {1}: 0 · {2}: 1, 3` 取第一个分支的第 2 项、第二个分支的第 0 项、第三个分支的第 1 和第 3 项。在 **面板** 里每个分支写一行，再用 **重塑数据树** 的 *升树* 拆开——模板 *arbor_qwen_pick_takes* 就这样为每个镜头选出最好的一版。
+给 *序号* 接一棵序号数据树：`{0}: 2 · {1}: 0 · {2}: 1, 3` 取第一个分支的第 2 项、第二个分支的第 0 项、第三个分支的第 1 和第 3 项。在 **面板** 里每个分支写一行，再用 **重塑数据树** 的 *升树* 拆开——例如为每个镜头留下最好的一版。
 """))
 
 PATTERN_EN = ("Typed repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), or connect BOOLEAN values / a boolean tree "

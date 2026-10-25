@@ -26,7 +26,8 @@ def node(node_id, en, zh):
 node("Arbor_ImageSlider", en=dict(
     name="Compare Viewer",
     desc="Compare images, videos and audio of any size: flip through them with the slider, or wipe A against B. Videos and audio play in sync and keep their place when you switch, so an A/B comparison stays on the same moment.",
-    inputs={"images": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."},
+    inputs={"images": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name.",
+            "labels": "Optional: a label for every item, matched branch by branch and item by item — one list serves every branch. It follows the branch name: Mei · Back, Kai · Close-up."},
     outputs=[],
     doc="""## How to use
 - Connect one or more inputs: pictures, videos (e.g. Load Folder with kind *videos*, Create Video) or audio. They can be mixed.
@@ -37,6 +38,9 @@ node("Arbor_ImageSlider", en=dict(
 - **Real** keeps relative sizes (a 512 px image looks half as big as a 1024 px one); **Fit** scales every picture to fill the stage.
 - Double-click the stage (or the ↗ button) to open the current file in a new tab.
 
+## Labels
+Slides take the name of their branch. Connect *labels* to name the items too: a tree of pictures by person (`Mei`, `Kai`) with the labels `original, 3/4 left, profile, back …` flips through as *Mei · original*, *Mei · 3/4 left* … *Kai · back*. Template: *arbor_qwen_camera_angles*.
+
 ## Tips
 - Feed it a native list (e.g. the per-item results of an XY run): it receives the whole list at once instead of running per item.
 - Videos already in ComfyUI's output / input folder play straight from there; others are written to the temp folder first.
@@ -45,7 +49,8 @@ node("Arbor_ImageSlider", en=dict(
 """), zh=dict(
     name="对比查看器",
     desc="对比任意尺寸的图片、视频和音频：拖动滑条逐个切换，或用「对比」模式把 A 和 B 放在一起比较。视频和音频同步播放，切换时保持在同一时刻。",
-    inputs={"images": ("输入", "要对比的内容——图片、视频或音频：单个、批次、列表或数据树都可以。每连一个就会多出一个输入口；图片批次每帧一页，音频批次每段一页（最多 64 页）。有名字的分支（加载的文件夹、分镜的场景）用名字标注。")},
+    inputs={"images": ("输入", "要对比的内容——图片、视频或音频：单个、批次、列表或数据树都可以。每连一个就会多出一个输入口；图片批次每帧一页，音频批次每段一页（最多 64 页）。有名字的分支（加载的文件夹、分镜的场景）用名字标注。"),
+            "labels": ("标签", "可选，每一项的标签，按分支、逐项对应——一个列表可以用于所有分支。标签跟在分支名后面：Mei · Back、Kai · Close-up。")},
     outputs=[],
     doc="""## 用法
 - 接入一个或多个输入：图片、视频（例如「加载文件夹」类型选 *videos*、「创建视频」）或音频，可以混合。
@@ -55,6 +60,9 @@ node("Arbor_ImageSlider", en=dict(
 - 音频显示波形，点击波形可以跳转。
 - **原比例**：保持图片之间的相对大小（512 像素的图看起来是 1024 的一半）；**填充**：每张图都铺满画面。
 - 双击画面（或点 ↗ 按钮）在新标签页打开当前文件。
+
+## 标签
+每页默认用所在分支的名字。接上 *标签* 可以给每一项命名：按人物分支的图片（`Mei`、`Kai`）配上标签 `original, 3/4 left, profile, back ……`，翻页时显示 *Mei · original*、*Mei · 3/4 left* …… *Kai · back*。模板：*arbor_qwen_camera_angles*。
 
 ## 提示
 - 可以直接接原生列表（例如 XY 批量运行的逐项结果），节点会一次收下整个列表，而不是逐项运行。
@@ -437,7 +445,7 @@ Videos go on to **Tree to Data** → any node with a VIDEO input (Get Video Comp
 The **folder icon** at the end of the folder box opens the system's folder dialog. A folder inside ComfyUI's output folder is written as `output/…`. The dialog opens on the computer ComfyUI runs on; from another computer, type the path.
 
 ## Round trip
-Folders saved by **Save by Path** from named branches (`0 · Arrival`, `1 · The village`) load back with their names (*Arrival*, *The village*) and in their order. Template: *arbor_folder_review*.
+Folders saved by **Save by Path** from named branches (`0 · Arrival`, `1 · The village`) load back with their names (*Arrival*, *The village*) and in their order.
 
 ## Tips
 - The node re-runs automatically when files are added, removed or changed.
@@ -467,7 +475,7 @@ shots/             →  文件 {0}：2 个视频   文件夹：shots
 点文件夹输入框末尾的 **文件夹图标** 打开系统的文件夹窗口。位于 ComfyUI output 文件夹里的文件夹会写成 `output/…`。窗口在运行 ComfyUI 的电脑上打开；从其它电脑访问时请直接输入路径。
 
 ## 往返
-**按路径保存** 按有名字的分支保存的文件夹（`0 · Arrival`、`1 · The village`）读回来时会恢复名字（*Arrival*、*The village*）和顺序。模板：*arbor_folder_review*。
+**按路径保存** 按有名字的分支保存的文件夹（`0 · Arrival`、`1 · The village`）读回来时会恢复名字（*Arrival*、*The village*）和顺序。
 
 ## 提示
 - 文件有增删改时，节点会自动重新读取。
@@ -572,7 +580,7 @@ paper map
 # The village
 misty roofs
 ```
-→ `{0} Arrival: [night train, paper map]`, `{1} The village: [misty roofs]` — a storyboard (template *arbor_qwen_storyboard*).
+→ `{0} Arrival: [night train, paper map]`, `{1} The village: [misty roofs]` — a storyboard.
 """), zh=dict(
     name="面板",
     desc="查看任何数据，或直接输入数据。接入时：显示输入并原样传出。未接入时：每行是一项，空一行开始新分支，`# 标题` 行给分支命名。（对应 Grasshopper 的 Panel）",
@@ -613,7 +621,7 @@ a dog
 # 村庄
 晨雾中的屋顶
 ```
-→ `{0} 到站: [夜行列车, 纸质地图]`、`{1} 村庄: [晨雾中的屋顶]`——一份分镜脚本（模板 *arbor_qwen_storyboard*）。
+→ `{0} 到站: [夜行列车, 纸质地图]`、`{1} 村庄: [晨雾中的屋顶]`——一份分镜脚本。
 """))
 
 node("Arbor_NumberSlider", en=dict(

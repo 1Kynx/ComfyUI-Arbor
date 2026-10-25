@@ -70,6 +70,10 @@
       "images_image15": {
         "name": "image15",
         "tooltip": "What to compare — images, videos or audio: a single value, a batch, a list or a tree. Every input grows a new slot; image batches give one slide per frame, audio batches one per clip (max 64 slides). Items of a named branch (a Load Folder folder, a storyboard scene) are labelled with its name."
+      },
+      "labels": {
+        "name": "labels",
+        "tooltip": "Optional: a label for every item, matched branch by branch and item by item — one list serves every branch. It follows the branch name: Mei · Back, Kai · Close-up."
       }
     }
   },
