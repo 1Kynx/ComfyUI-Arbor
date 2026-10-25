@@ -7,7 +7,7 @@ requires-python = ">=3.10"
 dependencies = []
 
 [project.urls]
-Repository = "https://github.com/KunLnn/ComfyUI-Arbor"
+Repository = "https://github.com/1Kynx/ComfyUI-Arbor"
 
 [tool.comfy]
 PublisherId = "kunlnn"
