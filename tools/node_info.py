@@ -517,7 +517,7 @@ Tree `{0} Arrival: 2 clips · {1} Village: 1 clip`, prefix `arbor/h3`, layout *s
 output/arbor/h3/0 · Arrival/000.mp4  001.mp4
 output/arbor/h3/1 · Village/000.mp4
 ```
-Pictures become `000.png …`, audio `000.flac …`, text `000.txt …` — a branch may mix them. **Load Folder** with `output/arbor/h3_two_characters` (kind *videos*) reads the tree back, names included. Template: *arbor_h3_storyboard_video*.
+Pictures become `000.png …`, audio `000.flac …`, text `000.txt …` — a branch may mix them. **Load Folder** with `output/arbor/h3_two_characters` (kind *videos*) reads the tree back, names included. Template: *arbor_h3_two_characters*.
 
 With *names* connected the files are called after the names instead (`cat.png`, `dog.png`, …).
 
@@ -545,7 +545,7 @@ Previews of files saved outside the output folder are shown from a copy in the t
 output/arbor/h3/0 · Arrival/000.mp4  001.mp4
 output/arbor/h3/1 · Village/000.mp4
 ```
-图片存为 `000.png ……`，音频 `000.flac ……`，文字 `000.txt ……`——同一个分支里可以混合。**加载文件夹** 读取 `output/arbor/h3_two_characters`（类型选 *videos*）就能把数据树连同名字读回来。模板：*arbor_h3_storyboard_video*。
+图片存为 `000.png ……`，音频 `000.flac ……`，文字 `000.txt ……`——同一个分支里可以混合。**加载文件夹** 读取 `output/arbor/h3_two_characters`（类型选 *videos*）就能把数据树连同名字读回来。模板：*arbor_h3_two_characters*。
 
 接入 *文件名* 后，文件按名字命名（`cat.png`、`dog.png`……）。
 
