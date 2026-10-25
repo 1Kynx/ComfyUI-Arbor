@@ -184,7 +184,11 @@ Models used:
 
 ## Install
 
-Clone into `ComfyUI/custom_nodes/` and restart. No extra dependencies.
+Clone into `ComfyUI/custom_nodes/` and restart. No extra dependencies. Tested on ComfyUI 0.42.
+
+## License
+
+MIT — see `LICENSE`.
 
 ## Tests
 
