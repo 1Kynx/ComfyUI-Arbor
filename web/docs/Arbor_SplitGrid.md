@@ -27,6 +27,9 @@ An image model that draws all the frames of a storyboard in one picture keeps th
 
 Template: *arbor_h3_continuous_shots* draws a 3 × 2 sheet with MOSS-Image, cuts it into six keyframes and animates from each one to the next.
 
+## Checking the cuts
+After a run the node shows the sheet with everything that was cut away shaded red and every panel outlined and numbered (0, 1, 2 … — the numbers **List Item** uses). A panel that swallowed a gutter, or two panels merged into one, shows at a glance.
+
 ## Tips
 - The gutters only need to be roughly where an even split would cut; drawn grids are rarely exact and the found gutter wins.
 - Panels come out a few pixels apart in size; video and image models resize them anyway, **Smart Resize** evens them out.

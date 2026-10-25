@@ -175,6 +175,9 @@ An image model that draws all the frames of a storyboard in one picture keeps th
 
 Template: *arbor_h3_continuous_shots* draws a 3 × 2 sheet with MOSS-Image, cuts it into six keyframes and animates from each one to the next.
 
+## Checking the cuts
+After a run the node shows the sheet with everything that was cut away shaded red and every panel outlined and numbered (0, 1, 2 … — the numbers **List Item** uses). A panel that swallowed a gutter, or two panels merged into one, shows at a glance.
+
 ## Tips
 - The gutters only need to be roughly where an even split would cut; drawn grids are rarely exact and the found gutter wins.
 - Panels come out a few pixels apart in size; video and image models resize them anyway, **Smart Resize** evens them out.
@@ -193,6 +196,9 @@ Template: *arbor_h3_continuous_shots* draws a 3 × 2 sheet with MOSS-Image, cuts
 让图像模型在一张图里画出分镜的所有画面，人物、光线和色调会比分开生成一致得多。在提示词里写明网格（*six panels, three columns and two rows, thin white gutters, no text*），图片比例取各格拼起来的比例（3 格 16:9 × 2 行 ≈ 8:3，例如 3264 × 1216），再用本节点拆开。
 
 模板 *arbor_h3_continuous_shots* 用 MOSS-Image 画一张 3 × 2 的分镜表，拆成六张关键帧，再逐张过渡生成视频。
+
+## 检查切线
+运行后节点上会显示网格图：被裁掉的部分标成红色，每一格画框并编号（0、1、2……——与 **列表取项** 的序号一致）。某格吞进了留白、或两格连在一起，一眼就能看出来。
 
 ## 提示
 - 留白只要大致在均匀切分的位置附近即可；模型画的网格很少完全均匀，以找到的留白为准。

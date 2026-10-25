@@ -661,7 +661,9 @@ def test_image_nodes():
     for r, (y0, y1) in enumerate(ys):
         for c, (x0, x1) in enumerate(xs):
             sheet[0, y0:y1, x0:x1] = torch.rand(y1 - y0, x1 - x0, 3) * 0.5 + (r * 3 + c) / 12
-    flat, tree = res(run(nodes_image.SplitGrid, image=[sheet], rows=2, columns=3, find_gutters=True, inset=0))
+    cut = run(nodes_image.SplitGrid, image=[sheet], rows=2, columns=3, find_gutters=True, inset=0)
+    flat, tree = res(cut)
+    assert len(cut.ui["images"]) == 1, "a preview of the cuts on the node"
     assert len(flat) == 6 and list(tree.branches) == [(0,)]
     assert [tuple(p.shape[1:3]) for p in flat] == [(y1 - y0, x1 - x0) for y0, y1 in ys for x0, x1 in xs], \
         "gutters and margins found and left out, panels in reading order"

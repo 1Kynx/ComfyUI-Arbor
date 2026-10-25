@@ -430,6 +430,33 @@ def grid_spans(flat: np.ndarray, n: int) -> list[tuple[int, int]]:
     return [(edges[2 * i], edges[2 * i + 1]) for i in range(n)]
 
 
+MAX_CUT_PREVIEWS = 4
+
+
+def cut_preview(frame: torch.Tensor, boxes: list[tuple[int, int, int, int]], max_px: int = 1280):
+    """The sheet with what was cut away shaded red and every panel outlined and numbered."""
+    from PIL import Image, ImageDraw
+    from .grid import _font
+
+    img = to_pil(frame).convert("RGBA")
+    s = min(1.0, max_px / max(img.size))
+    if s < 1:
+        img = img.resize((round(img.width * s), round(img.height * s)), Image.LANCZOS)
+    boxes = [tuple(round(v * s) for v in box) for box in boxes]
+    shade = Image.new("RGBA", img.size, (230, 50, 50, 120))
+    draw = ImageDraw.Draw(shade)
+    for x0, y0, x1, y1 in boxes:
+        draw.rectangle([x0, y0, x1 - 1, y1 - 1], fill=(0, 0, 0, 0))
+    img = Image.alpha_composite(img, shade)
+    draw = ImageDraw.Draw(img)
+    size = max(14, round(min(img.size) * 0.05))
+    for k, (x0, y0, x1, y1) in enumerate(boxes):
+        draw.rectangle([x0, y0, x1 - 1, y1 - 1], outline=(255, 220, 60, 255), width=max(2, size // 8))
+        draw.text((x0 + size // 3, y0 + size // 4), str(k), font=_font(size), fill=(255, 220, 60, 255),
+                  stroke_width=max(1, size // 10), stroke_fill=(0, 0, 0, 255))
+    return img.convert("RGB")
+
+
 class SplitGrid(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
@@ -455,7 +482,7 @@ class SplitGrid(IO.ComfyNode):
     def execute(cls, image, rows, columns, find_gutters, inset) -> IO.NodeOutput:
         rows, cols, inset = int(unwrap(rows)), int(unwrap(columns)), int(unwrap(inset))
         sheets = [im[k:k + 1] for im in image if im is not None for k in range(im.shape[0])]
-        out = {}
+        out, previews = {}, []
         for b, sheet in enumerate(sheets):
             h, w = int(sheet.shape[1]), int(sheet.shape[2])
             if unwrap(find_gutters):
@@ -463,14 +490,17 @@ class SplitGrid(IO.ComfyNode):
                 ys, xs = grid_spans(flat_lines(gray, 1), rows), grid_spans(flat_lines(gray, 0), cols)
             else:
                 ys, xs = even_spans(h, rows), even_spans(w, cols)
-            panels = []
+            panels, boxes = [], []
             for y0, y1 in ys:
                 for x0, x1 in xs:
                     dy, dx = min(inset, (y1 - y0 - 1) // 2), min(inset, (x1 - x0 - 1) // 2)
                     panels.append(sheet[:, y0 + dy:y1 - dy, x0 + dx:x1 - dx])
+                    boxes.append((x0 + dx, y0 + dy, x1 - dx, y1 - dy))
             out[(b,)] = panels
+            if b < MAX_CUT_PREVIEWS:
+                previews.append(save_temp(cut_preview(sheet[0], boxes), "split", fmt="webp"))
         tree = T.DataTree(out or {(0,): []})
-        return IO.NodeOutput(tree.flat(), tree)
+        return IO.NodeOutput(tree.flat(), tree, ui={"images": previews})
 
 
 NODES = [ImageSlider, ImageGrid, VideoGrid, SmartResize, BatchPick, SplitGrid]
