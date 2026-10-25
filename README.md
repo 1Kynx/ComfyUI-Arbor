@@ -53,7 +53,7 @@ Branches can hold branches — `{scene;shot}`, `{character;outfit}` — and the 
 
 | Category | Nodes |
 |---|---|
-| **Arbor/Media** | Compare Viewer · Image Grid · Video Grid · Load Media · Load Folder · Save by Path · Smart Resize · Batch Pick |
+| **Arbor/Media** | Compare Viewer · Image Grid · Video Grid · Split Grid · Load Media · Load Folder · Save by Path · Smart Resize · Batch Pick |
 | **Arbor/Data** | Panel · Number Slider · Number Sequence · Split Text · Prompt Template · Expression · Random · Collect · Index Switch |
 | **Arbor/Tree** | XY Lists · Tree to Data · Construct Tree · Reshape Tree · Tree Branch · Merge · Tree Statistics |
 | **Arbor/List** | List Item · Dispatch · Partition · Repeat · Sort List · Cross Reference |
@@ -154,7 +154,7 @@ input or output is undocumented.
 
 *Templates → ComfyUI-Arbor*. Each one has a note explaining what the nodes are doing. Times are for a 16 GB card.
 The templates that start from pictures use the sample media in `example_media/` (keyframes in `arbor:storyboard`,
-a continuous sequence in `arbor:sequence`, characters and places in `arbor:characters` / `arbor:locations`,
+characters and places in `arbor:characters` / `arbor:locations`,
 references in `arbor:references`; made with MOSS-Image SFT at 2 MP, cfg 3, 50 steps, so the edits do not start
 from Qwen's own output),
 so they run straight after installing; swap in your own with Load Media's **Add…**.
@@ -165,7 +165,7 @@ so they run straight after installing; swap in your own with Load Media's **Add�
 |---|---|---|
 | `arbor_qwen_storyboard` | A **Panel** storyboard (`# scene` lines, one shot per line) → **Expression** adds the style → **Tree to Data** flattens it for the sampler → **Image Grid** with one row per scene, every frame captioned with its shot; **Construct Tree** + **Save by Path** write one folder per scene. | 6 images, 30 s |
 | `arbor_qwen_edit_by_scene` | Picture × picture × instruction: **Load Media** gives the shots per scene (*image 1*) and two references, a cat and an umbrella (*image 2*); a **Panel** gives each reference its instruction. Two **Cross References** pair every shot with every reference and with that reference's instruction, **XY Lists** in *zip* mode feeds image 1, image 2 and the instruction to the edit model side by side, **Construct Tree** + **Merge** put each original in front of its edits — columns labelled by **Collect** from the references' names. | 12 edits, 90 s |
-| `arbor_h3_continuous_shots` | Six keyframes of one moment become five clips that run into each other — clip *k* goes from keyframe *k* to keyframe *k + 1*. **List Item** `:-1` and `1:` pair every keyframe with the next, **Tree to Data** lines the pairs up, they enter **FastH3 OmniRef** as `<Picture 1>` / `<Picture 2>` and two **Add Guide** nodes pin them to the first and last frame. **Prompt Template** (*zip*) writes a structured prompt per transition from a motion and a sound line; **Save by Path** names the clips (`01 → 02.mp4`) and core **Concatenate Video** joins them into one sequence **with sound**. | 5 clips of 5 s, 5 min |
+| `arbor_h3_continuous_shots` | **MOSS-Image** draws the whole storyboard as one 3 × 2 sheet — one picture keeps the character, light and palette consistent — and **Split Grid** cuts it into six keyframes (gutters found, panels in reading order). They become five clips that run into each other — clip *k* goes from keyframe *k* to keyframe *k + 1*. **List Item** `:-1` and `1:` pair every keyframe with the next, **Tree to Data** lines the pairs up, they enter **FastH3 OmniRef** as `<Picture 1>` / `<Picture 2>` and two **Add Guide** nodes pin them to the first and last frame. **Prompt Template** (*zip*) writes a structured prompt per transition from a motion and a sound line; **Save by Path** names the clips (`01 → 02.mp4`) and core **Concatenate Video** joins them into one sequence **with sound**. | 5 clips of 5 s, 5 min |
 | `arbor_h3_two_characters` | The same two characters in three places: each clip gets **Mei** (`<Picture 1>`), **Kai** (`<Picture 2>`) and its scene's location (`<Picture 3>`) — a one-picture list repeats for every clip, the locations are one named branch per scene. **Prompt Template** (*zip*) writes the structured prompt per scene with `{name}`, action and spoken lines; **Construct Tree** + **Save by Path** file the clips one folder per scene, **Video Grid** plays them side by side, **Concatenate Video** joins them into one film. | 3 clips of 5 s, 3 min |
 | `arbor_folder_review` | No model: **Load Folder** reads the folders back as a named tree; contact sheet, **List Item** picks, **Reshape Tree** (flip matrix) compares shot by shot, **Compare Viewer** flips through. | — |
 | `arbor_qwen_character_sheet` | Three uneven levels — character → outfit → pose (Mira 3 outfits, Theo 2). **List Item** splits description from outfits per branch, **Cross Reference** nests the poses and hands every outfit its character's description, **Expression** pairs them branch by branch (Grasshopper's matching), **Reshape Tree** *shift paths −1* folds outfits back into one row per character. | 15 images, 65 s |
@@ -179,6 +179,7 @@ so they run straight after installing; swap in your own with Load Media's **Add�
 
 Models used:
 - **Qwen Image 2.1 Turbo** (`arbor_qwen_*`): `qwen_image_2.1_turbo_int8_convrot.safetensors` (diffusion_models), `qwen3vl_8b_int8_convrot.safetensors` (text_encoders), `texture_fix_vae_for_qwen_image_2.1_bf16.safetensors` for generating and `qwen_image_2.1_vae_bf16.safetensors` for editing (vae); text to image uses 8 steps, editing 6. The sweep uses the LoRA `Qwen-2.1\mj_aesthetic_qwen21_turbo_v2_632_r32.safetensors` — swap in any LoRA you have. Editing works best with concrete, local instructions (add, remove or recolor something).
+- **MOSS-Image SFT** (the storyboard sheet of `arbor_h3_continuous_shots`): `moss_image_sft_int8_convrot.safetensors` (diffusion_models), `qwen3.5_9b_w4a8_gptq.safetensors` (text_encoders, type *moss_image*), `flux2-vae.safetensors` (vae); 50 steps, cfg 3, euler. It draws clean storyboard grids when the prompt asks for the panels, the rows and columns and *thin white gutters, no text*.
 - **FastH3 OmniRef** (`arbor_h3_*`): `fasth3_omniref_8step_pruned_int8_convrot.safetensors` (diffusion_models, from FastVideo/FastH3-OmniRef-Comfy; 8 steps, keep *Model Sparse Attention* on vsa and *SigmaShift* at 12 / 3), `qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors` (text_encoders, type *minimax*), `minimax_h3_video_vae_int8_convrot.safetensors` and `minimax_h3_audio_vae_fp32.safetensors` (vae). The demo renders 124 frames (~5 s) at 0.4 MP; raise the resolution for real shots.
 
 ## Install

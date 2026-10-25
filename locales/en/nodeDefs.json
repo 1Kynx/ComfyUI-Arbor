@@ -309,6 +309,42 @@
       }
     }
   },
+  "Arbor_SplitGrid": {
+    "display_name": "Split Grid",
+    "description": "Cut a grid picture — a storyboard sheet, a contact sheet, a sprite sheet — into its panels, row by row. Gutters and margins are found and left out; without them the picture is cut evenly.",
+    "inputs": {
+      "image": {
+        "name": "image",
+        "tooltip": "One sheet, or a batch / list of sheets — each sheet becomes one branch."
+      },
+      "rows": {
+        "name": "rows",
+        "tooltip": "How many rows of panels the sheet has."
+      },
+      "columns": {
+        "name": "columns",
+        "tooltip": "How many panels per row."
+      },
+      "find_gutters": {
+        "name": "find_gutters",
+        "tooltip": "Look for gutters and margins — lines of one flat colour — near every cut and leave them out, so panels that are not quite even still come out clean. Off: cut into even parts."
+      },
+      "inset": {
+        "name": "inset",
+        "tooltip": "Pixels shaved off every panel edge, to drop the soft edge of a gutter."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "data",
+        "tooltip": "Every panel as plain data, in reading order (left to right, top to bottom) — panels may differ by a few pixels in size."
+      },
+      "1": {
+        "name": "tree",
+        "tooltip": "One branch per sheet, its panels in reading order."
+      }
+    }
+  },
   "Arbor_LoadMedia": {
     "display_name": "Load Media",
     "description": "Pick pictures, videos and audio from anywhere on disk and group them into named branches — several Load Image nodes in one, using the system's own file dialog, with thumbnails. Files are used where they are; nothing is copied.",

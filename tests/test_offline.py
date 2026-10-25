@@ -654,6 +654,23 @@ def test_image_nodes():
     vid = InputImpl.VideoFromComponents(Types.VideoComponents(images=frames, audio=None, frame_rate=Fraction(24)))
     ends = res(nodes_image.BatchPick.execute(vid, "0, -1"))
     assert ends[1] == 2 and torch.equal(ends[0][1], frames[-1]), "first and last frame of a video"
+
+    # Split Grid: a 2 x 3 sheet drawn unevenly, white margin and gutters, panels coloured by index
+    sheet = torch.ones(1, 130, 320, 3)
+    xs, ys = [(4, 100), (110, 214), (222, 316)], [(3, 60), (68, 127)]
+    for r, (y0, y1) in enumerate(ys):
+        for c, (x0, x1) in enumerate(xs):
+            sheet[0, y0:y1, x0:x1] = torch.rand(y1 - y0, x1 - x0, 3) * 0.5 + (r * 3 + c) / 12
+    flat, tree = res(run(nodes_image.SplitGrid, image=[sheet], rows=2, columns=3, find_gutters=True, inset=0))
+    assert len(flat) == 6 and list(tree.branches) == [(0,)]
+    assert [tuple(p.shape[1:3]) for p in flat] == [(y1 - y0, x1 - x0) for y0, y1 in ys for x0, x1 in xs], \
+        "gutters and margins found and left out, panels in reading order"
+    assert torch.equal(flat[4], sheet[:, 68:127, 110:214])
+    even = res(run(nodes_image.SplitGrid, image=[sheet], rows=2, columns=3, find_gutters=False, inset=2))[0]
+    assert tuple(even[0].shape[1:3]) == (61, 103), "even split, inset on every side"
+    two = res(run(nodes_image.SplitGrid, image=[torch.cat([sheet, sheet])], rows=2, columns=3,
+                  find_gutters=True, inset=0))[1]
+    assert list(two.branches) == [(0,), (1,)], "one branch per sheet"
     print("image nodes: OK")
 
 
@@ -969,7 +986,7 @@ def test_example_workflows():
 
 def test_registration():
     ids = [n.define_schema().node_id for n in pkg.NODES]
-    assert len(ids) == len(set(ids)) == 30, (len(ids), len(set(ids)))
+    assert len(ids) == len(set(ids)) == 31, (len(ids), len(set(ids)))
     cats = {}
     for n in pkg.NODES:
         s = n.define_schema()

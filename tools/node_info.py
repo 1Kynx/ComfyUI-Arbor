@@ -161,6 +161,45 @@ Connect a video (Create Video, Load Video, a generated clip) and pick its frames
 - 序号超出批次范围会直接报错而不是跳过，避免输错了却没发现。
 """))
 
+node("Arbor_SplitGrid", en=dict(
+    desc="Cut a grid picture — a storyboard sheet, a contact sheet, a sprite sheet — into its panels, row by row. Gutters and margins are found and left out; without them the picture is cut evenly.",
+    inputs={"image": "One sheet, or a batch / list of sheets — each sheet becomes one branch.",
+            "rows": "How many rows of panels the sheet has.",
+            "columns": "How many panels per row.",
+            "find_gutters": "Look for gutters and margins — lines of one flat colour — near every cut and leave them out, so panels that are not quite even still come out clean. Off: cut into even parts.",
+            "inset": "Pixels shaved off every panel edge, to drop the soft edge of a gutter."},
+    outputs=["Every panel as plain data, in reading order (left to right, top to bottom) — panels may differ by a few pixels in size.",
+             "One branch per sheet, its panels in reading order."],
+    doc="""## Why a whole sheet
+An image model that draws all the frames of a storyboard in one picture keeps the character, the light and the palette far more consistent than separate renders do. Ask for the grid in the prompt (*six panels, three columns and two rows, thin white gutters, no text*), give the sheet the panels' combined aspect (3 × 16:9 by 2 rows ≈ 8:3, e.g. 3264 × 1216), and cut it here.
+
+Template: *arbor_h3_continuous_shots* draws a 3 × 2 sheet with MOSS-Image, cuts it into six keyframes and animates from each one to the next.
+
+## Tips
+- The gutters only need to be roughly where an even split would cut; drawn grids are rarely exact and the found gutter wins.
+- Panels come out a few pixels apart in size; video and image models resize them anyway, **Smart Resize** evens them out.
+- The inverse of **Image Grid**.
+"""), zh=dict(
+    name="拆分网格",
+    desc="把一张网格图——分镜表、联系表、精灵图——按行拆成一格一格的图片。自动找到并去掉格间留白和外边距；没有留白时均匀切分。",
+    inputs={"image": ("图像", "一张网格图，或一批 / 一组网格图——每张成为一个分支。"),
+            "rows": ("行数", "网格有几行。"),
+            "columns": ("列数", "每行有几格。"),
+            "find_gutters": ("查找留白", "在每条切线附近寻找格间留白和外边距（整条同一颜色的线）并去掉，格子大小不完全一致也能切干净。关闭：均匀切分。"),
+            "inset": ("内缩", "每格四边再裁掉的像素，去掉留白边缘的过渡。")},
+    outputs=[("数据", "所有格子（普通数据），按阅读顺序（从左到右、从上到下）——各格尺寸可能相差几个像素。"),
+             ("数据树", "每张网格图一个分支，格子按阅读顺序排列。")],
+    doc="""## 为什么要整张生成
+让图像模型在一张图里画出分镜的所有画面，人物、光线和色调会比分开生成一致得多。在提示词里写明网格（*six panels, three columns and two rows, thin white gutters, no text*），图片比例取各格拼起来的比例（3 格 16:9 × 2 行 ≈ 8:3，例如 3264 × 1216），再用本节点拆开。
+
+模板 *arbor_h3_continuous_shots* 用 MOSS-Image 画一张 3 × 2 的分镜表，拆成六张关键帧，再逐张过渡生成视频。
+
+## 提示
+- 留白只要大致在均匀切分的位置附近即可；模型画的网格很少完全均匀，以找到的留白为准。
+- 各格尺寸会差几个像素；视频和图像模型本来就会缩放，需要一致时接 **智能缩放**。
+- 与 **图像网格** 互为逆操作。
+"""))
+
 node("Arbor_ImageGrid", en=dict(
     desc="Lay images out as an XY comparison sheet: each branch is a row, each item a column.",
     inputs={"images": "An image tree — or the plain images of a batch run, together with shape.",

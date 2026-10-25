@@ -7,7 +7,7 @@ import torch
 
 from . import media
 from . import tree as T
-from .common import IO, TREE, CAT_MEDIA, schema, connected, tree_in, to_tree, unwrap
+from .common import IO, TREE, CAT_MEDIA, schema, connected, data_out, tree_in, tree_out, to_tree, unwrap
 from .grid import CAPTION_STYLES, FITS, LABEL_DIRS, build_grid, caption_rows, col_labels_for, fit_box, \
     grid_size, layout_sheet, row_labels_for, wrap_rows
 from .media import is_audio, is_video
@@ -381,4 +381,96 @@ class BatchPick(IO.ComfyNode):
         return IO.NodeOutput(images[idx], len(idx))
 
 
-NODES = [ImageSlider, ImageGrid, VideoGrid, SmartResize, BatchPick]
+# ======================================================================= Split Grid
+
+def flat_lines(gray: np.ndarray, axis: int, tol: float = 0.05) -> np.ndarray:
+    """Per column (axis 0) or row (axis 1): is the whole line one flat colour, as a gutter is?"""
+    med = np.median(gray, axis=axis, keepdims=True)
+    return (np.abs(gray - med) < tol).mean(axis=axis) > 0.97
+
+
+def _runs(mask) -> list[tuple[int, int]]:
+    out, start = [], None
+    for i, m in enumerate(mask):
+        if m and start is None:
+            start = i
+        elif not m and start is not None:
+            out.append((start, i))
+            start = None
+    if start is not None:
+        out.append((start, len(mask)))
+    return out
+
+
+def even_spans(size: int, n: int) -> list[tuple[int, int]]:
+    return [(round(i * size / n), round((i + 1) * size / n)) for i in range(n)]
+
+
+def grid_spans(flat: np.ndarray, n: int) -> list[tuple[int, int]]:
+    """Split one axis into n panels, leaving out the margins and the gutters (flat lines) found near
+    where an even split would cut; where there is none, that cut is even."""
+    size = len(flat)
+    edge = size // (4 * n)
+    lo, hi = 0, size
+    while lo < edge and flat[lo]:
+        lo += 1
+    while hi > size - edge and flat[hi - 1]:
+        hi -= 1
+    lo = 0 if lo >= edge else lo  # a flat stretch that long is picture, not a margin
+    hi = size if hi <= size - edge else hi
+    step = (hi - lo) / n
+    gutters = [(s + lo, e + lo) for s, e in _runs(flat[lo:hi]) if e - s < step * 0.3]
+    edges = [lo]
+    for k in range(1, n):
+        x = lo + step * k
+        near = [g for g in gutters if abs((g[0] + g[1]) / 2 - x) <= step * 0.15]
+        s, e = min(near, key=lambda g: abs((g[0] + g[1]) / 2 - x)) if near else (round(x), round(x))
+        edges += [s, e]
+    edges.append(hi)
+    return [(edges[2 * i], edges[2 * i + 1]) for i in range(n)]
+
+
+class SplitGrid(IO.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return schema(
+            "Arbor_SplitGrid", "Split Grid", CAT_MEDIA,
+            "Cut a grid picture — a storyboard sheet, a contact sheet, a sprite sheet — into its panels, "
+            "row by row. Gutters and margins (lines of one flat colour) are found and left out, so panels "
+            "that are not quite even still come out clean; without gutters the picture is cut evenly.",
+            [IO.Image.Input("image", tooltip="One sheet, or a batch / list of sheets (one branch each)"),
+             IO.Int.Input("rows", default=2, min=1, max=64),
+             IO.Int.Input("columns", default=3, min=1, max=64),
+             IO.Boolean.Input("find_gutters", default=True,
+                              tooltip="Look for gutters and margins near every cut and leave them out. "
+                                      "Off: cut the picture into even parts"),
+             IO.Int.Input("inset", default=2, min=0, max=256,
+                          tooltip="Pixels shaved off every panel edge — drops the soft edge of a gutter")],
+            [data_out(IO.Image, "Every panel as plain data, in reading order (left to right, top to bottom)"),
+             tree_out(tooltip="One branch per sheet, its panels in reading order")],
+            ["split grid", "split image", "crop grid", "slice image", "tiles", "image to tiles",
+             "storyboard sheet", "contact sheet", "sprite sheet", "panels", "uncollage"])
+
+    @classmethod
+    def execute(cls, image, rows, columns, find_gutters, inset) -> IO.NodeOutput:
+        rows, cols, inset = int(unwrap(rows)), int(unwrap(columns)), int(unwrap(inset))
+        sheets = [im[k:k + 1] for im in image if im is not None for k in range(im.shape[0])]
+        out = {}
+        for b, sheet in enumerate(sheets):
+            h, w = int(sheet.shape[1]), int(sheet.shape[2])
+            if unwrap(find_gutters):
+                gray = sheet[0].float().mean(-1).cpu().numpy()
+                ys, xs = grid_spans(flat_lines(gray, 1), rows), grid_spans(flat_lines(gray, 0), cols)
+            else:
+                ys, xs = even_spans(h, rows), even_spans(w, cols)
+            panels = []
+            for y0, y1 in ys:
+                for x0, x1 in xs:
+                    dy, dx = min(inset, (y1 - y0 - 1) // 2), min(inset, (x1 - x0 - 1) // 2)
+                    panels.append(sheet[:, y0 + dy:y1 - dy, x0 + dx:x1 - dx])
+            out[(b,)] = panels
+        tree = T.DataTree(out or {(0,): []})
+        return IO.NodeOutput(tree.flat(), tree)
+
+
+NODES = [ImageSlider, ImageGrid, VideoGrid, SmartResize, BatchPick, SplitGrid]
