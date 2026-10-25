@@ -640,6 +640,9 @@ def test_image_nodes():
     labelled = run(nodes_image.ImageSlider, images={"image0": [angles]}, labels=["original", "back"]).ui
     assert [s["label"] for s in labelled["arbor_slider"][0]["slides"]] == [
         "Mei · original", "Mei · back", "Kai · original", "Kai · back"], "one label list serves every branch"
+    assert [s["group"] for s in labelled["arbor_slider"][0]["slides"]] == ["Mei", "Mei", "Kai", "Kai"], \
+        "the viewer can show one person at a time"
+    assert {s["group"] for s in slides} == {"image0", "image1"}, "unnamed: one group per input"
     slot = nodes_image.ImageSlider.define_schema().inputs[0].template.input
     assert "IMAGE" in slot.get_io_type() and "ARBOR_TREE" in slot.get_io_type()
 

@@ -19,7 +19,10 @@ Compare images, videos and audio of any size: flip through them with the slider,
 - Double-click the stage (or the ↗ button) to open the current file in a new tab.
 
 ## Labels
-Slides take the name of their branch. Connect *labels* to name the items too: a tree of pictures by person (`Mei`, `Kai`) with the labels `original, 3/4 left, profile, back …` flips through as *Mei · original*, *Mei · 3/4 left* … *Kai · back*. Template: *arbor_qwen_camera_angles*.
+Slides take the name of their branch. Connect *labels* to name the items too: a tree of pictures by person (`Mei`, `Kai`) with the labels `original, 45°, 90° …` flips through as *Mei · original*, *Mei · 45°* … *Kai · 315°*.
+
+## One branch at a time
+When the slides come from several named branches, a chip in the toolbar picks the branch to show — *All*, *Mei* or *Kai* (the top-level branches; unnamed trees are split by input instead): the slider, Wipe and the A menu then stay within that branch. The choice is saved with the workflow. Template: *arbor_qwen_camera_angles*.
 
 ## Tips
 - Feed it a native list (e.g. the per-item results of an XY run): it receives the whole list at once instead of running per item.

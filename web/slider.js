@@ -83,7 +83,9 @@ class Layer {
 class SliderView {
   constructor(node) {
     this.node = node;
-    this.slides = [];
+    this.all = [];      // every slide the node sent
+    this.slides = [];   // the ones of the chosen group
+    this.group = node.properties?.arbor_group || "";  // "" = all
     this.index = 0;     // flip: shown slide; wipe: B
     this.a = 0;         // wipe: A
     this.mode = node.properties?.arbor_mode || "flip";
@@ -108,6 +110,8 @@ class SliderView {
       const m = e.target?.dataset?.m;
       if (m) this.setMode(m);
     });
+    this.chipG = el("button", "arb-chip");
+    this.chipG.addEventListener("click", () => this.pickGroup());
     this.chipA = el("button", "arb-chip");
     this.chipA.addEventListener("click", () => this.pickA());
     this.info = el("span", "arb-sub");
@@ -123,7 +127,7 @@ class SliderView {
       const s = this.slides[this.index];
       if (s) window.open(viewURL(s), "_blank");
     });
-    bar.append(this.seg, this.chipA, this.info, el("span", "arb-sp"), this.scaleBtn, this.openBtn);
+    bar.append(this.seg, this.chipG, this.chipA, this.info, el("span", "arb-sp"), this.scaleBtn, this.openBtn);
 
     const stage = (this.stage = el("div", "arb-cmp-stage"));
     const meta = () => { this.sync(true); this.layout(); };
@@ -271,7 +275,24 @@ class SliderView {
   }
 
   setSlides(slides) {
-    this.slides = slides || [];
+    this.all = slides || [];
+    this.showGroup(this.group);
+  }
+
+  groups() {
+    return [...new Set(this.all.map((s) => s.group).filter((g) => g != null))];
+  }
+
+  /* show one group ("" = all); a group the new slides don't have falls back to all */
+  showGroup(g) {
+    if (g && !this.groups().includes(g)) g = "";
+    if (g !== this.group) {
+      this.group = g;
+      this.node.properties.arbor_group = g;
+      markChanged(this.node);
+      this.index = this.a = 0;
+    }
+    this.slides = g ? this.all.filter((s) => s.group === g) : this.all;
     const n = this.slides.length;
     this.index = Math.min(this.index, Math.max(0, n - 1));
     this.a = Math.min(this.a, Math.max(0, n - 1));
@@ -289,6 +310,18 @@ class SliderView {
     if (i === this.index) return;
     this.index = i;
     this.render();
+  }
+
+  pickGroup() {
+    const groups = this.groups();
+    if (groups.length < 2) return;
+    const first = (g) => this.all.find((s) => (!g || s.group === g) && (s.kind === "image" || !s.kind));
+    const count = (g) => this.all.filter((s) => !g || s.group === g).length;
+    showMenu(this.chipG, ["", ...groups].map((g) => ({
+      label: `${g || t("allGroups")}  (${count(g)})`,
+      img: first(g) ? viewURL(first(g)) : null, on: g === this.group,
+      pick: () => this.showGroup(g),
+    })));
   }
 
   pickA() {
@@ -498,6 +531,13 @@ class SliderView {
     this.empty.textContent = t("sliderEmpty");
     this.empty.style.display = n ? "none" : "";
     this.chipA.style.display = wipe && n ? "" : "none";
+    const grouped = this.groups().length > 1;
+    this.chipG.style.display = grouped ? "" : "none";
+    if (grouped) {
+      this.chipG.title = t("chooseGroup");
+      this.chipG.innerHTML = `<span></span>`;
+      this.chipG.firstChild.textContent = `${this.group || t("allGroups")} ▾`;
+    }
     this.scrub.style.visibility = n > 1 ? "" : "hidden";
 
     const cur = this.slides[this.index];

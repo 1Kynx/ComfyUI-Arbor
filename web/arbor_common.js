@@ -309,6 +309,7 @@ const STRINGS = {
   en: {
     flip: "Flip", wipe: "Wipe", real: "Real", fit: "Fit",
     chooseA: "Choose A",
+    allGroups: "All", chooseGroup: "Show one branch (or one input, when the branches have no names) — or all of them",
     scaleTip: "Real: keep relative sizes · Fit: fill the stage",
     openTip: "Open the current file in a new tab",
     sliderEmpty: "Connect images, videos or audio and run to compare",
@@ -359,6 +360,7 @@ const STRINGS = {
   zh: {
     flip: "切换", wipe: "对比", real: "原比例", fit: "填充",
     chooseA: "选择 A",
+    allGroups: "全部", chooseGroup: "只看一个分支（分支没有名字时按输入区分）——或全部",
     scaleTip: "原比例：保持图片之间的相对大小 · 填充：每张图铺满画面",
     openTip: "在新标签页打开当前文件",
     sliderEmpty: "接入图片、视频或音频并运行后即可对比",

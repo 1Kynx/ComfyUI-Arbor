@@ -18,36 +18,40 @@ MAX_SLIDES = 64
 
 # ======================================================================= Compare Viewer
 
-def _slides(slot: str, value, labels: T.DataTree | None = None) -> list[tuple[str, object, str]]:
-    """(kind, value, label) for everything a socket value holds that can be compared: every frame
-    of an image batch, every video, every clip of an audio batch — a batch, a list or a tree.
+def _slides(slot: str, value, labels: T.DataTree | None = None) -> list[tuple[str, object, str, str]]:
+    """(kind, value, label, group) for everything a socket value holds that can be compared: every
+    frame of an image batch, every video, every clip of an audio batch — a batch, a list or a tree.
     Items of a named branch are labelled with its name, the rest with the slot name; with
     ``labels`` (matched branch by branch, item by item) an item's label follows the branch name.
-    A label shared by several slides is numbered."""
+    A label shared by several slides is numbered. The group — what the viewer can show on its
+    own — is the top-level branch's name, else the slot."""
     tree = to_tree(value)
     found = []
     for b, (p, items) in enumerate(tree.items()):
         branch = tree.label(p, label_of)
+        group = tree.label(p[:1], label_of) or slot
         for j, v in enumerate(items):
             own = T.match_item(labels, b, j) if labels else None
             own = label_of(own) if own is not None else None
             lab = " · ".join(x for x in (branch, own) if x) or slot
             if is_image(v):
-                found += [("image", v[i], lab) for i in range(v.shape[0])]
+                found += [("image", v[i], lab, group) for i in range(v.shape[0])]
             elif is_video(v):
-                found.append(("video", v, lab))
+                found.append(("video", v, lab, group))
             elif is_audio(v):
-                found += [("audio", clip, lab) for clip in media.audio_clips(v)]
-    total = {lab: sum(1 for *_, l in found if l == lab) for *_, lab in found}
+                found += [("audio", clip, lab, group) for clip in media.audio_clips(v)]
+    total: dict[str, int] = {}
+    for _, _, lab, _ in found:
+        total[lab] = total.get(lab, 0) + 1
     seen: dict[str, int] = {}
     out = []
-    for kind, v, lab in found:
+    for kind, v, lab, group in found:
         seen[lab] = seen.get(lab, 0) + 1
-        out.append((kind, v, lab if total[lab] == 1 else f"{lab} · {seen[lab]}/{total[lab]}"))
+        out.append((kind, v, lab if total[lab] == 1 else f"{lab} · {seen[lab]}/{total[lab]}", group))
     return out
 
 
-def _slide(kind: str, v, label: str) -> dict:
+def _slide(kind: str, v, label: str, group: str) -> dict:
     """The UI payload of one slide: a /view reference plus what the viewer needs to lay it out."""
     if kind == "image":
         ref = save_temp(to_pil(v), "compare", fmt="png")
@@ -58,7 +62,7 @@ def _slide(kind: str, v, label: str) -> dict:
         waveform, rate = v
         ref = media.audio_ref(waveform, rate, "compare")
         info = {"dur": waveform.shape[-1] / rate, "peaks": media.peaks(waveform)}
-    return {**ref, "kind": kind, "label": label, **info}
+    return {**ref, "kind": kind, "label": label, "group": group, **info}
 
 
 class ImageSlider(IO.ComfyNode):
@@ -89,8 +93,8 @@ class ImageSlider(IO.ComfyNode):
         label_tree = to_tree(labels) if connected(labels) else None
         slides = []
         for name, value in (images or {}).items():
-            for kind, v, label in _slides(name, value, label_tree)[:MAX_SLIDES - len(slides)]:
-                slides.append(_slide(kind, v, label))
+            for kind, v, label, group in _slides(name, value, label_tree)[:MAX_SLIDES - len(slides)]:
+                slides.append(_slide(kind, v, label, group))
         return IO.NodeOutput(ui={"arbor_slider": [{"slides": slides}]})
 
 

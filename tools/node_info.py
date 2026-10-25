@@ -39,7 +39,10 @@ node("Arbor_ImageSlider", en=dict(
 - Double-click the stage (or the ↗ button) to open the current file in a new tab.
 
 ## Labels
-Slides take the name of their branch. Connect *labels* to name the items too: a tree of pictures by person (`Mei`, `Kai`) with the labels `original, 3/4 left, profile, back …` flips through as *Mei · original*, *Mei · 3/4 left* … *Kai · back*. Template: *arbor_qwen_camera_angles*.
+Slides take the name of their branch. Connect *labels* to name the items too: a tree of pictures by person (`Mei`, `Kai`) with the labels `original, 45°, 90° …` flips through as *Mei · original*, *Mei · 45°* … *Kai · 315°*.
+
+## One branch at a time
+When the slides come from several named branches, a chip in the toolbar picks the branch to show — *All*, *Mei* or *Kai* (the top-level branches; unnamed trees are split by input instead): the slider, Wipe and the A menu then stay within that branch. The choice is saved with the workflow. Template: *arbor_qwen_camera_angles*.
 
 ## Tips
 - Feed it a native list (e.g. the per-item results of an XY run): it receives the whole list at once instead of running per item.
@@ -62,7 +65,10 @@ Slides take the name of their branch. Connect *labels* to name the items too: a 
 - 双击画面（或点 ↗ 按钮）在新标签页打开当前文件。
 
 ## 标签
-每页默认用所在分支的名字。接上 *标签* 可以给每一项命名：按人物分支的图片（`Mei`、`Kai`）配上标签 `original, 3/4 left, profile, back ……`，翻页时显示 *Mei · original*、*Mei · 3/4 left* …… *Kai · back*。模板：*arbor_qwen_camera_angles*。
+每页默认用所在分支的名字。接上 *标签* 可以给每一项命名：按人物分支的图片（`Mei`、`Kai`）配上标签 `original, 45°, 90° ……`，翻页时显示 *Mei · original*、*Mei · 45°* …… *Kai · 315°*。
+
+## 一次看一个分支
+内容来自多个有名字的分支时，工具栏会出现一个分支胶囊，可选择 *全部*、*Mei* 或 *Kai*（顶层分支；没有名字的数据树按输入区分）：滑条、对比模式和 A 菜单都只在这个分支里切换。选择会随工作流保存。模板：*arbor_qwen_camera_angles*。
 
 ## 提示
 - 可以直接接原生列表（例如 XY 批量运行的逐项结果），节点会一次收下整个列表，而不是逐项运行。
