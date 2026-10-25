@@ -22,7 +22,15 @@ Compare images, videos and audio of any size: flip through them with the slider,
 Slides take the name of their branch. Connect *labels* to name the items too: a tree of pictures by person (`Mei`, `Kai`) with the labels `original, 45°, 90° …` flips through as *Mei · original*, *Mei · 45°* … *Kai · 315°*.
 
 ## One branch at a time
-When the slides come from several named branches, a chip in the toolbar picks the branch to show — *All*, *Mei* or *Kai* (the top-level branches; unnamed trees are split by input instead): the slider, Wipe and the A menu then stay within that branch. The choice is saved with the workflow. Template: *arbor_qwen_camera_angles*.
+When a tree comes in with two or more top-level branches, a chip in the toolbar picks the branch to show — *All*, *Mei*, *Kai* (or *{0}*, *{1}* for unnamed branches): the slider, Wipe and the A menu then stay within that branch. The choice is saved with the workflow.
+
+| Inputs | Branches |
+|---|---|
+| Plain lists, batches or single values only | none — everything in one row |
+| A tree + a plain list | the tree's branches; the list shows in **every** branch (one reference against each) |
+| Two trees, same names (or paths) | one branch per name: input 1's *Mei* and input 2's *Mei* together, ready to wipe |
+| Two trees, different names / a named and an unnamed one | each its own branch |
+| A nested tree | the top level only: {0;0} and {0;1} are both *{0}* | Template: *arbor_qwen_camera_angles*.
 
 ## Tips
 - Feed it a native list (e.g. the per-item results of an XY run): it receives the whole list at once instead of running per item.

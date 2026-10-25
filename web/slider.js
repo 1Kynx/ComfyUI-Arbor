@@ -283,6 +283,11 @@ class SliderView {
     return [...new Set(this.all.map((s) => s.group).filter((g) => g != null))];
   }
 
+  /* a slide without a group (a plain list next to a tree) belongs to every group */
+  inGroup(s, g) {
+    return !g || s.group == null || s.group === g;
+  }
+
   /* show one group ("" = all); a group the new slides don't have falls back to all */
   showGroup(g) {
     if (g && !this.groups().includes(g)) g = "";
@@ -292,7 +297,7 @@ class SliderView {
       markChanged(this.node);
       this.index = this.a = 0;
     }
-    this.slides = g ? this.all.filter((s) => s.group === g) : this.all;
+    this.slides = this.all.filter((s) => this.inGroup(s, g));
     const n = this.slides.length;
     this.index = Math.min(this.index, Math.max(0, n - 1));
     this.a = Math.min(this.a, Math.max(0, n - 1));
@@ -316,7 +321,7 @@ class SliderView {
     const groups = this.groups();
     if (groups.length < 2) return;
     const first = (g) => this.all.find((s) => (!g || s.group === g) && (s.kind === "image" || !s.kind));
-    const count = (g) => this.all.filter((s) => !g || s.group === g).length;
+    const count = (g) => this.all.filter((s) => this.inGroup(s, g)).length;
     showMenu(this.chipG, ["", ...groups].map((g) => ({
       label: `${g || t("allGroups")}  (${count(g)})`,
       img: first(g) ? viewURL(first(g)) : null, on: g === this.group,

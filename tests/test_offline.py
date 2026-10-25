@@ -642,7 +642,23 @@ def test_image_nodes():
         "Mei · original", "Mei · back", "Kai · original", "Kai · back"], "one label list serves every branch"
     assert [s["group"] for s in labelled["arbor_slider"][0]["slides"]] == ["Mei", "Mei", "Kai", "Kai"], \
         "the viewer can show one person at a time"
-    assert {s["group"] for s in slides} == {"image0", "image1"}, "unnamed: one group per input"
+    # groups: only trees split the viewer, by top-level branch (name, else path); they meet across inputs
+    px = lambda: torch.rand(1, 8, 8, 3)
+    groups = lambda **inputs: [s["group"] for s in run(nodes_image.ImageSlider, images={
+        k: v if isinstance(v, list) else [v] for k, v in inputs.items()}).ui["arbor_slider"][0]["slides"]]
+    named = lambda a, b: T.DataTree({(0,): [px()], (1,): [px()]}, {(0,): a, (1,): b})
+    assert groups(image0=[px(), px()], image1=[px()]) == [None, None, None], "two plain lists: no groups"
+    assert groups(image0=named("Mei", "Kai"), image1=[px()]) == ["Mei", "Kai", None], \
+        "tree + plain list: the list has no group, so it goes with every group"
+    assert groups(image0=named("Mei", "Kai"), image1=named("Mei", "Kai")) == ["Mei", "Kai", "Mei", "Kai"], \
+        "two trees: same names meet in one group"
+    assert groups(image0=named("Mei", "Kai"), image1=T.DataTree({(0,): [px()], (1,): [px()]})) == \
+        ["Mei", "Kai", "{0}", "{1}"], "a named branch never meets an unnamed one"
+    assert groups(image0=named("Mei", "Kai"), image1=named("Ayu", "Ren")) == ["Mei", "Kai", "Ayu", "Ren"]
+    nested = T.DataTree({(0, 0): [px()], (0, 1): [px()], (1, 0): [torch.rand(2, 8, 8, 3)]})
+    assert groups(image0=nested) == ["{0}", "{0}", "{1}", "{1}"], "top level only; a batch's frames stay together"
+    assert groups(image0=T.DataTree({(0,): [px(), px()]}, {(0,): "Mei"}), image1=[px()]) == [None, None, None], \
+        "one branch is no grouping"
     slot = nodes_image.ImageSlider.define_schema().inputs[0].template.input
     assert "IMAGE" in slot.get_io_type() and "ARBOR_TREE" in slot.get_io_type()
 

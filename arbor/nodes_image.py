@@ -18,18 +18,27 @@ MAX_SLIDES = 64
 
 # ======================================================================= Compare Viewer
 
-def _slides(slot: str, value, labels: T.DataTree | None = None) -> list[tuple[str, object, str, str]]:
+def is_tree_input(value) -> bool:
+    """A tree arrived (not a plain value, list or batch) — only trees split the viewer into groups."""
+    values = value if isinstance(value, list) else [value]
+    return any(isinstance(v, T.DataTree) for v in values)
+
+
+def _slides(slot: str, value, labels: T.DataTree | None = None) -> list[tuple[str, object, str, str | None]]:
     """(kind, value, label, group) for everything a socket value holds that can be compared: every
     frame of an image batch, every video, every clip of an audio batch — a batch, a list or a tree.
     Items of a named branch are labelled with its name, the rest with the slot name; with
     ``labels`` (matched branch by branch, item by item) an item's label follows the branch name.
     A label shared by several slides is numbered. The group — what the viewer can show on its
-    own — is the top-level branch's name, else the slot."""
+    own — is the top-level branch of a tree: its name, or its path when it has none ({0}). Plain
+    values, lists and batches have no group (None): they go with every group."""
     tree = to_tree(value)
+    grouped = is_tree_input(value)
     found = []
     for b, (p, items) in enumerate(tree.items()):
         branch = tree.label(p, label_of)
-        group = tree.label(p[:1], label_of) or slot
+        top = tree.names.get(p[:1])
+        group = (label_of(top) if top is not None else T.format_path(p[:1])) if grouped else None
         for j, v in enumerate(items):
             own = T.match_item(labels, b, j) if labels else None
             own = label_of(own) if own is not None else None
@@ -51,7 +60,7 @@ def _slides(slot: str, value, labels: T.DataTree | None = None) -> list[tuple[st
     return out
 
 
-def _slide(kind: str, v, label: str, group: str) -> dict:
+def _slide(kind: str, v, label: str, group: str | None) -> dict:
     """The UI payload of one slide: a /view reference plus what the viewer needs to lay it out."""
     if kind == "image":
         ref = save_temp(to_pil(v), "compare", fmt="png")
@@ -95,6 +104,11 @@ class ImageSlider(IO.ComfyNode):
         for name, value in (images or {}).items():
             for kind, v, label, group in _slides(name, value, label_tree)[:MAX_SLIDES - len(slides)]:
                 slides.append(_slide(kind, v, label, group))
+        # groups of every input meet by name (or path): input 1's Mei and input 2's Mei are one group;
+        # fewer than two groups is no grouping at all
+        if len({s["group"] for s in slides if s["group"] is not None}) < 2:
+            for s in slides:
+                s["group"] = None
         return IO.NodeOutput(ui={"arbor_slider": [{"slides": slides}]})
 
 

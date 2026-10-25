@@ -42,7 +42,15 @@ node("Arbor_ImageSlider", en=dict(
 Slides take the name of their branch. Connect *labels* to name the items too: a tree of pictures by person (`Mei`, `Kai`) with the labels `original, 45°, 90° …` flips through as *Mei · original*, *Mei · 45°* … *Kai · 315°*.
 
 ## One branch at a time
-When the slides come from several named branches, a chip in the toolbar picks the branch to show — *All*, *Mei* or *Kai* (the top-level branches; unnamed trees are split by input instead): the slider, Wipe and the A menu then stay within that branch. The choice is saved with the workflow. Template: *arbor_qwen_camera_angles*.
+When a tree comes in with two or more top-level branches, a chip in the toolbar picks the branch to show — *All*, *Mei*, *Kai* (or *{0}*, *{1}* for unnamed branches): the slider, Wipe and the A menu then stay within that branch. The choice is saved with the workflow.
+
+| Inputs | Branches |
+|---|---|
+| Plain lists, batches or single values only | none — everything in one row |
+| A tree + a plain list | the tree's branches; the list shows in **every** branch (one reference against each) |
+| Two trees, same names (or paths) | one branch per name: input 1's *Mei* and input 2's *Mei* together, ready to wipe |
+| Two trees, different names / a named and an unnamed one | each its own branch |
+| A nested tree | the top level only: {0;0} and {0;1} are both *{0}* | Template: *arbor_qwen_camera_angles*.
 
 ## Tips
 - Feed it a native list (e.g. the per-item results of an XY run): it receives the whole list at once instead of running per item.
@@ -68,7 +76,15 @@ When the slides come from several named branches, a chip in the toolbar picks th
 每页默认用所在分支的名字。接上 *标签* 可以给每一项命名：按人物分支的图片（`Mei`、`Kai`）配上标签 `original, 45°, 90° ……`，翻页时显示 *Mei · original*、*Mei · 45°* …… *Kai · 315°*。
 
 ## 一次看一个分支
-内容来自多个有名字的分支时，工具栏会出现一个分支胶囊，可选择 *全部*、*Mei* 或 *Kai*（顶层分支；没有名字的数据树按输入区分）：滑条、对比模式和 A 菜单都只在这个分支里切换。选择会随工作流保存。模板：*arbor_qwen_camera_angles*。
+接入的数据树有两个以上顶层分支时，工具栏会出现一个分支胶囊，可选择 *全部*、*Mei*、*Kai*（没有名字的分支显示为 *{0}*、*{1}*）：滑条、对比模式和 A 菜单都只在这个分支里切换。选择会随工作流保存。
+
+| 输入 | 分支 |
+|---|---|
+| 只有普通列表、批次或单个值 | 不分组——全部排在一起 |
+| 一棵数据树 + 一个普通列表 | 按数据树的分支；列表在 **每个** 分支里都显示（一张参考图对比每个分支） |
+| 两棵数据树，名字（或路径）相同 | 同名合为一个分支：输入 1 的 *Mei* 和输入 2 的 *Mei* 在一起，可直接对比 |
+| 两棵数据树，名字不同 / 一棵有名字一棵没有 | 各自成为分支 |
+| 嵌套的数据树 | 只看顶层：{0;0} 和 {0;1} 都属于 *{0}* |模板：*arbor_qwen_camera_angles*。
 
 ## 提示
 - 可以直接接原生列表（例如 XY 批量运行的逐项结果），节点会一次收下整个列表，而不是逐项运行。
