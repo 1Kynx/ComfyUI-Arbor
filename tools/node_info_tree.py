@@ -223,7 +223,8 @@ node("Arbor_ListItem", en=dict(
     inputs={"tree": TREE_EN,
             "index": "Which items: `0` · `-1` (last) · `0, 2` · `1:4` (slice, end excluded) · `2-5` (range, end included) · `::2` (every other). A connected number works too, or a tree of indices: its branches pair with the list's in order, so every branch picks its own items.",
             "wrap": "Out-of-range indices wrap around the branch length. Off: they give an empty value, so branches stay aligned."},
-    outputs=["The picked items, branch by branch."],
+    outputs=["The picked items, branch by branch.",
+             "The picked items as plain data, branch after branch: index k on a tree of sheets gives frame k of every sheet as one list — straight into a node that runs once per item."],
     doc="""## Examples
 `{0}: a, b, c, d · {1}: e, f`:
 
@@ -235,7 +236,10 @@ node("Arbor_ListItem", en=dict(
 | `1:` | `{0}: b, c, d · {1}: f` |
 | `::2` | `{0}: a, c · {1}: e` |
 
-`:-1` and `1:` pair every item with the next one (a → b, b → c, c → d): *arbor_h3_continuous_shots* takes its first and last frames this way. The same syntax picks frames in **Batch Pick**.
+`:-1` and `1:` pair every item with the next one (a → b, b → c, c → d) — first and last frames for clip after clip. The same syntax picks frames in **Batch Pick**.
+
+## Item k of every branch
+The *data* output lists the picks branch after branch. On a tree with one branch per storyboard sheet, index `2` gives the third frame of **every** sheet as one plain list — one item per scene, straight into a node that then runs once per scene. *arbor_h3_long_takes* feeds six of these lists (index 0 … 5) into the six reference pictures and keyframe guides of its long takes.
 
 ## One pick per branch
 Connect a tree of indices to *index*: `{0}: 2 · {1}: 0 · {2}: 1, 3` takes item 2 of the first branch, item 0 of the second and items 1 and 3 of the third. Type the picks in a **Panel** one line per branch and **Reshape Tree** *graft* them — *arbor_qwen_pick_takes* chooses the best take of every shot this way.
@@ -245,7 +249,8 @@ Connect a tree of indices to *index*: `{0}: 2 · {1}: 0 · {2}: 1, 3` takes item
     inputs={"tree": TREE_ZH,
             "index": ("序号", "取哪些项：`0` · `-1`（最后一项）· `0, 2` · `1:4`（切片，不含结尾）· `2-5`（范围，含结尾）· `::2`（隔一个取一个）。也可以接入数字，或接入序号数据树：它的分支按顺序与列表的分支配对，每个分支取自己的项。"),
             "wrap": ("循环", "序号超出分支长度时循环。关闭时得到空值，各分支仍保持对齐。")},
-    outputs=[("数据树", "按分支取出的项。")],
+    outputs=[("数据树", "按分支取出的项。"),
+             ("数据", "取出的项（普通数据），各分支依次排列：对一棵「每张网格图一个分支」的数据树取序号 k，就得到每张图的第 k 格组成的列表——可直接接按项运行的节点。")],
     doc="""## 示例
 `{0}: a, b, c, d · {1}: e, f`：
 
@@ -257,7 +262,10 @@ Connect a tree of indices to *index*: `{0}: 2 · {1}: 0 · {2}: 1, 3` takes item
 | `1:` | `{0}: b, c, d · {1}: f` |
 | `::2` | `{0}: a, c · {1}: e` |
 
-`:-1` 和 `1:` 能把每一项和下一项配成对（a → b、b → c、c → d）：模板 *arbor_h3_continuous_shots* 就这样取首帧和尾帧。**批次挑选** 用的是同样的写法。
+`:-1` 和 `1:` 能把每一项和下一项配成对（a → b、b → c、c → d）——逐段取首帧和尾帧。**批次挑选** 用的是同样的写法。
+
+## 每个分支的第 k 项
+*数据* 输出把取出的项按分支依次排成普通列表。对一棵「每张分镜表一个分支」的数据树取序号 `2`，就得到 **每张** 表的第三格组成的列表——每个场景一项，直接接到按项运行的节点上，就会每个场景运行一次。模板 *arbor_h3_long_takes* 用六个这样的列表（序号 0 … 5）接入长镜头的六张参考图和关键帧锚点。
 
 ## 每个分支各取各的
 给 *序号* 接一棵序号数据树：`{0}: 2 · {1}: 0 · {2}: 1, 3` 取第一个分支的第 2 项、第二个分支的第 0 项、第三个分支的第 1 和第 3 项。在 **面板** 里每个分支写一行，再用 **重塑数据树** 的 *升树* 拆开——模板 *arbor_qwen_pick_takes* 就这样为每个镜头选出最好的一版。

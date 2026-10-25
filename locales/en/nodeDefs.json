@@ -1290,6 +1290,10 @@
       "0": {
         "name": "tree",
         "tooltip": "The picked items, branch by branch."
+      },
+      "1": {
+        "name": "data",
+        "tooltip": "The picked items as plain data, branch after branch: index k on a tree of sheets gives frame k of every sheet as one list — straight into a node that runs once per item."
       }
     }
   },

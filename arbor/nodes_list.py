@@ -1,7 +1,7 @@
 """List nodes: the same operation on every branch of a tree."""
 
 from . import tree as T
-from .common import IO, TREE, CAT_LIST, schema, tree_in, tree_out, to_tree, unwrap, connected
+from .common import IO, TREE, CAT_LIST, schema, data_out, tree_in, tree_out, to_tree, unwrap, connected
 
 
 def _list_node(node_id, name, desc, inputs, outputs, aliases=()):
@@ -21,7 +21,9 @@ class ListItem(IO.ComfyNode):
                           "Pick items from every branch by index, list, range or slice.",
                           [index, IO.Boolean.Input("wrap", default=True,
                                                    tooltip="Out-of-range indices wrap around; off gives null")],
-                          [tree_out()], ["get item", "index", "pick", "sub list", "slice", "range of list"])
+                          [tree_out(), data_out(tooltip="The picked items as plain data, branch after branch — "
+                                                        "item k of every branch as one list, ready for any node")],
+                          ["get item", "index", "pick", "sub list", "slice", "range of list"])
 
     @classmethod
     def execute(cls, tree, index, wrap) -> IO.NodeOutput:
@@ -30,7 +32,8 @@ class ListItem(IO.ComfyNode):
             spec = values[0]  # one branch of indices per branch
         else:
             spec = ", ".join(str(v) for v in values if v is not None)  # a connected list: every index
-        return IO.NodeOutput(T.list_items(to_tree(tree), spec, unwrap(wrap)))
+        picked = T.list_items(to_tree(tree), spec, unwrap(wrap))
+        return IO.NodeOutput(picked, picked.flat())
 
 
 class Dispatch(IO.ComfyNode):

@@ -173,7 +173,7 @@ node("Arbor_SplitGrid", en=dict(
     doc="""## Why a whole sheet
 An image model that draws all the frames of a storyboard in one picture keeps the character, the light and the palette far more consistent than separate renders do. Ask for the grid in the prompt (*six panels, three columns and two rows, thin white gutters, no text*), give the sheet the panels' combined aspect (3 × 16:9 by 2 rows ≈ 8:3, e.g. 3264 × 1216), and cut it here.
 
-Template: *arbor_h3_continuous_shots* draws a 3 × 2 sheet with MOSS-Image, cuts it into six keyframes and animates from each one to the next.
+Template: *arbor_h3_long_takes* draws one 3 × 2 sheet per scene with MOSS-Image, cuts each into six keyframes (one branch per scene) and pins them along one continuous take per scene.
 
 ## Checking the cuts
 After a run the node shows the sheet with everything that was cut away shaded red and every panel outlined and numbered (0, 1, 2 … — the numbers **List Item** uses). A panel that swallowed a gutter, or two panels merged into one, shows at a glance.
@@ -195,7 +195,7 @@ After a run the node shows the sheet with everything that was cut away shaded re
     doc="""## 为什么要整张生成
 让图像模型在一张图里画出分镜的所有画面，人物、光线和色调会比分开生成一致得多。在提示词里写明网格（*six panels, three columns and two rows, thin white gutters, no text*），图片比例取各格拼起来的比例（3 格 16:9 × 2 行 ≈ 8:3，例如 3264 × 1216），再用本节点拆开。
 
-模板 *arbor_h3_continuous_shots* 用 MOSS-Image 画一张 3 × 2 的分镜表，拆成六张关键帧，再逐张过渡生成视频。
+模板 *arbor_h3_long_takes* 用 MOSS-Image 为每个场景画一张 3 × 2 的分镜表，各拆成六张关键帧（每个场景一个分支），再把它们锚定在每个场景的一镜到底长镜头里。
 
 ## 检查切线
 运行后节点上会显示网格图：被裁掉的部分标成红色，每一格画框并编号（0、1、2……——与 **列表取项** 的序号一致）。某格吞进了留白、或两格连在一起，一眼就能看出来。
@@ -692,7 +692,7 @@ b = {0}: horn · {1}: bells          template "{name}: {a} + {b}"
 → {0} Arrival: "Arrival: door + horn", "Arrival: map + horn"
   {1} Village: "Village: mist + bells", "Village: steps + bells"
 ```
-`{name}` is the branch's name (a scene, a page). Template: *arbor_h3_two_characters* writes a structured video prompt per scene this way, *arbor_h3_continuous_shots* one per transition.
+`{name}` is the branch's name (a scene, a page). Templates *arbor_h3_two_characters* and *arbor_h3_long_takes* write a structured video prompt per shot / per scene this way.
 
 ## Tips
 - Type the values in **Panels** (one per line) and connect their *data* output (or *tree*, to keep branches).
@@ -721,7 +721,7 @@ b = {0}: horn · {1}: bells          模板 "{name}: {a} + {b}"
 → {0} Arrival: "Arrival: door + horn", "Arrival: map + horn"
   {1} Village: "Village: mist + bells", "Village: steps + bells"
 ```
-`{name}` 是分支的名字（场景、页面）。模板 *arbor_h3_two_characters* 就是这样为每个场景写结构化的视频提示词，*arbor_h3_continuous_shots* 则为每段过渡写一条。
+`{name}` 是分支的名字（场景、页面）。模板 *arbor_h3_two_characters* 和 *arbor_h3_long_takes* 就是这样为每个镜头 / 每个场景写结构化的视频提示词。
 
 ## 提示
 - 在 **面板** 里逐行输入取值，接它的 *数据* 输出（想保留分支就接 *数据树*）。

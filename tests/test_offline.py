@@ -445,6 +445,9 @@ def test_grasshopper_matching():
     assert flip(T.DataTree({(0,): [1, 2], (1,): [3]})) == {(0,): [1, 3], (1,): [2]}
     # List Item: a connected list of indices picks all of them
     assert res(run(nodes_list.ListItem, tree=["a", "b", "c"], index=[0, 2], wrap=True))[0].branches == {(0,): ["a", "c"]}
+    sheets = T.DataTree({(0,): ["a0", "a1", "a2"], (1,): ["b0", "b1", "b2"]})
+    assert res(run(nodes_list.ListItem, tree=[sheets], index="1", wrap=True))[1] == ["a1", "b1"], \
+        "data: item 1 of every branch as one plain list"
     print("grasshopper matching: OK")
 
 
