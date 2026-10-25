@@ -1,7 +1,7 @@
 """List nodes: the same operation on every branch of a tree."""
 
 from . import tree as T
-from .common import IO, TREE, CAT_LIST, schema, tree_in, tree_out, to_tree, unwrap
+from .common import IO, TREE, CAT_LIST, schema, tree_in, tree_out, to_tree, unwrap, connected
 
 
 def _list_node(node_id, name, desc, inputs, outputs, aliases=()):
@@ -14,8 +14,9 @@ class ListItem(IO.ComfyNode):
         index = IO.MultiType.Input(
             IO.String.Input("index", default="0",
                             tooltip="Which items: 0 · -1 (last) · 0, 2 · 1:4 (slice) · 2-5 (inclusive) · ::2 "
-                                    "— or connect a number"),
-            types=[IO.Int])
+                                    "— or connect a number, or a tree of indices (its branches pair with "
+                                    "the list's in order: each branch picks its own items)"),
+            types=[IO.Int, TREE])
         return _list_node("Arbor_ListItem", "List Item",
                           "Pick items from every branch by index, list, range or slice.",
                           [index, IO.Boolean.Input("wrap", default=True,
@@ -25,7 +26,10 @@ class ListItem(IO.ComfyNode):
     @classmethod
     def execute(cls, tree, index, wrap) -> IO.NodeOutput:
         values = index if isinstance(index, list) else [index]
-        spec = ", ".join(str(v) for v in values if v is not None)  # a connected list: every index
+        if len(values) == 1 and isinstance(values[0], T.DataTree):
+            spec = values[0]  # one branch of indices per branch
+        else:
+            spec = ", ".join(str(v) for v in values if v is not None)  # a connected list: every index
         return IO.NodeOutput(T.list_items(to_tree(tree), spec, unwrap(wrap)))
 
 
@@ -69,13 +73,22 @@ class Repeat(IO.ComfyNode):
     @classmethod
     def define_schema(cls):
         return _list_node("Arbor_Repeat", "Repeat",
-                          "Repeat items: 'each' gives aabbcc, 'whole' gives abcabc.",
+                          "Repeat items: 'each' gives aabbcc, 'whole' gives abcabc. Connect a shape to "
+                          "stretch every branch to the item count of the matching branch instead "
+                          "(Grasshopper's Longest List) — one value per scene for every shot of that scene.",
                           [IO.Int.Input("count", default=2, min=1, max=10000),
-                           IO.Combo.Input("mode", options=["each", "whole"], default="each")],
-                          [tree_out()], ["duplicate", "tile list"])
+                           IO.Combo.Input("mode", options=["each", "whole"], default="each"),
+                           tree_in("shape", optional=True,
+                                   tooltip="Optional: a tree to match — each branch is stretched to the item "
+                                           "count of its matching branch (paired in order) and takes its path; "
+                                           "count is then ignored")],
+                          [tree_out()], ["duplicate", "tile list", "longest list", "match shape", "match tree",
+                                         "repeat to length"])
 
     @classmethod
-    def execute(cls, tree, count, mode) -> IO.NodeOutput:
+    def execute(cls, tree, count, mode, shape=None) -> IO.NodeOutput:
+        if connected(shape):
+            return IO.NodeOutput(T.repeat_to(to_tree(tree), to_tree(shape), unwrap(mode)))
         return IO.NodeOutput(T.repeat(to_tree(tree), unwrap(count), unwrap(mode)))
 
 

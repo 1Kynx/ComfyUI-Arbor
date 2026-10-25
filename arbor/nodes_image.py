@@ -361,15 +361,20 @@ class BatchPick(IO.ComfyNode):
     def define_schema(cls):
         return schema(
             "Arbor_BatchPick", "Batch Pick", CAT_MEDIA,
-            "Pick frames from an image batch: '0, 2, -1', ranges '3-5' (inclusive) or slices '1:8:2'. "
-            "Order and repeats are kept.",
-            [IO.Image.Input("images"), IO.String.Input("indices", default="0", tooltip="e.g. 0, 2, -1, 3-5, ::2")],
+            "Pick frames from an image batch or a video: '0, 2, -1', ranges '3-5' (inclusive) or slices "
+            "'1:8:2'. Order and repeats are kept. '0, -1' gives a clip's first and last frame.",
+            [IO.MultiType.Input(IO.Image.Input("images", tooltip="An image batch, or a video (its frames)"),
+                                types=[IO.Video]),
+             IO.String.Input("indices", default="0", tooltip="e.g. 0, 2, -1, 3-5, ::2")],
             [IO.Image.Output(display_name="images"), IO.Int.Output(display_name="count")],
-            ["select from batch", "image from batch", "frames", "batch index"],
+            ["select from batch", "image from batch", "frames", "batch index", "video frame", "last frame",
+             "first frame", "extract frames"],
             input_list=False)
 
     @classmethod
     def execute(cls, images, indices) -> IO.NodeOutput:
+        if is_video(images):
+            images = images.get_components().images
         idx = parse_indices(indices, int(images.shape[0]))
         if not idx:
             raise ValueError("Batch Pick: no indices given")

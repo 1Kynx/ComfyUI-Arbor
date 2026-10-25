@@ -221,7 +221,7 @@ node("Arbor_TreeStatistics", en=dict(
 node("Arbor_ListItem", en=dict(
     desc="Pick items from every branch by index, list, range or slice — Grasshopper's List Item and Sub List in one node.",
     inputs={"tree": TREE_EN,
-            "index": "Which items: `0` · `-1` (last) · `0, 2` · `1:4` (slice, end excluded) · `2-5` (range, end included) · `::2` (every other). A connected number works too.",
+            "index": "Which items: `0` · `-1` (last) · `0, 2` · `1:4` (slice, end excluded) · `2-5` (range, end included) · `::2` (every other). A connected number works too, or a tree of indices: its branches pair with the list's in order, so every branch picks its own items.",
             "wrap": "Out-of-range indices wrap around the branch length. Off: they give an empty value, so branches stay aligned."},
     outputs=["The picked items, branch by branch."],
     doc="""## Examples
@@ -236,11 +236,14 @@ node("Arbor_ListItem", en=dict(
 | `::2` | `{0}: a, c · {1}: e` |
 
 `:-1` and `1:` pair every item with the next one (a → b, b → c, c → d): *arbor_h3_continuous_shots* takes its first and last frames this way. The same syntax picks frames in **Batch Pick**.
+
+## One pick per branch
+Connect a tree of indices to *index*: `{0}: 2 · {1}: 0 · {2}: 1, 3` takes item 2 of the first branch, item 0 of the second and items 1 and 3 of the third. Type the picks in a **Panel** one line per branch and **Reshape Tree** *graft* them — *arbor_qwen_pick_takes* chooses the best take of every shot this way.
 """), zh=dict(
     name="列表取项",
     desc="按序号、列表、范围或切片从每个分支取项——一个节点包含 Grasshopper 的 List Item 和 Sub List。",
     inputs={"tree": TREE_ZH,
-            "index": ("序号", "取哪些项：`0` · `-1`（最后一项）· `0, 2` · `1:4`（切片，不含结尾）· `2-5`（范围，含结尾）· `::2`（隔一个取一个）。也可以接入数字。"),
+            "index": ("序号", "取哪些项：`0` · `-1`（最后一项）· `0, 2` · `1:4`（切片，不含结尾）· `2-5`（范围，含结尾）· `::2`（隔一个取一个）。也可以接入数字，或接入序号数据树：它的分支按顺序与列表的分支配对，每个分支取自己的项。"),
             "wrap": ("循环", "序号超出分支长度时循环。关闭时得到空值，各分支仍保持对齐。")},
     outputs=[("数据树", "按分支取出的项。")],
     doc="""## 示例
@@ -255,6 +258,9 @@ node("Arbor_ListItem", en=dict(
 | `::2` | `{0}: a, c · {1}: e` |
 
 `:-1` 和 `1:` 能把每一项和下一项配成对（a → b、b → c、c → d）：模板 *arbor_h3_continuous_shots* 就这样取首帧和尾帧。**批次挑选** 用的是同样的写法。
+
+## 每个分支各取各的
+给 *序号* 接一棵序号数据树：`{0}: 2 · {1}: 0 · {2}: 1, 3` 取第一个分支的第 2 项、第二个分支的第 0 项、第三个分支的第 1 和第 3 项。在 **面板** 里每个分支写一行，再用 **重塑数据树** 的 *升树* 拆开——模板 *arbor_qwen_pick_takes* 就这样为每个镜头选出最好的一版。
 """))
 
 PATTERN_EN = ("Typed repeating pattern ('T F', 'true,false', '1 0 1', 'TFT'), or connect BOOLEAN values / a boolean tree "
@@ -311,18 +317,40 @@ Handy for turning a flat list of images into grid rows.
 """))
 
 node("Arbor_Repeat", en=dict(
-    desc="Repeat items: each gives aabbcc, whole gives abcabc.",
-    inputs={"tree": TREE_EN, "count": "How many times.", "mode": "each: repeat every item in place · whole: repeat the whole list."},
+    desc="Repeat items: each gives aabbcc, whole gives abcabc. With a shape connected, every branch is stretched to the item count of its matching branch instead — Grasshopper's Longest List.",
+    inputs={"tree": TREE_EN, "count": "How many times (ignored while a shape is connected).",
+            "mode": "each: repeat every item in place · whole: repeat the whole list. With a shape: each spreads the items evenly (a a b b), whole cycles them (a b a b).",
+            "shape": "Optional tree to match. Branches pair in order (the last one repeats); each branch gets as many items as its partner and takes its path, so the result lines up with the shape item by item."},
     outputs=[OUT_EN],
     doc="""## Example
 count 2: `a, b` → each `a, a, b, b` · whole `a, b, a, b`
+
+## Match a shape
+One location per scene, two shots per scene:
+```
+tree  = {0}: tea house · {1}: bamboo · {2}: rooftop
+shape = {0}: shot 1, shot 2 · {1}: shot 1, shot 2 · {2}: shot 1, shot 2
+→ {0}: tea house, tea house · {1}: bamboo, bamboo · {2}: rooftop, rooftop
+```
+**Tree to Data** on both now gives two lists of six that line up — every shot gets its own scene's location as a reference picture.
 """), zh=dict(
     name="重复",
-    desc="重复项：each 得到 aabbcc，whole 得到 abcabc。",
-    inputs={"tree": TREE_ZH, "count": ("次数", "重复的次数。"), "mode": ("模式", "each：每项原地重复 · whole：整个列表重复。")},
+    desc="重复项：each 得到 aabbcc，whole 得到 abcabc。接上形状时，改为把每个分支拉长到对应分支的项数——即 Grasshopper 的 Longest List。",
+    inputs={"tree": TREE_ZH, "count": ("次数", "重复的次数（接了形状时不起作用）。"),
+            "mode": ("模式", "each：每项原地重复 · whole：整个列表重复。接形状时：each 均匀铺开（a a b b），whole 循环（a b a b）。"),
+            "shape": ("形状", "可选，要对齐的数据树。分支按顺序配对（不够时重复最后一个）；每个分支拉长到对应分支的项数并沿用它的路径，结果与形状逐项对齐。")},
     outputs=[OUT_ZH],
     doc="""## 示例
 次数 2：`a, b` → each `a, a, b, b` · whole `a, b, a, b`
+
+## 对齐形状
+每个场景一个地点、两个镜头：
+```
+数据 = {0}: 茶室 · {1}: 竹林 · {2}: 天台
+形状 = {0}: 镜头1, 镜头2 · {1}: 镜头1, 镜头2 · {2}: 镜头1, 镜头2
+→ {0}: 茶室, 茶室 · {1}: 竹林, 竹林 · {2}: 天台, 天台
+```
+两边再各接 **数据树转数据**，就得到两个逐项对齐的六项列表——每个镜头都拿到自己场景的地点作参考图。
 """))
 
 simple("Arbor_SortList",

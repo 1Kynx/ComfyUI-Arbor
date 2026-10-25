@@ -388,6 +388,7 @@ class SaveByPath(IO.ComfyNode):
         meta = _metadata(cls.hidden)
 
         saved, previews = {}, {"images": [], "audio": [], "video": []}
+        single = list(plan) == [(0,)] and not data.label((0,), label_of)  # a plain list, or one unnamed {0}
         for b, (path, files) in enumerate(plan.items()):
             tag = "-".join(map(str, path))
             name = data.label(path, label_of)
@@ -397,8 +398,13 @@ class SaveByPath(IO.ComfyNode):
             for j, (ext, payload) in enumerate(files):
                 label = T.match_item(name_tree, b, j) if name_tree else None
                 stem = _safe(label_of(label)) if label is not None else f"{j:03d}"
-                target = _unique(os.path.join(folder, f"{filename}_{tag}_{stem}.{ext}") if flat
-                                 else os.path.join(folder, filename, tag, f"{stem}.{ext}"))
+                if single:  # a plain list: no branch folder / tag, the files go straight under the prefix
+                    target = (os.path.join(folder, f"{filename}_{stem}.{ext}") if flat
+                              else os.path.join(folder, filename, f"{stem}.{ext}"))
+                else:
+                    target = (os.path.join(folder, f"{filename}_{tag}_{stem}.{ext}") if flat
+                              else os.path.join(folder, filename, tag, f"{stem}.{ext}"))
+                target = _unique(target)
                 os.makedirs(os.path.dirname(target), exist_ok=True)
                 WRITERS[ext](payload, target, meta)
                 row.append(target)

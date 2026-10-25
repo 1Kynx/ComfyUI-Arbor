@@ -142,9 +142,13 @@ class SplitText(IO.ComfyNode):
         return schema(
             "Arbor_SplitText", "Split Text", CAT_DATA,
             "Split text into items — one per line or separator; an empty line starts a new branch. "
-            "For text coming from other nodes (to type it, use a Panel).",
+            "'table' reads a pasted spreadsheet (tab or comma separated): one branch per column, named "
+            "after its header. For text coming from other nodes (to type it, use a Panel).",
             [IO.String.Input("text", multiline=True, default=""),
-             IO.Combo.Input("separator", options=["newline", ",", ";", "|"], default="newline"),
+             IO.Combo.Input("separator", options=["newline", ",", ";", "|", "table"], default="newline",
+                            tooltip="table: rows from a spreadsheet or CSV (cells split by tabs, or by commas "
+                                    "when there are no tabs; quotes allowed). The first row names the columns; "
+                                    "every column becomes a branch"),
              IO.Boolean.Input("blank_line_branches", default=True,
                               tooltip="Paragraphs separated by an empty line become branches {0},{1},…"),
              IO.Boolean.Input("strip", default=True)],
@@ -156,6 +160,8 @@ class SplitText(IO.ComfyNode):
     def execute(cls, text, separator, blank_line_branches, strip) -> IO.NodeOutput:
         text = str(unwrap(text, "")).replace("\r\n", "\n")
         sep = unwrap(separator)
+        if sep == "table":
+            return both(split_table(text, unwrap(strip)))
         blocks = re.split(r"\n\s*\n", text) if unwrap(blank_line_branches) else [text]
         out = {}
         for block in blocks:
@@ -166,6 +172,25 @@ class SplitText(IO.ComfyNode):
             if parts:
                 out[(len(out),)] = parts
         return both(T.DataTree(out or {(0,): []}))
+
+
+def split_table(text: str, strip: bool = True) -> T.DataTree:
+    """A pasted spreadsheet / CSV -> one branch per column, named after its header cell."""
+    import csv
+    lines = [ln for ln in text.split("\n") if ln.strip()]
+    if not lines:
+        return T.DataTree({(0,): []})
+    delim = "\t" if "\t" in lines[0] else ","
+    rows = list(csv.reader(lines, delimiter=delim))
+    if strip:
+        rows = [[c.strip() for c in r] for r in rows]
+    header, body = rows[0], rows[1:]
+    out, names = {}, {}
+    for c in range(max(len(r) for r in rows)):
+        out[(c,)] = [r[c] if c < len(r) else "" for r in body]
+        if c < len(header) and header[c]:
+            names[(c,)] = header[c]
+    return T.DataTree(out, names)
 
 
 # ======================================================================= Prompt Template

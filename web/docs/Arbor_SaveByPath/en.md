@@ -9,7 +9,7 @@ Save a tree keeping its structure — pictures as PNG, videos as MP4, audio as F
 - **filename_prefix** · *STRING*  
   Where to save: a folder / prefix inside ComfyUI's output folder (arbor/run), output/…, or an absolute path such as D:/renders/run — the folder icon at the end of the box picks the folder. Outside the output folder only while ComfyUI listens on this computer alone. Supports %date%-style variables.
 - **layout** · *COMBO (subfolders · flat)*  
-  subfolders: prefix/0-1/000.png (a named branch: prefix/0-1 · name/000.png) · flat: prefix_0-1_000.png
+  subfolders: prefix/0-1/000.png (a named branch: prefix/0-1 · name/000.png) · flat: prefix_0-1_000.png. A plain list (one unnamed branch {0}) goes straight under the prefix: prefix/000.png · prefix_000.png
 - **names** · *any, optional*  
   Optional file names, matched to the files item by item (e.g. Load Folder's names or a Prompt Template).
 

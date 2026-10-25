@@ -401,13 +401,18 @@ def parse_indices(spec, n: int) -> list[int]:
 
 
 def list_items(tree: DataTree, spec, wrap: bool = True) -> DataTree:
-    """Pick items from every branch; out-of-range indices wrap, or give null."""
-    def pick(_, items):
+    """Pick items from every branch; out-of-range indices wrap, or give null.
+
+    ``spec`` is one index text for every branch, or a tree of indices whose
+    branches pair with the list's in order (each branch picks its own items).
+    """
+    def pick(k, items):
         n = len(items)
+        own = spec if not isinstance(spec, DataTree) else ", ".join(str(v) for v in (branch_for(spec, k) or []))
         if wrap:
-            return [items[i % n] for i in parse_indices(spec, n)] if n else []
-        return [items[i] if -n <= i < n else None for i in parse_indices(spec, n)]
-    return tree.map_branches(pick)
+            return [items[i % n] for i in parse_indices(own, n)] if n else []
+        return [items[i] if -n <= i < n else None for i in parse_indices(own, n)]
+    return DataTree({p: pick(k, items) for k, (p, items) in enumerate(tree.items())}, tree.names)
 
 
 def dispatch(tree: DataTree, pattern) -> tuple[DataTree, DataTree]:
@@ -436,6 +441,33 @@ def repeat(tree: DataTree, count: int, mode: str = "each") -> DataTree:
     if mode == "each":
         return tree.map_branches(lambda _, items: [v for v in items for _ in range(count)])
     return tree.map_branches(lambda _, items: items * count)
+
+
+def repeat_to(tree: DataTree, shape: DataTree, mode: str = "each") -> DataTree:
+    """Stretch every branch to the item count of the matching branch of ``shape``.
+
+    Branches pair in order (the last one repeats), like Grasshopper's Longest
+    List. 'each' spreads the items evenly (a a b b), 'whole' cycles them
+    (a b a b). The result takes the shape's paths, so it lines up with it item
+    by item; a branch keeps its own name where the shape's has none.
+    """
+    out, names = {}, dict(shape.names)
+    own = list(tree.items())
+    for k, (path, target) in enumerate(shape.items()):
+        n = len(target)
+        src = branch_for(tree, k) or []
+        m = len(src)
+        if not m:
+            out[path] = []
+        elif mode == "each":
+            out[path] = [src[j * m // n] for j in range(n)]
+        else:
+            out[path] = [src[j % m] for j in range(n)]
+        if path not in names and own:
+            name = tree.names.get(own[min(k, len(own) - 1)][0])
+            if name is not None:
+                names[path] = name
+    return DataTree(out, names)
 
 
 def _sort_key(v):

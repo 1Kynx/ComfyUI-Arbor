@@ -73,6 +73,17 @@ def test_tree_algebra():
         (0, 0): [0, 1], (0, 1): [2, 3], (0, 2): [4]}
     assert T.repeat(t, 2, "whole").branches[(1,)] == [4, 5, 4, 5]
     assert T.list_items(t, "-1").branches == {(0,): [3], (1,): [5]}
+    picks = T.DataTree({(0,): ["2"], (1,): [0, 1]})
+    assert T.list_items(t, picks).branches == {(0,): [3], (1,): [4, 5]}, "one pick per branch"
+    loc = T.DataTree({(0,): ["tea"], (1,): ["bamboo"]}, {(0,): "Tea house"})
+    shots = T.DataTree({(0, 0): ["s1", "s2", "s3"], (0, 1): ["s1", "s2"], (0, 2): ["s1"]})
+    m = T.repeat_to(loc, shots)
+    assert m.branches == {(0, 0): ["tea"] * 3, (0, 1): ["bamboo"] * 2, (0, 2): ["bamboo"]}, m.branches
+    assert m.names == {(0, 0): "Tea house"}, "a branch keeps its name where the shape has none"
+    ab = T.DataTree({(0,): ["a", "b"]})
+    four = T.DataTree({(0,): [1, 2, 3, 4]})
+    assert T.repeat_to(ab, four, "each").branches[(0,)] == ["a", "a", "b", "b"]
+    assert T.repeat_to(ab, four, "whole").branches[(0,)] == ["a", "b", "a", "b"]
     assert T.list_items(t, "0, 5", wrap=False).branches == {(0,): [1, None], (1,): [4, None]}, "null keeps alignment"
     assert T.parse_indices("0, -1, 2-4, ::3, 4-2", 6) == [0, -1, 2, 3, 4, 0, 3, 4, 3, 2]
     assert T.parse_indices(3, 5) == [3], "a connected number"
@@ -128,6 +139,14 @@ def test_data_nodes():
     assert st.branches == {(0,): ["cat", "dog"], (1,): ["red, blue"]}
     st2 = res(run(nodes_data.SplitText, text="red, blue", separator=",", blank_line_branches=True, strip=True))[1]
     assert st2.branches == {(0,): ["red", "blue"]}
+    sheet = "scene\tmotion\tsound\nArrival\tthe train pulls away\thorn\nVillage\tmist drifts\n"
+    tab = res(run(nodes_data.SplitText, text=sheet, separator="table", blank_line_branches=True, strip=True))[1]
+    assert tab.branches == {(0,): ["Arrival", "Village"], (1,): ["the train pulls away", "mist drifts"],
+                            (2,): ["horn", ""]}, tab.branches
+    assert tab.names == {(0,): "scene", (1,): "motion", (2,): "sound"}, "columns named after the header"
+    csv_tab = res(run(nodes_data.SplitText, text='name,prompt\ncat,"a cat, sleeping"', separator="table",
+                      blank_line_branches=True, strip=True))[1]
+    assert csv_tab.branches[(1,)] == ["a cat, sleeping"], "quoted commas stay in the cell"
 
     # Prompt Template
     a = T.DataTree({(0,): ["cat", "dog"]})
@@ -629,6 +648,12 @@ def test_image_nodes():
     assert nodes_image.parse_indices("0, -1, 2-4, ::3", 6) == [0, 5, 2, 3, 4, 0, 3]
     picked = res(nodes_image.BatchPick.execute(torch.rand(6, 4, 4, 3), "1, 1, -1"))
     assert picked[0].shape[0] == 3 and picked[1] == 3
+    from fractions import Fraction
+    from comfy_api.latest import InputImpl, Types
+    frames = torch.rand(10, 4, 6, 3)
+    vid = InputImpl.VideoFromComponents(Types.VideoComponents(images=frames, audio=None, frame_rate=Fraction(24)))
+    ends = res(nodes_image.BatchPick.execute(vid, "0, -1"))
+    assert ends[1] == 2 and torch.equal(ends[0][1], frames[-1]), "first and last frame of a video"
     print("image nodes: OK")
 
 
@@ -794,6 +819,10 @@ def test_files():
             assert back_count == 7 and back_folders == folders and back.names == imgs.names
             plain = res(save(T.DataTree({(0, 1): [imgs.branches[(1,)][0]]}), "xy/plain"))[0]
             assert rel(plain.branches[(0, 1)][0]) == "xy/plain/0-1/000.png", "unnamed branches: just the path"
+            one = [imgs.branches[(1,)][0], imgs.branches[(1,)][1]]
+            listed = res(run(nodes_files.SaveByPath, tree=one, filename_prefix="xy/list", layout="subfolders",
+                             names=["a → b", "b → c"]))[0]
+            assert [rel(f) for f in listed.branches[(0,)]] == ["xy/list/a → b.png", "xy/list/b → c.png"],                 "a plain list goes straight under the prefix"
             again = res(save(imgs, "xy/run", layout="flat"))[0]
             assert os.path.basename(again.branches[(0,)][0]) == "run_0 · src_000.png"
             # a long name cut at a space must not leave a trailing space (Windows drops it from folder names)

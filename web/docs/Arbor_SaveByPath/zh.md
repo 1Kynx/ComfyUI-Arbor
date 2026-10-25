@@ -9,7 +9,7 @@
 - **文件名前缀** `filename_prefix` · *STRING*  
   保存位置：output 文件夹内的目录 / 前缀（arbor/run）、output/…，或绝对路径如 D:/renders/run——点输入框末尾的文件夹图标可以选择文件夹。只有 ComfyUI 只在本机监听时才能存到 output 以外。支持 %date% 等变量。
 - **布局** `layout` · *COMBO (subfolders · flat)*  
-  subfolders：前缀/0-1/000.png（有名字的分支：前缀/0-1 · 名字/000.png）· flat：前缀_0-1_000.png
+  subfolders：前缀/0-1/000.png（有名字的分支：前缀/0-1 · 名字/000.png）· flat：前缀_0-1_000.png。普通列表（只有一个未命名的分支 {0}）直接存在前缀下：前缀/000.png · 前缀_000.png
 - **文件名** `names` · *任意，可选*  
   可选，与文件逐项对应的文件名（例如「加载文件夹」的文件名或提示词模板的输出）。
 

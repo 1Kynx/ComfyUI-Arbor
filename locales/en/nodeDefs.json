@@ -287,11 +287,11 @@
   },
   "Arbor_BatchPick": {
     "display_name": "Batch Pick",
-    "description": "Pick frames from an image batch by index, inclusive range or slice. Order and repeats are kept.",
+    "description": "Pick frames from an image batch or a video by index, inclusive range or slice. Order and repeats are kept.",
     "inputs": {
       "images": {
         "name": "images",
-        "tooltip": "Image batch to pick from."
+        "tooltip": "Image batch — or a video, whose frames are picked from."
       },
       "indices": {
         "name": "indices",
@@ -403,7 +403,7 @@
       },
       "layout": {
         "name": "layout",
-        "tooltip": "subfolders: prefix/0-1/000.png (a named branch: prefix/0-1 · name/000.png) · flat: prefix_0-1_000.png"
+        "tooltip": "subfolders: prefix/0-1/000.png (a named branch: prefix/0-1 · name/000.png) · flat: prefix_0-1_000.png. A plain list (one unnamed branch {0}) goes straight under the prefix: prefix/000.png · prefix_000.png"
       },
       "names": {
         "name": "names",
@@ -519,7 +519,7 @@
   },
   "Arbor_SplitText": {
     "display_name": "Split Text",
-    "description": "Split text into items — one per line or separator; an empty line starts a new branch.",
+    "description": "Split text into items — one per line or separator; an empty line starts a new branch. table reads a pasted spreadsheet: one branch per column.",
     "inputs": {
       "text": {
         "name": "text",
@@ -527,7 +527,7 @@
       },
       "separator": {
         "name": "separator",
-        "tooltip": "What separates items inside a paragraph: newline, comma, semicolon or |."
+        "tooltip": "What separates items inside a paragraph: newline, comma, semicolon or |. table: rows copied from a spreadsheet or a CSV — cells split by tabs (or commas when there are none, quotes allowed), the first row names the columns, every column becomes a branch."
       },
       "blank_line_branches": {
         "name": "blank_line_branches",
@@ -1243,7 +1243,7 @@
       },
       "index": {
         "name": "index",
-        "tooltip": "Which items: `0` · `-1` (last) · `0, 2` · `1:4` (slice, end excluded) · `2-5` (range, end included) · `::2` (every other). A connected number works too."
+        "tooltip": "Which items: `0` · `-1` (last) · `0, 2` · `1:4` (slice, end excluded) · `2-5` (range, end included) · `::2` (every other). A connected number works too, or a tree of indices: its branches pair with the list's in order, so every branch picks its own items."
       },
       "wrap": {
         "name": "wrap",
@@ -1303,7 +1303,7 @@
   },
   "Arbor_Repeat": {
     "display_name": "Repeat",
-    "description": "Repeat items: each gives aabbcc, whole gives abcabc.",
+    "description": "Repeat items: each gives aabbcc, whole gives abcabc. With a shape connected, every branch is stretched to the item count of its matching branch instead — Grasshopper's Longest List.",
     "inputs": {
       "tree": {
         "name": "tree",
@@ -1311,11 +1311,15 @@
       },
       "count": {
         "name": "count",
-        "tooltip": "How many times."
+        "tooltip": "How many times (ignored while a shape is connected)."
       },
       "mode": {
         "name": "mode",
-        "tooltip": "each: repeat every item in place · whole: repeat the whole list."
+        "tooltip": "each: repeat every item in place · whole: repeat the whole list. With a shape: each spreads the items evenly (a a b b), whole cycles them (a b a b)."
+      },
+      "shape": {
+        "name": "shape",
+        "tooltip": "Optional tree to match. Branches pair in order (the last one repeats); each branch gets as many items as its partner and takes its path, so the result lines up with the shape item by item."
       }
     },
     "outputs": {

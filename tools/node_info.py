@@ -123,8 +123,8 @@ A 500 × 300 image, *longest side* = 1000, *multiple_of* = 64 → **1024 × 576*
 """))
 
 node("Arbor_BatchPick", en=dict(
-    desc="Pick frames from an image batch by index, inclusive range or slice. Order and repeats are kept.",
-    inputs={"images": "Image batch to pick from.",
+    desc="Pick frames from an image batch or a video by index, inclusive range or slice. Order and repeats are kept.",
+    inputs={"images": "Image batch — or a video, whose frames are picked from.",
             "indices": "Comma / space separated: 0, 2, -1 (from the end), 3-5 (inclusive range), 1:8:2 or ::2 (Python slices)."},
     outputs=["The picked frames, as one batch.", "How many frames were picked."],
     doc="""## Examples (batch of 6)
@@ -135,12 +135,15 @@ node("Arbor_BatchPick", en=dict(
 | `::2` | 0, 2, 4 |
 | `1, 1, 1` | frame 1 three times |
 
+## Videos
+Connect a video (Create Video, Load Video, a generated clip) and pick its frames as pictures: `0, -1` for a contact sheet of first and last frames, `-1` for the last frame to start the next shot from. A batch run of clips gives one picked batch per clip.
+
 ## Tips
 - An index outside the batch is an error rather than being skipped, so typos don't go unnoticed.
 """), zh=dict(
     name="批次挑选",
-    desc="按序号、闭区间或切片从图像批次中挑帧，保留顺序和重复。",
-    inputs={"images": ("图像", "要挑选的图像批次。"),
+    desc="按序号、闭区间或切片从图像批次或视频中挑帧，保留顺序和重复。",
+    inputs={"images": ("图像", "要挑选的图像批次——或一段视频，从它的帧里挑。"),
             "indices": ("序号", "用逗号或空格分隔：0, 2, -1（倒数）, 3-5（闭区间）, 1:8:2 或 ::2（Python 切片）。")},
     outputs=[("图像", "挑出的帧，合成一个批次。"), ("数量", "挑出的帧数。")],
     doc="""## 示例（6 帧的批次）
@@ -150,6 +153,9 @@ node("Arbor_BatchPick", en=dict(
 | `2-4` | 2, 3, 4 |
 | `::2` | 0, 2, 4 |
 | `1, 1, 1` | 第 1 帧重复三次 |
+
+## 视频
+接入视频（创建视频、加载视频、生成的片段），把其中的帧挑出来作为图片：`0, -1` 做首尾帧对照表，`-1` 取最后一帧作为下一个镜头的起点。一批片段会得到每段一个挑选结果。
 
 ## 提示
 - 序号超出批次范围会直接报错而不是跳过，避免输错了却没发现。
@@ -427,7 +433,7 @@ node("Arbor_SaveByPath", en=dict(
     desc="Save a tree keeping its structure — pictures as PNG, videos as MP4, audio as FLAC, text as TXT: one subfolder (or filename part) per branch, named after the branch when it has a name, with optional names per file.",
     inputs={"tree": "What to save — a tree, a list or a single value. Picture batches are saved frame by frame, audio batches clip by clip; other values are skipped.",
             "filename_prefix": "Where to save: a folder / prefix inside ComfyUI's output folder (arbor/run), output/…, or an absolute path such as D:/renders/run — the folder icon at the end of the box picks the folder. Outside the output folder only while ComfyUI listens on this computer alone. Supports %date%-style variables.",
-            "layout": "subfolders: prefix/0-1/000.png (a named branch: prefix/0-1 · name/000.png) · flat: prefix_0-1_000.png",
+            "layout": "subfolders: prefix/0-1/000.png (a named branch: prefix/0-1 · name/000.png) · flat: prefix_0-1_000.png. A plain list (one unnamed branch {0}) goes straight under the prefix: prefix/000.png · prefix_000.png",
             "names": "Optional file names, matched to the files item by item (e.g. Load Folder's names or a Prompt Template)."},
     outputs=["Saved file paths, in the same tree layout (and with the same names)."],
     doc="""## Example
@@ -455,7 +461,7 @@ Previews of files saved outside the output folder are shown from a copy in the t
     desc="按数据树结构保存——图片存 PNG、视频存 MP4、音频存 FLAC、文字存 TXT：每个分支一个子文件夹（或文件名的一部分），有名字的分支用名字命名，可选为每个文件命名。",
     inputs={"tree": ("数据树", "要保存的内容——数据树、列表或单个值。图片批次逐帧保存，音频批次逐段保存；其它类型的值会跳过。"),
             "filename_prefix": ("文件名前缀", "保存位置：output 文件夹内的目录 / 前缀（arbor/run）、output/…，或绝对路径如 D:/renders/run——点输入框末尾的文件夹图标可以选择文件夹。只有 ComfyUI 只在本机监听时才能存到 output 以外。支持 %date% 等变量。"),
-            "layout": ("布局", "subfolders：前缀/0-1/000.png（有名字的分支：前缀/0-1 · 名字/000.png）· flat：前缀_0-1_000.png"),
+            "layout": ("布局", "subfolders：前缀/0-1/000.png（有名字的分支：前缀/0-1 · 名字/000.png）· flat：前缀_0-1_000.png。普通列表（只有一个未命名的分支 {0}）直接存在前缀下：前缀/000.png · 前缀_000.png"),
             "names": ("文件名", "可选，与文件逐项对应的文件名（例如「加载文件夹」的文件名或提示词模板的输出）。")},
     outputs=[("路径", "已保存文件的路径，结构（和分支名）与输入相同。")],
     doc="""## 示例
@@ -917,27 +923,45 @@ Use **series** when you know the step, **range** when you know both ends (e.g. c
 """))
 
 node("Arbor_SplitText", en=dict(
-    desc="Split text into items — one per line or separator; an empty line starts a new branch.",
+    desc="Split text into items — one per line or separator; an empty line starts a new branch. table reads a pasted spreadsheet: one branch per column.",
     inputs={"text": "The text. Can be typed or connected from any STRING output.",
-            "separator": "What separates items inside a paragraph: newline, comma, semicolon or |.",
+            "separator": "What separates items inside a paragraph: newline, comma, semicolon or |. table: rows copied from a spreadsheet or a CSV — cells split by tabs (or commas when there are none, quotes allowed), the first row names the columns, every column becomes a branch.",
             "blank_line_branches": "Paragraphs separated by an empty line become branches {0}, {1}, …",
             "strip": "Trim spaces around every item."},
     outputs=["Every item as plain text data (paragraphs one after another).", "The items as a tree: one branch per paragraph."],
     doc="""## Example
 `red, green` ⏎ ⏎ `cat, dog` with separator `,` → `{0}: red, green` · `{1}: cat, dog`.
 
+## Tables
+Copy a shot list out of Excel or Google Sheets and paste it, separator `table`:
+```
+scene     motion                  sound
+Arrival   the train pulls away    a distant horn
+Village   mist drifts             birdsong
+```
+→ `{0} scene: Arrival, Village` · `{1} motion: …` · `{2} sound: …`. **Tree Branch** (index 1) takes the motion column for **Prompt Template**; **Reshape Tree** *flip matrix* turns it into one branch per row.
+
 ## Tips
 - For typing, a **Panel** does the same with a live preview; use this node when the text comes from another node (a file loader, an LLM…).
 """), zh=dict(
     name="拆分文本",
-    desc="把文本拆成多项——每行或每个分隔符一项；空行开始新分支。",
+    desc="把文本拆成多项——每行或每个分隔符一项；空行开始新分支。table 读取粘贴的表格：每列一个分支。",
     inputs={"text": ("文本", "要拆分的文本，可以手动输入，也可以接任意 STRING 输出。"),
-            "separator": ("分隔符", "段落内用什么分隔各项：换行、逗号、分号或 |。"),
+            "separator": ("分隔符", "段落内用什么分隔各项：换行、逗号、分号或 |。table 表格：从电子表格或 CSV 复制来的行——用制表符分隔单元格（没有制表符时用逗号，支持引号），第一行是列名，每一列成为一个分支。"),
             "blank_line_branches": ("空行分支", "用空行分隔的段落分别成为分支 {0}、{1}……"),
             "strip": ("去除首尾空白", "去掉每一项两端的空格。")},
     outputs=[("数据", "拆分后的所有项（普通文本数据，各段依次排列）。"), ("数据树", "拆分后的数据树：每个段落一个分支。")],
     doc="""## 示例
 `red, green` ⏎ ⏎ `cat, dog`，分隔符 `,` → `{0}: red, green` · `{1}: cat, dog`。
+
+## 表格
+从 Excel 或在线表格复制一份镜头表粘贴进来，分隔符选 `table`：
+```
+scene     motion                  sound
+Arrival   the train pulls away    a distant horn
+Village   mist drifts             birdsong
+```
+→ `{0} scene: Arrival, Village` · `{1} motion: …` · `{2} sound: …`。用 **数据树分支**（序号 1）取出 motion 列接 **提示词模板**；**重塑数据树** 的 *翻转矩阵* 可以变成每行一个分支。
 
 ## 提示
 - 手动输入时用 **面板** 效果相同，还能实时预览；文本来自其他节点（读文件、LLM……）时用本节点。
