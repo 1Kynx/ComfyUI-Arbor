@@ -332,7 +332,7 @@ tree  = {0}: tea house · {1}: bamboo · {2}: rooftop
 shape = {0}: shot 1, shot 2 · {1}: shot 1, shot 2 · {2}: shot 1, shot 2
 → {0}: tea house, tea house · {1}: bamboo, bamboo · {2}: rooftop, rooftop
 ```
-**Tree to Data** on both now gives two lists of six that line up — every shot gets its own scene's location as a reference picture.
+**Tree to Data** on both now gives two lists of six that line up — every shot gets its own scene's location as a reference picture. Template: *arbor_h3_two_characters*.
 """), zh=dict(
     name="重复",
     desc="重复项：each 得到 aabbcc，whole 得到 abcabc。接上形状时，改为把每个分支拉长到对应分支的项数——即 Grasshopper 的 Longest List。",
@@ -350,7 +350,7 @@ shape = {0}: shot 1, shot 2 · {1}: shot 1, shot 2 · {2}: shot 1, shot 2
 形状 = {0}: 镜头1, 镜头2 · {1}: 镜头1, 镜头2 · {2}: 镜头1, 镜头2
 → {0}: 茶室, 茶室 · {1}: 竹林, 竹林 · {2}: 天台, 天台
 ```
-两边再各接 **数据树转数据**，就得到两个逐项对齐的六项列表——每个镜头都拿到自己场景的地点作参考图。
+两边再各接 **数据树转数据**，就得到两个逐项对齐的六项列表——每个镜头都拿到自己场景的地点作参考图。模板：*arbor_h3_two_characters*。
 """))
 
 simple("Arbor_SortList",
