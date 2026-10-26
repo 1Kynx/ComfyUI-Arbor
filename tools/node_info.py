@@ -203,7 +203,7 @@ node("Arbor_SplitGrid", en=dict(
     doc="""## Why a whole sheet
 An image model that draws all the frames of a storyboard in one picture keeps the character, the light and the palette far more consistent than separate renders do. Ask for the grid in the prompt (*six panels, three columns and two rows, thin white gutters, no text*), give the sheet the panels' combined aspect (3 × 16:9 by 2 rows ≈ 8:3, e.g. 3264 × 1216), and cut it here.
 
-Template: *arbor_h3_continuous_shots* draws a 3 × 2 sheet with MOSS-Image, cuts it into six keyframes and animates from each one to the next.
+Template: *arbor_h3_mannequin_storyboard* draws a 3 × 2 blocking sheet with MOSS-Image (a red and a blue mannequin), cuts it into six panels and turns each one into a shot with the real characters.
 
 ## Checking the cuts
 After a run the node shows the sheet with everything that was cut away shaded red and every panel outlined and numbered (0, 1, 2 … — the numbers **List Item** uses). A panel that swallowed a gutter, or two panels merged into one, shows at a glance.
@@ -225,7 +225,7 @@ After a run the node shows the sheet with everything that was cut away shaded re
     doc="""## 为什么要整张生成
 让图像模型在一张图里画出分镜的所有画面，人物、光线和色调会比分开生成一致得多。在提示词里写明网格（*six panels, three columns and two rows, thin white gutters, no text*），图片比例取各格拼起来的比例（3 格 16:9 × 2 行 ≈ 8:3，例如 3264 × 1216），再用本节点拆开。
 
-模板 *arbor_h3_continuous_shots* 用 MOSS-Image 画一张 3 × 2 的分镜表，拆成六张关键帧，再逐张过渡生成视频。
+模板 *arbor_h3_mannequin_storyboard* 用 MOSS-Image 画一张 3 × 2 的红蓝简模分镜表，拆成六格，再把每一格换成真实人物生成一段视频。
 
 ## 检查切线
 运行后节点上会显示网格图：被裁掉的部分标成红色，每一格画框并编号（0、1、2……——与 **列表取项** 的序号一致）。某格吞进了留白、或两格连在一起，一眼就能看出来。
@@ -319,7 +319,7 @@ node("Arbor_VideoGrid", en=dict(
             "audio": "none: a silent grid · mix: every clip's sound mixed together (loudness kept below clipping)."},
     outputs=["The grid as one VIDEO (H.264 MP4 in the temp folder) — save it with Save by Path or Save Video, or compare it in the Compare Viewer."],
     doc="""## How to use
-- **From a tree**: connect any video tree, e.g. *arbor_h3_two_characters*'s clips through **Construct Tree** (one row per scene), or **Load Folder** with kind *videos* (one row per folder).
+- **From a tree**: connect any video tree, e.g. *arbor_h3_orbit*'s clips through **Construct Tree** (one row per character), or **Load Folder** with kind *videos* (one row per folder).
 - **After a batch run**: connect the plain videos to *videos* and **XY Lists'** *shape* to *shape* — rows and columns are laid out and labelled like **Image Grid**.
 - The node shows the grid video when it runs; it also works on its own, nothing needs to follow it.
 
@@ -357,7 +357,7 @@ node("Arbor_VideoGrid", en=dict(
             "audio": ("音频", "none：无声 · mix：把所有视频的声音混在一起（自动压低音量避免爆音）。")},
     outputs=[("视频", "合成后的网格视频（VIDEO，临时文件夹里的 H.264 MP4）——用「按路径保存」或「保存视频」保存，也可以接「对比查看器」。")],
     doc="""## 用法
-- **来自数据树**：接任意视频数据树，例如 *arbor_h3_two_characters* 里经 **构建数据树** 整理好的视频（每个场景一行），或「加载文件夹」类型选 *videos*（每个文件夹一行）。
+- **来自数据树**：接任意视频数据树，例如 *arbor_h3_orbit* 里经 **构建数据树** 整理好的视频（每个人物一行），或「加载文件夹」类型选 *videos*（每个文件夹一行）。
 - **批量运行之后**：普通视频接 *视频*，**XY 组合列表** 的 *结构* 接 *结构*——和 **图像网格** 一样自动排好行列并标注。
 - 运行后节点上直接显示网格视频；节点可以单独运行，后面不必再接别的节点。
 
@@ -379,11 +379,11 @@ node("Arbor_VideoGrid", en=dict(
 node("Arbor_LoadMedia", en=dict(
     desc="Pick pictures, videos and audio from anywhere on disk and group them into named branches — several Load Image nodes in one, using the system's own file dialog, with thumbnails. Files are used where they are; nothing is copied.",
     inputs={"files": "The list (kept as text): '# name' starts a named group, an empty line a new group, every other line is a file — an absolute path, output/… (ComfyUI's output folder), arbor:… (Arbor's sample media) or relative to the input folder. Edit it in the node's Text view, or fill it with Add…."},
-    outputs=["Everything, one branch per group, named after it — for the Compare Viewer, Save by Path or a Panel.",
-             "Only the pictures (IMAGE), same groups — go on to Tree to Data → image nodes, or Image Grid.",
-             "Only the videos (VIDEO), same groups.",
-             "Only the audio clips (AUDIO), same groups.",
-             "File names without extension, like files — handy as captions or for Save by Path."],
+    outputs=["Everything, one branch per group, named after it — the data tree: Cross Reference, Tree Branch, the Compare Viewer, Save by Path, a Panel.",
+             "File names without extension, like files — handy as captions or for Save by Path.",
+             "Every picture (IMAGE) as plain data, in list order — connect straight to image nodes, which run once per picture.",
+             "Every video (VIDEO) as plain data.",
+             "Every audio clip (AUDIO) as plain data."],
     doc="""## How to use
 - **Add…** opens the system's file dialog. Select one or several pictures, videos or audio files and press **Add** — they go into the selected group.
 - To take a **whole folder**, go into it and press **Add** without selecting anything (the name box says *(add this folder)*): every media file in it is added, each subfolder becoming a group named after it, like Load Folder.
@@ -399,6 +399,10 @@ output/shots/arrival_02.png
 C:/music/theme.wav
 ```
 
+## Data tree or data?
+- **files** / **names** keep the groups: one branch per group, named after it. Use them wherever the groups matter — **Cross Reference** pairs every group with something else, **Tree Branch** takes one group out (*{0}* or its name).
+- **images** / **videos** / **audio** are plain data: every file of that kind, in list order, without the groups. Connect them straight to ordinary nodes, which then run once per file.
+
 ## Load Media or Load Folder?
 - **Load Media**: exactly the files you picked, in your order, from anywhere — the list is saved with the workflow.
 - **Load Folder**: everything in a folder, re-read on every run — new files are picked up by themselves.
@@ -412,11 +416,11 @@ C:/music/theme.wav
     name="加载素材",
     desc="从硬盘任意位置挑选图片、视频和音频，分组成带名字的分支——相当于把多个「加载图像」合成一个节点，用系统自带的文件窗口选择，带缩略图。文件原地使用，不复制。",
     inputs={"files": ("文件", "文件列表（以文本保存）：「# 名字」开始一个有名字的分组，空一行开始新分组，其余每行一个文件——绝对路径、output/…（ComfyUI 的 output 文件夹）、arbor:…（Arbor 自带的示例素材），或相对于 input 文件夹的路径。可以在节点的「文本」视图里直接编辑，也可以用「添加…」添加。")},
-    outputs=[("文件", "全部文件，每个分组一个分支，并以分组命名——可以接对比查看器、按路径保存或面板。"),
-             ("图片", "只有图片（IMAGE），分组相同——接「数据树转数据」后给图片节点，或接图像网格。"),
-             ("视频", "只有视频（VIDEO），分组相同。"),
-             ("音频", "只有音频（AUDIO），分组相同。"),
-             ("文件名", "不带扩展名的文件名，结构同「文件」——可作单元格说明，或给「按路径保存」命名。")],
+    outputs=[("文件", "全部文件，每个分组一个分支，并以分组命名——这就是数据树：可以接交叉引用、取分支、对比查看器、按路径保存或面板。"),
+             ("文件名", "不带扩展名的文件名，结构同「文件」——可作单元格说明，或给「按路径保存」命名。"),
+             ("图片", "全部图片（IMAGE），按列表顺序输出为普通数据——可直接接图片节点，每张图运行一次。"),
+             ("视频", "全部视频（VIDEO），普通数据。"),
+             ("音频", "全部音频（AUDIO），普通数据。")],
     doc="""## 用法
 - **添加…** 打开系统的文件窗口：选中一个或多个图片、视频、音频文件，点 **添加**——它们会放进选中的分组。
 - 想添加**整个文件夹**：进入这个文件夹，不选任何文件直接点 **添加**（文件名框里是「（添加当前文件夹）」）——其中所有媒体文件都会加入，每个子文件夹成为一个以它命名的分组，和「加载文件夹」一样。
@@ -431,6 +435,10 @@ output/shots/arrival_02.png
 # Sound                                →  文件 {1} Sound：1 段音频
 C:/music/theme.wav
 ```
+
+## 数据树还是数据？
+- **文件** / **文件名** 保留分组：每个分组一个分支，并以分组命名。需要分组的地方用它们——**交叉引用** 把每个分组和别的数据配对，**取分支** 取出其中一组（*{0}* 或分组名）。
+- **图片** / **视频** / **音频** 是普通数据：这一类的全部文件，按列表顺序，不带分组。可以直接接普通节点，每个文件运行一次。
 
 ## 加载素材还是加载文件夹？
 - **加载素材**：只读你挑选的文件，按你排的顺序，可以来自任何位置——列表随工作流保存。
@@ -517,7 +525,7 @@ Tree `{0} Arrival: 2 clips · {1} Village: 1 clip`, prefix `arbor/h3`, layout *s
 output/arbor/h3/0 · Arrival/000.mp4  001.mp4
 output/arbor/h3/1 · Village/000.mp4
 ```
-Pictures become `000.png …`, audio `000.flac …`, text `000.txt …` — a branch may mix them. **Load Folder** with `output/arbor/h3_two_characters` (kind *videos*) reads the tree back, names included. Template: *arbor_h3_two_characters*.
+Pictures become `000.png …`, audio `000.flac …`, text `000.txt …` — a branch may mix them. **Load Folder** with `output/arbor/h3_orbit` (kind *videos*) reads the tree back, names included. Template: *arbor_h3_orbit*.
 
 With *names* connected the files are called after the names instead (`cat.png`, `dog.png`, …).
 
@@ -545,7 +553,7 @@ Previews of files saved outside the output folder are shown from a copy in the t
 output/arbor/h3/0 · Arrival/000.mp4  001.mp4
 output/arbor/h3/1 · Village/000.mp4
 ```
-图片存为 `000.png ……`，音频 `000.flac ……`，文字 `000.txt ……`——同一个分支里可以混合。**加载文件夹** 读取 `output/arbor/h3_two_characters`（类型选 *videos*）就能把数据树连同名字读回来。模板：*arbor_h3_two_characters*。
+图片存为 `000.png ……`，音频 `000.flac ……`，文字 `000.txt ……`——同一个分支里可以混合。**加载文件夹** 读取 `output/arbor/h3_orbit`（类型选 *videos*）就能把数据树连同名字读回来。模板：*arbor_h3_orbit*。
 
 接入 *文件名* 后，文件按名字命名（`cat.png`、`dog.png`……）。
 
@@ -722,7 +730,7 @@ b = {0}: horn · {1}: bells          template "{name}: {a} + {b}"
 → {0} Arrival: "Arrival: door + horn", "Arrival: map + horn"
   {1} Village: "Village: mist + bells", "Village: steps + bells"
 ```
-`{name}` is the branch's name (a scene, a page). Template: *arbor_h3_two_characters* writes a structured video prompt per scene this way, *arbor_h3_continuous_shots* one per transition.
+`{name}` is the branch's name (a character, a scene, a page). Template: *arbor_h3_orbit* writes a structured video prompt per character and place this way — one branch per character, the shorter list of place lines repeating — *arbor_h3_mannequin_storyboard* one per storyboard panel.
 
 ## Tips
 - Type the values in **Panels** (one per line) and connect their *data* output (or *tree*, to keep branches).
@@ -751,7 +759,7 @@ b = {0}: horn · {1}: bells          模板 "{name}: {a} + {b}"
 → {0} Arrival: "Arrival: door + horn", "Arrival: map + horn"
   {1} Village: "Village: mist + bells", "Village: steps + bells"
 ```
-`{name}` 是分支的名字（场景、页面）。模板 *arbor_h3_two_characters* 就是这样为每个场景写结构化的视频提示词，*arbor_h3_continuous_shots* 则为每段过渡写一条。
+`{name}` 是分支的名字（人物、场景、页面）。模板 *arbor_h3_orbit* 就是这样为每个人物、每个场景写结构化的视频提示词——每个人物一个分支，较短的场景列表自动重复；*arbor_h3_mannequin_storyboard* 则为每一格分镜写一条。
 
 ## 提示
 - 在 **面板** 里逐行输入取值，接它的 *数据* 输出（想保留分支就接 *数据树*）。

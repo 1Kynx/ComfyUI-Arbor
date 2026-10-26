@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-arbor"
 description = "Grasshopper-style data trees for ComfyUI: batch runs that keep their structure, a data Panel, XY grids, a compare viewer for images, video and audio, video grids, media by path, and templates for Qwen Image, MOSS-Image and FastH3 OmniRef."
-version = "0.6.0"
+version = "0.7.0"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = []

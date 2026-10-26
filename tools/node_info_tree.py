@@ -164,20 +164,26 @@ node("Arbor_ReshapeTree", en=dict(
 """))
 
 node("Arbor_TreeBranch", en=dict(
-    desc="Pick one branch by path (e.g. {0;1}) or, when path is empty, by index (Grasshopper's Tree Branch).",
-    inputs={"tree": TREE_EN, "path": "Exact path such as {0;1}; leave empty to pick by index.",
+    desc="Pick branches by path (e.g. {0;1}) or by name — several separated by commas — or, when path is empty, one by index (Grasshopper's Tree Branch).",
+    inputs={"tree": TREE_EN, "path": "Paths such as {0;1} or branch names such as Mei, separated by commas (Mei, Kai); leave empty to pick by index.",
             "index": "Branch index when path is empty; wraps around, −1 = last branch."},
-    outputs=["A tree with only that branch."],
-    doc="""## Tips
-- A path that doesn't exist is an error listing the paths that do.
+    outputs=["A tree with only those branches, paths and names kept.", "Their items as plain data, branch after branch — straight into a node that runs once per item."],
+    doc="""## Example
+**Load Media** with the groups `# Mei`, `# Kai` and `# Places`: one **Tree Branch** with path *Mei, Kai* and one with *Places* split them, and **Cross Reference** pairs every character with every place — `{0} Mei` and `{1} Kai`, three places each.
+
+## Tips
+- A path or name that doesn't exist is an error listing the paths that do.
 """), zh=dict(
     name="取分支",
-    desc="按路径（如 {0;1}）取出一个分支；路径留空时按序号取（对应 Grasshopper 的 Tree Branch）。",
-    inputs={"tree": TREE_ZH, "path": ("路径", "完整路径，如 {0;1}；留空则按序号取。"),
+    desc="按路径（如 {0;1}）或分支名取出分支，多个用逗号分隔；路径留空时按序号取一个（对应 Grasshopper 的 Tree Branch）。",
+    inputs={"tree": TREE_ZH, "path": ("路径", "路径如 {0;1}，或分支名如 Mei，多个用逗号分隔（Mei, Kai）；留空则按序号取。"),
             "index": ("序号", "路径为空时使用的分支序号；会循环，−1 = 最后一个分支。")},
-    outputs=[("数据树", "只含该分支的数据树。")],
-    doc="""## 提示
-- 路径不存在时会报错，并列出实际存在的路径。
+    outputs=[("数据树", "只含这些分支的数据树，路径和名字不变。"), ("数据", "这些分支的各项，依次作为普通数据——可直接接逐项运行的节点。")],
+    doc="""## 示例
+**加载素材** 里有分组 `# Mei`、`# Kai` 和 `# Places`：一个 **取分支** 填 *Mei, Kai*，另一个填 *Places*，就把人物和场景分开了，再用 **交叉引用** 让每个人物和每个场景配对——`{0} Mei` 和 `{1} Kai`，各三个场景。
+
+## 提示
+- 路径或分支名不存在时会报错，并列出实际存在的路径。
 """))
 
 node("Arbor_Merge", en=dict(
@@ -236,7 +242,7 @@ node("Arbor_ListItem", en=dict(
 | `1:` | `{0}: b, c, d · {1}: f` |
 | `::2` | `{0}: a, c · {1}: e` |
 
-`:-1` and `1:` pair every item with the next one (a → b, b → c, c → d): *arbor_h3_continuous_shots* takes its first and last frames this way. The same syntax picks frames in **Batch Pick**.
+`:-1` and `1:` pair every item with the next one (a → b, b → c, c → d) — first and last frames for clips that run into each other. The same syntax picks frames in **Batch Pick**.
 
 ## One pick per branch
 Connect a tree of indices to *index*: `{0}: 2 · {1}: 0 · {2}: 1, 3` takes item 2 of the first branch, item 0 of the second and items 1 and 3 of the third. Type the picks in a **Panel** one line per branch and **Reshape Tree** *graft* them — to keep the best take of every shot, for instance.
@@ -259,7 +265,7 @@ Connect a tree of indices to *index*: `{0}: 2 · {1}: 0 · {2}: 1, 3` takes item
 | `1:` | `{0}: b, c, d · {1}: f` |
 | `::2` | `{0}: a, c · {1}: e` |
 
-`:-1` 和 `1:` 能把每一项和下一项配成对（a → b、b → c、c → d）：模板 *arbor_h3_continuous_shots* 就这样取首帧和尾帧。**批次挑选** 用的是同样的写法。
+`:-1` 和 `1:` 能把每一项和下一项配成对（a → b、b → c、c → d）——例如给首尾相接的视频取首帧和尾帧。**批次挑选** 用的是同样的写法。
 
 ## 每个分支各取各的
 给 *序号* 接一棵序号数据树：`{0}: 2 · {1}: 0 · {2}: 1, 3` 取第一个分支的第 2 项、第二个分支的第 0 项、第三个分支的第 1 和第 3 项。在 **面板** 里每个分支写一行，再用 **重塑数据树** 的 *升树* 拆开——例如为每个镜头留下最好的一版。
@@ -334,7 +340,7 @@ tree  = {0}: tea house · {1}: bamboo · {2}: rooftop
 shape = {0}: shot 1, shot 2 · {1}: shot 1, shot 2 · {2}: shot 1, shot 2
 → {0}: tea house, tea house · {1}: bamboo, bamboo · {2}: rooftop, rooftop
 ```
-**Tree to Data** on both now gives two lists of six that line up — every shot gets its own scene's location as a reference picture. Template: *arbor_h3_two_characters*.
+**Tree to Data** on both now gives two lists of six that line up — every shot gets its own scene's location as a reference picture.
 """), zh=dict(
     name="重复",
     desc="重复项：each 得到 aabbcc，whole 得到 abcabc。接上形状时，改为把每个分支拉长到对应分支的项数——即 Grasshopper 的 Longest List。",
@@ -352,7 +358,7 @@ shape = {0}: shot 1, shot 2 · {1}: shot 1, shot 2 · {2}: shot 1, shot 2
 形状 = {0}: 镜头1, 镜头2 · {1}: 镜头1, 镜头2 · {2}: 镜头1, 镜头2
 → {0}: 茶室, 茶室 · {1}: 竹林, 竹林 · {2}: 天台, 天台
 ```
-两边再各接 **数据树转数据**，就得到两个逐项对齐的六项列表——每个镜头都拿到自己场景的地点作参考图。模板：*arbor_h3_two_characters*。
+两边再各接 **数据树转数据**，就得到两个逐项对齐的六项列表——每个镜头都拿到自己场景的地点作参考图。
 """))
 
 simple("Arbor_SortList",

@@ -28,4 +28,4 @@ tree  = {0}: tea house · {1}: bamboo · {2}: rooftop
 shape = {0}: shot 1, shot 2 · {1}: shot 1, shot 2 · {2}: shot 1, shot 2
 → {0}: tea house, tea house · {1}: bamboo, bamboo · {2}: rooftop, rooftop
 ```
-**Tree to Data** on both now gives two lists of six that line up — every shot gets its own scene's location as a reference picture. Template: *arbor_h3_two_characters*.
+**Tree to Data** on both now gives two lists of six that line up — every shot gets its own scene's location as a reference picture.

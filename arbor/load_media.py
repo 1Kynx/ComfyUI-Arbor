@@ -16,7 +16,7 @@ from collections import OrderedDict
 import folder_paths
 
 from . import tree as T
-from .common import IO, CAT_MEDIA, schema, tree_out, unwrap
+from .common import IO, CAT_MEDIA, schema, data_out, tree_out, unwrap
 from .nodes_files import EXAMPLE_MEDIA, KINDS, LOADERS, _natural_key, folder_label, resolve_path, scan_folder, \
     short_path
 
@@ -61,10 +61,11 @@ class LoadMedia(IO.ComfyNode):
                              tooltip="One file per line (absolute, output/…, arbor:… or inside input); '# name' starts "
                                      "a named group, an empty line a new group")],
             [tree_out("files", tooltip="Everything, one branch per group, named after it"),
-             tree_out("images", tooltip="The pictures (IMAGE), same groups"),
-             tree_out("videos", tooltip="The videos (VIDEO), same groups"),
-             tree_out("audio", tooltip="The audio clips (AUDIO), same groups"),
-             tree_out("names", tooltip="File names without extension, like files")],
+             tree_out("names", tooltip="File names without extension, like files"),
+             data_out(IO.Image, "Every picture (IMAGE) as plain data, in list order — image nodes run once per picture",
+                      "images"),
+             data_out(IO.Video, "Every video (VIDEO) as plain data, in list order", "videos"),
+             data_out(IO.Audio, "Every audio clip (AUDIO) as plain data, in list order", "audio")],
             ["load media", "load images", "load videos", "load audio", "multiple images", "image list",
              "加载素材", "素材"],
             input_list=False)
@@ -86,7 +87,7 @@ class LoadMedia(IO.ComfyNode):
         if not groups:
             raise ValueError("Load Media: the list is empty — use Add… to pick files or a folder")
         everything, names = {}, {}
-        by_kind = {k: {} for k in KINDS}
+        by_kind = {k: [] for k in KINDS}
         labels = {}
         for b, (label, entries) in enumerate(groups):
             path = (b,)
@@ -102,10 +103,8 @@ class LoadMedia(IO.ComfyNode):
                 value = LOADERS[kind](p)
                 everything.setdefault(path, []).append(value)
                 names.setdefault(path, []).append(os.path.splitext(os.path.basename(p))[0])
-                by_kind[kind].setdefault(path, []).append(value)
-        pick = lambda branches: {p: n for p, n in labels.items() if p in branches}
-        return IO.NodeOutput(T.DataTree(everything, labels), *(T.DataTree(by_kind[k], pick(by_kind[k])) for k in KINDS),
-                             T.DataTree(names, labels))
+                by_kind[kind].append(value)
+        return IO.NodeOutput(T.DataTree(everything, labels), T.DataTree(names, labels), *(by_kind[k] for k in KINDS))
 
 
 NODES = [LoadMedia]

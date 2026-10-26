@@ -34,7 +34,7 @@ b = {0}: horn · {1}: bells          template "{name}: {a} + {b}"
 → {0} Arrival: "Arrival: door + horn", "Arrival: map + horn"
   {1} Village: "Village: mist + bells", "Village: steps + bells"
 ```
-`{name}` is the branch's name (a scene, a page). Template: *arbor_h3_two_characters* writes a structured video prompt per scene this way, *arbor_h3_continuous_shots* one per transition.
+`{name}` is the branch's name (a character, a scene, a page). Template: *arbor_h3_orbit* writes a structured video prompt per character and place this way — one branch per character, the shorter list of place lines repeating — *arbor_h3_mannequin_storyboard* one per storyboard panel.
 
 ## Tips
 - Type the values in **Panels** (one per line) and connect their *data* output (or *tree*, to keep branches).

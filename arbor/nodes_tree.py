@@ -178,17 +178,24 @@ class TreeBranch(IO.ComfyNode):
     def define_schema(cls):
         return schema(
             "Arbor_TreeBranch", "Tree Branch", CAT_TREE,
-            "Pick one branch by path (e.g. {0;1}) or, when path is empty, by index.",
+            "Pick branches by path (e.g. {0;1}) or name — several separated by commas — or, when path is empty, one by index.",
             [tree_in(),
-             IO.String.Input("path", default="", tooltip="Exact path; leave empty to use index"),
+             IO.String.Input("path", default="", tooltip="Paths such as {0;1} or branch names, separated by commas; leave empty to use index"),
              IO.Int.Input("index", default=0, min=-10000, max=10000, tooltip="Branch index (wraps)")],
-            [tree_out()], ["get branch", "explode tree"])
+            [tree_out(), data_out(tooltip="The branch's items as plain data")], ["get branch", "explode tree", "branch by name"])
 
     @classmethod
     def execute(cls, tree, path, index) -> IO.NodeOutput:
         p = str(unwrap(path, "")).strip()
         t = to_tree(tree)
-        return IO.NodeOutput(T.get_branch(t, T.parse_path(p)) if p else T.get_branch(t, index=unwrap(index)))
+        if not p:
+            picked = T.get_branch(t, index=unwrap(index))
+        else:  # one or more paths / branch names, separated by commas
+            by_name = {n: q for q, n in t.names.items() if q in t.branches}
+            parts = [T.get_branch(t, by_name[k] if k in by_name else T.parse_path(k))
+                     for k in (s.strip() for s in p.split(",")) if k]
+            picked = T.DataTree({q: v for b in parts for q, v in b.branches.items()}, t.names)
+        return IO.NodeOutput(picked, picked.flat())
 
 
 class Merge(IO.ComfyNode):

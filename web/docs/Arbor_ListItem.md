@@ -29,7 +29,7 @@ Pick items from every branch by index, list, range or slice — Grasshopper's Li
 | `1:` | `{0}: b, c, d · {1}: f` |
 | `::2` | `{0}: a, c · {1}: e` |
 
-`:-1` and `1:` pair every item with the next one (a → b, b → c, c → d): *arbor_h3_continuous_shots* takes its first and last frames this way. The same syntax picks frames in **Batch Pick**.
+`:-1` and `1:` pair every item with the next one (a → b, b → c, c → d) — first and last frames for clips that run into each other. The same syntax picks frames in **Batch Pick**.
 
 ## One pick per branch
 Connect a tree of indices to *index*: `{0}: 2 · {1}: 0 · {2}: 1, 3` takes item 2 of the first branch, item 0 of the second and items 1 and 3 of the third. Type the picks in a **Panel** one line per branch and **Reshape Tree** *graft* them — to keep the best take of every shot, for instance.

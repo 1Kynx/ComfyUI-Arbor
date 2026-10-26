@@ -10,15 +10,15 @@ Pick pictures, videos and audio from anywhere on disk and group them into named 
 ## Outputs
 
 - **files** · *TREE*  
-  Everything, one branch per group, named after it — for the Compare Viewer, Save by Path or a Panel.
-- **images** · *TREE*  
-  Only the pictures (IMAGE), same groups — go on to Tree to Data → image nodes, or Image Grid.
-- **videos** · *TREE*  
-  Only the videos (VIDEO), same groups.
-- **audio** · *TREE*  
-  Only the audio clips (AUDIO), same groups.
+  Everything, one branch per group, named after it — the data tree: Cross Reference, Tree Branch, the Compare Viewer, Save by Path, a Panel.
 - **names** · *TREE*  
   File names without extension, like files — handy as captions or for Save by Path.
+- **images** · *IMAGE ×N*  
+  Every picture (IMAGE) as plain data, in list order — connect straight to image nodes, which run once per picture.
+- **videos** · *VIDEO ×N*  
+  Every video (VIDEO) as plain data.
+- **audio** · *AUDIO ×N*  
+  Every audio clip (AUDIO) as plain data.
 
 ## How to use
 - **Add…** opens the system's file dialog. Select one or several pictures, videos or audio files and press **Add** — they go into the selected group.
@@ -34,6 +34,10 @@ output/shots/arrival_02.png
 # Sound                                →  files {1} Sound: 1 audio
 C:/music/theme.wav
 ```
+
+## Data tree or data?
+- **files** / **names** keep the groups: one branch per group, named after it. Use them wherever the groups matter — **Cross Reference** pairs every group with something else, **Tree Branch** takes one group out (*{0}* or its name).
+- **images** / **videos** / **audio** are plain data: every file of that kind, in list order, without the groups. Connect them straight to ordinary nodes, which then run once per file.
 
 ## Load Media or Load Folder?
 - **Load Media**: exactly the files you picked, in your order, from anywhere — the list is saved with the workflow.

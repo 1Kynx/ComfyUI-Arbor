@@ -24,7 +24,7 @@ Tree `{0} Arrival: 2 clips · {1} Village: 1 clip`, prefix `arbor/h3`, layout *s
 output/arbor/h3/0 · Arrival/000.mp4  001.mp4
 output/arbor/h3/1 · Village/000.mp4
 ```
-Pictures become `000.png …`, audio `000.flac …`, text `000.txt …` — a branch may mix them. **Load Folder** with `output/arbor/h3_two_characters` (kind *videos*) reads the tree back, names included. Template: *arbor_h3_two_characters*.
+Pictures become `000.png …`, audio `000.flac …`, text `000.txt …` — a branch may mix them. **Load Folder** with `output/arbor/h3_orbit` (kind *videos*) reads the tree back, names included. Template: *arbor_h3_orbit*.
 
 With *names* connected the files are called after the names instead (`cat.png`, `dog.png`, …).
 

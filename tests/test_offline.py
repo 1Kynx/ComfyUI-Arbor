@@ -340,6 +340,11 @@ def test_tree_nodes():
     assert [o.key for o in mode.options] == list(nodes_tree.RESHAPE)
     assert res(run(nodes_tree.TreeBranch, tree=[g], path="{0;2}", index=0))[0].branches == {(0, 2): [2.0]}
     assert res(run(nodes_tree.TreeBranch, tree=[g], path="", index=-1))[0].paths() == [(0, 3)]
+    named = T.DataTree({(0,): ["mei", "kai"], (1,): ["tea", "roof"]}, {(0,): "Characters", (1,): "Places"})
+    t, d = res(run(nodes_tree.TreeBranch, tree=[named], path="Places", index=0))
+    assert t.names == {(1,): "Places"} and d == ["tea", "roof"], "by name, and its items as data"
+    t, d = res(run(nodes_tree.TreeBranch, tree=[named], path="Places, {0}", index=0))
+    assert list(t.branches) == [(1,), (0,)] and d == ["tea", "roof", "mei", "kai"], "several, in the order asked"
     trees = {"tree0": [tr], "tree1": [5, 6], "tree2": [None]}
     mg = res(run(nodes_tree.Merge, trees=trees, mode="merge"))[0]
     assert mg.branches == {(0,): [1.0, 1.5, 2.0, 2.5, 5, 6]}, "unconnected Autogrow slot ignored"
@@ -787,11 +792,10 @@ def test_load_media():
         at = lambda *parts: os.path.join(d, *parts)
         text = (f"# Shots\n{at('shots', 's0.png')}\n{at('shots', 's1.png')}\n\n"
                 f"# Mixed\n{at('clip.mp4')}\n{at('voice.flac')}\n{far}")
-        files, images, videos, audio, names = res(LM.execute(files=text))
+        files, names, images, videos, audio = res(LM.execute(files=text))
         assert files.names == {(0,): "Shots", (1,): "Mixed"} and [len(v) for v in files.branches.values()] == [2, 3]
-        assert images.branches[(0,)][1].shape == (1, 8, 17, 3) and len(images.branches[(1,)]) == 1, "every line is a full path"
-        assert list(videos.branches) == [(1,)] and videos.names == {(1,): "Mixed"}, "each kind keeps its groups"
-        assert videos.branches[(1,)][0].get_frame_count() == 4 and audio.branches[(1,)][0]["sample_rate"] == 8000
+        assert len(images) == 3 and images[1].shape == (1, 8, 17, 3), "every line is a full path; kinds are plain data"
+        assert len(videos) == 1 and videos[0].get_frame_count() == 4 and audio[0]["sample_rate"] == 8000
         assert names.branches[(1,)] == ["clip", "voice", "far"]
         assert LM.fingerprint_inputs(text) != LM.fingerprint_inputs(text.replace("s1", "s0"))
         raises(ValueError, LM.execute, files="")
