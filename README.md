@@ -3,6 +3,8 @@
 Grasshopper-style **data trees**, a data **Panel**, **multi-image compare** and **XY grids** for ComfyUI.
 Built on the v3 node schema; the custom widgets work in both the classic canvas and Nodes 2.0 (Vue).
 
+![Arbor's nodes on one ComfyUI canvas: Load Media, Tree Branch, Panel, Split Grid and the Compare Viewer, with real outputs from the arbor_h3_mannequin_storyboard template](docs/overview.jpg)
+
 > Inspired by Grasshopper. Not affiliated with Robert McNeel & Associates.
 
 ## Why trees
