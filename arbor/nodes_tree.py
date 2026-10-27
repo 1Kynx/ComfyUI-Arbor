@@ -23,9 +23,8 @@ class XYLists(IO.ComfyNode):
              tree_in("y", optional=True, tooltip="Values for the columns"),
              tree_in("z", optional=True, tooltip="Optional third parameter (columns; rows become x × y)"),
              IO.Combo.Input("mode", options=["cross", "zip"], default="cross",
-                            tooltip="cross: every combination · zip: item by item (longest list) — two trees of "
-                                    "the same layout flatten side by side; the shape keeps the branches of "
-                                    "the longest input")],
+                            tooltip="cross: every combination · zip: item by item (longest list). Trees pair "
+                                    "branch by branch like Grasshopper; a plain list is one branch")],
             [IO.AnyType.Output(display_name="x", is_output_list=True, tooltip="x of every run"),
              IO.AnyType.Output(display_name="y", is_output_list=True, tooltip="y of every run"),
              IO.AnyType.Output(display_name="z", is_output_list=True, tooltip="z of every run"),
@@ -55,36 +54,54 @@ class XYLists(IO.ComfyNode):
             n = len(xs)
             return IO.NodeOutput(xs, [None] * n, [None] * n, tx, n)
 
+        # Branches pair the Grasshopper way (in order, the last branch repeating), like Cross Reference and
+        # Prompt Template: x, y and z only meet inside matching branches. Plain lists are one branch each.
+        pairs, master = T.match_branches(tx, ty, tz)
+        names = dict(master.names)
+        for t in (tx, ty, tz):  # a branch the master leaves unnamed takes the name another input gives it
+            for p, nm in (t.names.items() if t is not None else ()):
+                names.setdefault(p, nm)
         ox, oy, oz = [], [], []
+        shape = {}
         if unwrap(mode) == "zip":
-            n = max(len(xs), len(ys), len(zs or []))
+            # inside each branch pair: item by item, the shorter list repeating its last item
             pick = lambda vals, i: vals[min(i, len(vals) - 1)] if vals else None
-            for i in range(n):
-                ox.append(pick(xs, i))
-                oy.append(pick(ys, i))
-                oz.append(pick(zs, i))
-            # the runs keep the branches (and names) of the longest input — x, then y, then z;
-            # a plain list is one branch, so then the shape is one row. Its items are the last
-            # variable's values, for column labels.
-            longest = next(t for t, vals in ((tx, xs), (ty, ys), (tz, zs)) if vals is not None and len(vals) == n)
-            return IO.NodeOutput(ox, oy, oz, T.rebuild(oz if zs else oy, longest), n)
-        shape, names = {}, {}
-        total = len(xs) * len(ys) * len(zs or [None])
+            for path, (bx, by, bz) in pairs:
+                lengths = [len(b) for b in (bx, by, bz) if b is not None]
+                n = 0 if 0 in lengths else max(lengths)
+                for i in range(n):
+                    ox.append(pick(bx, i))
+                    oy.append(pick(by, i))
+                    oz.append(pick(bz, i))
+                # the shape's items are the last variable's values, for column labels
+                shape[path] = [pick(bz if zs else by, i) for i in range(n)]
+            kept = {p: nm for p, nm in names.items() if any(q[:len(p)] == p for q in shape)}  # parents too
+            return IO.NodeOutput(ox, oy, oz, T.DataTree(shape, kept), len(ox))
+
+        total = sum(len(bx or []) * len(by or []) * len(bz or [None]) for _, (bx, by, bz) in pairs)
         if total > MAX_COMBOS:
             raise ValueError(f"XY Lists: {total} combinations (max {MAX_COMBOS})")
-        for i, xv in enumerate(xs):
-            for j, yv in enumerate(ys):
-                for zv in zs or [None]:
-                    ox.append(xv)
-                    oy.append(yv)
-                    oz.append(zv)
-                if zs:
-                    shape[(i, j)] = list(zs)
-                    names[(i, j)] = f"{label_of(xv)} · {label_of(yv)}"
-            if not zs:
-                shape[(i,)] = list(ys)
-                names[(i,)] = xv
-        return IO.NodeOutput(ox, oy, oz, T.DataTree(shape, names), len(ox))
+        # inside each branch pair: every combination, one row per x value (x × y with z). One branch pair
+        # gives rows {i} / {i;j} as before; several give one group of rows per pair, under its path.
+        single = len(pairs) == 1
+        rows = {}
+        for path, (bx, by, bz) in pairs:
+            base = () if single else path
+            for i, xv in enumerate(bx or []):
+                for j, yv in enumerate(by or []):
+                    for zv in bz or [None]:
+                        ox.append(xv)
+                        oy.append(yv)
+                        oz.append(zv)
+                    if zs:
+                        shape[base + (i, j)] = list(bz)
+                        rows[base + (i, j)] = f"{label_of(xv)} · {label_of(yv)}"
+                if not zs:
+                    shape[base + (i,)] = list(by or [])
+                    rows[base + (i,)] = xv
+            if not single and path in names:
+                rows[path] = names[path]  # the group keeps its branch's name: rows read "Mei · 4"
+        return IO.NodeOutput(ox, oy, oz, T.DataTree(shape, rows), len(ox))
 
 
 class TreeToData(IO.ComfyNode):

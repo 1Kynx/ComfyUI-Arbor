@@ -528,6 +528,24 @@ def test_xy_lists():
     # z the longest: its branches; the items are still the last variable's values
     x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[1], y=[2], z=[scenes], mode="zip"))
     assert n == 3 and shape.branches == scenes.branches
+    # trees pair branch by branch (Grasshopper), not across branches
+    who = T.DataTree({(0,): ["Mei"], (1,): ["Kai"]}, {(0,): "Mei", (1,): "Kai"})
+    where = T.DataTree({(0,): ["tea", "bamboo"], (1,): ["roof"]})
+    x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[who], y=[where], mode="zip"))
+    assert list(zip(x, y)) == [("Mei", "tea"), ("Mei", "bamboo"), ("Kai", "roof")], "bamboo stays in Mei's branch"
+    assert shape.branches == where.branches and shape.names == who.names
+    x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[who], y=[where], mode="cross"))
+    assert n == 3 and list(zip(x, y)) == [("Mei", "tea"), ("Mei", "bamboo"), ("Kai", "roof")]
+    assert shape.branches == {(0, 0): ["tea", "bamboo"], (1, 0): ["roof"]} and shape.label((1, 0)) == "Kai · Kai"
+    ab = T.DataTree({(0,): ["a", "b"], (1,): ["c"]})
+    nums = T.DataTree({(0,): [1, 2], (1,): [3, 4]})
+    x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[ab], y=[nums], mode="cross"))
+    assert n == 6 and list(zip(x, y)) == [("a", 1), ("a", 2), ("b", 1), ("b", 2), ("c", 3), ("c", 4)]
+    assert shape.paths() == [(0, 0), (0, 1), (1, 0)] and shape.names[(0, 1)] == "b"
+    x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[ab], y=[nums], mode="zip"))
+    assert list(zip(x, y)) == [("a", 1), ("b", 2), ("c", 3), ("c", 4)], "the shorter branch repeats its last item"
+    x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[ab], y=[10, 20], mode="cross"))
+    assert n == 6 and y == [10, 20] * 3, "a plain list (one branch) repeats for every branch"
     # x only: flattens any tree, the shape is the tree itself
     branched = T.DataTree({(0,): [1, 2], (1,): [3]})
     x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[branched], mode="cross"))

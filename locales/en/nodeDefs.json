@@ -1035,7 +1035,7 @@
       },
       "mode": {
         "name": "mode",
-        "tooltip": "cross: every combination · zip: item by item (longest list, the last item repeats); the shape keeps the branches of the longest input (x, then y, then z) — one row when that is a plain list."
+        "tooltip": "cross: every combination · zip: item by item (longest list, the last item repeats). Trees meet branch by branch, like Grasshopper: branch k of x only with branch k of y (a tree with fewer branches repeats its last one), so plain lists — one branch each — combine fully."
       }
     },
     "outputs": {

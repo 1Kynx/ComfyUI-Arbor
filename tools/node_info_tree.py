@@ -21,7 +21,7 @@ node("Arbor_XYLists", en=dict(
     inputs={"x": "Values for the rows — or any tree to flatten into plain data.",
             "y": "Values for the columns (optional).",
             "z": "Optional third parameter: becomes the columns, rows become x × y.",
-            "mode": "cross: every combination · zip: item by item (longest list, the last item repeats); the shape keeps the branches of the longest input (x, then y, then z) — one row when that is a plain list."},
+            "mode": "cross: every combination · zip: item by item (longest list, the last item repeats). Trees meet branch by branch, like Grasshopper: branch k of x only with branch k of y (a tree with fewer branches repeats its last one), so plain lists — one branch each — combine fully."},
     outputs=["x of every run — connect to any widget input (cfg, steps, seed…). The node it feeds runs once per combination.",
              "y of every run.", "z of every run (empty values when z is not connected).",
              "Layout of the runs: connect to Image Grid (rows × columns) or Construct Tree (back into a tree). Each row is named after its x value and its items are the column values, so Image Grid labels itself. With only x, it is x's own tree.",
@@ -41,6 +41,19 @@ Example template: *Templates → ComfyUI-Arbor → arbor_qwen_lora_sweep*.
 ## Flatten any tree
 Connect a tree to *x* only: *x* becomes its items as plain data (ordinary nodes run once per item) and *shape* is the tree itself. Run something per item, then put the results back with **Construct Tree** (*shape* = this shape). **Tree to Data** does the same in a smaller node.
 
+## Trees: branch by branch
+Trees on *x*, *y* (and *z*) are matched the Grasshopper way, like **Cross Reference** and **Prompt Template**: branches pair in order — a tree with fewer branches repeats its last one — and values only meet inside their pair.
+
+```
+x  {0} Mei            y  {0} tea, bamboo
+   {1} Kai               {1} roof
+
+zip    → Mei·tea  Mei·bamboo  Kai·roof              shape {0} Mei: tea, bamboo · {1} Kai: roof
+cross  → the same three runs: every combination inside each branch
+         shape {0;0} Mei: tea, bamboo · {1;0} Kai: roof  (one group of rows per branch)
+```
+A plain list is one branch, so it combines with every branch of the other input; two plain lists give the classic XY plot.
+
 ## Flatten two trees side by side
 Two trees of the same layout — pictures and their edit instructions from **Cross Reference**, say — go to *x* and *y* in **zip** mode: both come out as plain data, item k with item k, and *shape* keeps the branches of the longest input for putting the results back. Template: *arbor_qwen_edit_by_scene*.
 
@@ -53,7 +66,7 @@ Two trees of the same layout — pictures and their edit instructions from **Cro
     inputs={"x": ("x", "行的取值——或任意要展开成普通数据的数据树。"),
             "y": ("y", "列的取值（可选）。"),
             "z": ("z", "可选的第三个参数：作为列，行变为 x × y。"),
-            "mode": ("模式", "cross 交叉：所有组合 · zip 配对：逐项对应（最长列表，不够时重复最后一项）；结构沿用最长那个输入的分支（依次看 x、y、z）——它是普通列表时就是单行。")},
+            "mode": ("模式", "cross 交叉：所有组合 · zip 配对：逐项对应（最长列表，不够时重复最后一项）。数据树按分支配对，和 Grasshopper 一样：x 的第 k 个分支只和 y 的第 k 个分支组合（分支少的一方重复最后一个分支），所以普通列表（只有一个分支）会和对方每个分支完整组合。")},
     outputs=[("x", "每次运行的 x——接到任意参数输入（cfg、步数、种子……），被接的节点会对每种组合各运行一次。"),
              ("y", "每次运行的 y。"), ("z", "每次运行的 z（未接 z 时为空值）。"),
              ("结构", "运行结果的布局：接「图像网格」排成行 × 列，或接「构建数据树」收回成数据树。每行以 x 的取值命名，项就是列的取值，所以图像网格会自动标注行和列。只接 x 时，它就是 x 自己的数据树。"),
@@ -72,6 +85,19 @@ Two trees of the same layout — pictures and their edit instructions from **Cro
 
 ## 展开任意数据树
 只接 *x*：*x* 输出它的所有项（普通数据，普通节点逐项运行），*结构* 就是这棵树本身。逐项处理后，用 **构建数据树**（*结构* 接这里）把结果收回原来的分支。**数据树转数据** 用更小的节点做同样的事。
+
+## 数据树：按分支配对
+*x*、*y*（和 *z*）接数据树时按 Grasshopper 的方式匹配，和 **交叉组合**、**提示词模板** 一致：分支按顺序配对——分支少的一方重复最后一个分支——取值只在配对的分支内部组合。
+
+```
+x  {0} Mei            y  {0} tea, bamboo
+   {1} Kai               {1} roof
+
+zip    → Mei·tea  Mei·bamboo  Kai·roof              结构 {0} Mei: tea, bamboo · {1} Kai: roof
+cross  → 同样三次运行：每个分支内部的所有组合
+         结构 {0;0} Mei: tea, bamboo · {1;0} Kai: roof（每个分支一组行）
+```
+普通列表就是一个分支，所以会和另一输入的每个分支完整组合；两个普通列表就是常规的 XY 对比图。
 
 ## 并排展开两棵树
 两棵结构相同的数据树——例如 **交叉组合** 输出的图片和对应的编辑指令——分别接 *x* 和 *y*，用 **zip** 模式：两者都变成普通数据，第 k 项对第 k 项，*结构* 沿用最长那个输入的分支，用来把结果收回去。模板：*arbor_qwen_edit_by_scene*。

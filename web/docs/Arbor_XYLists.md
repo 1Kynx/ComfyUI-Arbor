@@ -11,7 +11,7 @@ From values to a batch run: every combination of x, y (and z) as aligned plain d
 - **z** · *any, optional*  
   Optional third parameter: becomes the columns, rows become x × y.
 - **mode** · *COMBO (cross · zip)*  
-  cross: every combination · zip: item by item (longest list, the last item repeats); the shape keeps the branches of the longest input (x, then y, then z) — one row when that is a plain list.
+  cross: every combination · zip: item by item (longest list, the last item repeats). Trees meet branch by branch, like Grasshopper: branch k of x only with branch k of y (a tree with fewer branches repeats its last one), so plain lists — one branch each — combine fully.
 
 ## Outputs
 
@@ -40,6 +40,19 @@ Example template: *Templates → ComfyUI-Arbor → arbor_qwen_lora_sweep*.
 
 ## Flatten any tree
 Connect a tree to *x* only: *x* becomes its items as plain data (ordinary nodes run once per item) and *shape* is the tree itself. Run something per item, then put the results back with **Construct Tree** (*shape* = this shape). **Tree to Data** does the same in a smaller node.
+
+## Trees: branch by branch
+Trees on *x*, *y* (and *z*) are matched the Grasshopper way, like **Cross Reference** and **Prompt Template**: branches pair in order — a tree with fewer branches repeats its last one — and values only meet inside their pair.
+
+```
+x  {0} Mei            y  {0} tea, bamboo
+   {1} Kai               {1} roof
+
+zip    → Mei·tea  Mei·bamboo  Kai·roof              shape {0} Mei: tea, bamboo · {1} Kai: roof
+cross  → the same three runs: every combination inside each branch
+         shape {0;0} Mei: tea, bamboo · {1;0} Kai: roof  (one group of rows per branch)
+```
+A plain list is one branch, so it combines with every branch of the other input; two plain lists give the classic XY plot.
 
 ## Flatten two trees side by side
 Two trees of the same layout — pictures and their edit instructions from **Cross Reference**, say — go to *x* and *y* in **zip** mode: both come out as plain data, item k with item k, and *shape* keeps the branches of the longest input for putting the results back. Template: *arbor_qwen_edit_by_scene*.
