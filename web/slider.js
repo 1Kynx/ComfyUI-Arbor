@@ -29,7 +29,7 @@ function fmtTime(s) {
 
 /* One picture / video / waveform on the stage (A or B). */
 class Layer {
-  constructor(stage, onMeta) {
+  constructor(stage, onMeta, onData) {
     this.img = el("img");
     this.video = el("video");
     this.video.playsInline = true;
@@ -39,6 +39,10 @@ class Layer {
     this.audio.preload = "auto";
     this.wave = el("canvas", "arb-cmp-wave");
     for (const m of [this.video, this.audio]) m.addEventListener("loadedmetadata", onMeta);
+    // Some hardware decoders show a noisy first frame when a clip is loaded and positioned before its
+    // first frame is decoded; seeking once more after that frame exists (what re-picking A did by hand)
+    // makes the decoder put out a clean one.
+    this.video.addEventListener("loadeddata", () => onData(this));
     stage.append(this.img, this.video, this.wave);
     this.slide = null;
   }
@@ -131,8 +135,14 @@ class SliderView {
 
     const stage = (this.stage = el("div", "arb-cmp-stage"));
     const meta = () => { this.sync(true); this.layout(); };
-    this.B = new Layer(stage, meta);
-    this.A = new Layer(stage, meta);
+    const data = (layer) => {
+      const m = layer.video;
+      if (layer.kind !== "video" || !this.layers().includes(layer)) return;
+      const at = layer.dur ? Math.min(this.time, Math.max(0, layer.dur - 0.04)) : this.time;
+      try { m.currentTime = at; } catch {}  // assigning always seeks, even to the same time
+    };
+    this.B = new Layer(stage, meta, data);
+    this.A = new Layer(stage, meta, data);
     this.divEl = el("div", "arb-cmp-div");
     this.tagA = el("div", "arb-cmp-tag");
     this.tagB = el("div", "arb-cmp-tag");
