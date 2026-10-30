@@ -19,6 +19,7 @@ import torch.nn.functional as F
 import folder_paths
 
 BROWSER_EXTS = {".mp4", ".m4v", ".webm", ".mov"}  # played as they are; anything else is re-encoded
+VIEW_CRF = 8  # H.264 quality for videos re-encoded only to be shown (lower = closer to the source)
 
 
 def is_video(v) -> bool:
@@ -90,7 +91,12 @@ def video_ref(v, prefix: str = "video") -> dict:
             return ref
     from comfy_api.latest import Types
     path, ref = temp_file(prefix, "mp4")
-    v.save_to(path, format=Types.VideoContainer.MP4, codec=Types.VideoCodec.AUTO)
+    # near-lossless (ComfyUI's default is CRF 18): the viewer is for comparing, so a clip made in the
+    # workflow should look like itself next to a picture or a saved file, not like a second encode
+    try:
+        v.save_to(path, format=Types.VideoContainer.MP4, codec=Types.VideoCodec.AUTO, crf=VIEW_CRF)
+    except TypeError:  # a video type without the crf option
+        v.save_to(path, format=Types.VideoContainer.MP4, codec=Types.VideoCodec.AUTO)
     return ref
 
 

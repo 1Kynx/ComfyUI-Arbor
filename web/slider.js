@@ -462,11 +462,19 @@ class SliderView {
     this.tp.style.display = timed ? "" : "none";
     if (!timed) return;
     const L = this.length();
-    this.playBtn.innerHTML = this.playing ? ICONS.pause : ICONS.play;
+    // Swap an icon only when it changes. This runs on every clock tick while playing, and replacing the
+    // button's contents between pointerdown and pointerup drops the click — pause would then miss.
+    const icon = (btn, html) => {
+      if (btn.dataset.icon !== html) {
+        btn.dataset.icon = html;
+        btn.innerHTML = html;
+      }
+    };
+    icon(this.playBtn, this.playing ? ICONS.pause : ICONS.play);
     this.playBtn.title = t(this.playing ? "pauseTip" : "playTip");
     this.loopBtn.classList.toggle("on", this.loop);
     this.loopBtn.title = t("loopTip");
-    this.muteBtn.innerHTML = this.muted ? ICONS.muted : ICONS.sound;
+    icon(this.muteBtn, this.muted ? ICONS.muted : ICONS.sound);
     this.muteBtn.title = t("muteTip");
     this.timeEl.textContent = `${fmtTime(Math.min(this.time, L))} / ${fmtTime(L)}`;
     const f = L ? Math.min(1, this.time / L) : 0;
