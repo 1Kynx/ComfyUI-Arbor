@@ -29,8 +29,7 @@ function fmtTime(s) {
 
 /* One picture / video / waveform on the stage (A or B). */
 class Layer {
-  constructor(stage, onMeta, name) {
-    this.name = name;
+  constructor(stage, onMeta) {
     this.img = el("img");
     this.video = el("video");
     this.video.playsInline = true;
@@ -58,13 +57,11 @@ class Layer {
     this.wave.style.display = this.kind === "audio" ? "" : "none";
     if (!slide) return;
     const target = slide.kind === "image" ? this.img : this.media;
-    // A and B each get their own URL for a clip (the extra parameter is ignored by /view). With the same
-    // URL the browser shares one download buffer between both players, and when A and B show the same
-    // clip one of them can end up decoding a damaged picture that lasts until the clip is reloaded.
-    const url = viewURL(slide) + (slide.kind === "image" ? "" : `&layer=${this.name}`);
+    const url = viewURL(slide);
     if (target.dataset.src !== url) {
       target.dataset.src = url;
       target.src = url;
+      this.tries = 0;
     }
   }
 
@@ -135,8 +132,8 @@ class SliderView {
 
     const stage = (this.stage = el("div", "arb-cmp-stage"));
     const meta = () => { this.sync(true); this.layout(); };
-    this.B = new Layer(stage, meta, "b");
-    this.A = new Layer(stage, meta, "a");
+    this.B = new Layer(stage, meta);
+    this.A = new Layer(stage, meta);
     this.divEl = el("div", "arb-cmp-div");
     this.tagA = el("div", "arb-cmp-tag");
     this.tagB = el("div", "arb-cmp-tag");
@@ -400,6 +397,7 @@ class SliderView {
     clearInterval(this.timer);
     this.A.stop();
     this.B.stop();
+    this.sync(true);  // each player stops wherever its decoder was: put both on the clock's frame
     this.transport();
   }
 
@@ -450,15 +448,44 @@ class SliderView {
       }
       const dur = layer.dur;
       const at = dur ? Math.min(this.time, Math.max(0, dur - 0.04)) : this.time;
-      if (m.readyState >= 1 && (force || Math.abs(m.currentTime - at) > 0.25)) {
+      const drift = m.currentTime - at;
+      // held: on the clock's frame. Playing: seek only when far off (a seek stutters); a small drift is
+      // taken up by running that player a little faster or slower until it is back on the clock.
+      if (m.readyState >= 1 && (force || Math.abs(drift) > (this.playing ? 0.15 : 0.02))) {
         try { m.currentTime = at; } catch {}
+        m.playbackRate = 1;
+      } else if (this.playing) {
+        m.playbackRate = Math.abs(drift) < 0.02 ? 1 : drift > 0 ? 0.9 : 1.1;
       }
       m.muted = this.muted || layer !== loud;
       const run = this.playing && (!dur || this.time < dur - 0.04);
       if (run && m.paused) m.play().catch(() => {});
       else if (!run && !m.paused) m.pause();
     }
+    if (force) this.watch();
     this.drawWaves();
+  }
+
+  // A player can stick (seen with hardware decode in Edge: it never loads, or stays on an old frame and
+  // ignores seeks until its clip is picked again). Reload one that hasn't reached the clock, and look again.
+  watch() {
+    clearTimeout(this.dog);
+    this.dog = setTimeout(() => {
+      if (this.playing) return;
+      let again = false;
+      for (const layer of this.layers()) {
+        const m = layer.media;
+        if (!m || !m.getAttribute("src")) continue;
+        const dur = layer.dur;
+        const at = dur ? Math.min(this.time, Math.max(0, dur - 0.04)) : this.time;
+        if (m.readyState >= 2 && !m.seeking && Math.abs(m.currentTime - at) < 0.05) layer.tries = 0;
+        else if ((layer.tries = (layer.tries || 0) + 1) <= 3) {
+          m.load();  // its loadedmetadata seeks it again
+          again = true;
+        }
+      }
+      if (again) this.watch();
+    }, 1500);
   }
 
   transport() {

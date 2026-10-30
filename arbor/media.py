@@ -20,6 +20,7 @@ import folder_paths
 
 BROWSER_EXTS = {".mp4", ".m4v", ".webm", ".mov"}  # played as they are; anything else is re-encoded
 VIEW_CRF = 8  # H.264 quality for videos re-encoded only to be shown (lower = closer to the source)
+VIEW_GOP = 12  # a keyframe every 12 frames in those videos (half a second at 24 fps)
 
 
 def is_video(v) -> bool:
@@ -89,8 +90,14 @@ def video_ref(v, prefix: str = "video") -> dict:
         ref = view_ref(path)
         if ref:
             return ref
-    from comfy_api.latest import Types
+    from comfy_api.latest import InputImpl, Types
     path, ref = temp_file(prefix, "mp4")
+    if isinstance(v, InputImpl.VideoFromComponents):  # frames in memory, e.g. Create Video's output
+        try:
+            write_view_mp4(v, path)
+            return ref
+        except Exception:
+            pass  # fall back to ComfyUI's own writer
     # near-lossless (ComfyUI's default is CRF 18): the viewer is for comparing, so a clip made in the
     # workflow should look like itself next to a picture or a saved file, not like a second encode
     try:
@@ -98,6 +105,54 @@ def video_ref(v, prefix: str = "video") -> dict:
     except TypeError:  # a video type without the crf option
         v.save_to(path, format=Types.VideoContainer.MP4, codec=Types.VideoCodec.AUTO)
     return ref
+
+
+def write_view_mp4(v, path: str):
+    """An MP4 made for the viewer: near-lossless, a keyframe every VIEW_GOP frames and no B-frames.
+
+    With ComfyUI's writer a clip has one keyframe and B-frames, so every seek decodes from the first frame and
+    a picture a (hardware) decoder gets wrong stays wrong until the clip is reloaded. Short GOPs make seeking
+    cheap and exact, and any such error clears within half a second. Frames and audio as ComfyUI writes them.
+    """
+    import math
+    import av
+    from comfy_api.latest._input_impl import video_types as vt
+
+    comp = v.get_components()
+    images = comp.images
+    n, h, w = images.shape[0], images.shape[1], images.shape[2]
+    if n == 0 or w % 2 or h % 2:
+        raise ValueError("not a yuv420p size")
+    rate = Fraction(round(float(comp.frame_rate) * 1000), 1000)
+    try:
+        color = v.get_color_space()
+    except Exception:
+        color = "sRGB"
+    with av.open(path, mode="w", format="mp4", options={"movflags": "use_metadata_tags+faststart"}) as out:
+        vs = out.add_stream("libx264", rate=rate)
+        vs.width, vs.height, vs.pix_fmt = w, h, "yuv420p"
+        vs.options = {"crf": str(VIEW_CRF), "g": str(VIEW_GOP), "keyint_min": str(VIEW_GOP), "bf": "0", "preset": "fast"}
+        if color in getattr(vt, "VIDEO_COLOR_TRANSFERS", {}):
+            vt.set_video_color_properties(vs.codec_context, color)
+        audio = comp.audio
+        astream = None
+        if audio:
+            sr = int(audio["sample_rate"])
+            wave = audio["waveform"][0, :, :math.ceil(sr / rate * n)]
+            layout = {1: "mono", 2: "stereo", 6: "5.1"}.get(wave.shape[0], "stereo")
+            astream = out.add_stream("aac", rate=sr, layout=layout)
+        for img in images:
+            frame = av.VideoFrame.from_ndarray((img * 255).clamp(0, 255).byte().cpu().numpy(), format="rgb24")
+            frame = frame.reformat(format="yuv420p", dst_colorspace=getattr(vt, "BT709_NCL", None))
+            if color in getattr(vt, "VIDEO_COLOR_TRANSFERS", {}):
+                vt.set_video_color_properties(frame, color)
+            out.mux(vs.encode(frame))
+        out.mux(vs.encode(None))
+        if astream is not None:
+            af = av.AudioFrame.from_ndarray(wave.float().cpu().contiguous().numpy(), format="fltp", layout=layout)
+            af.sample_rate, af.pts = sr, 0
+            out.mux(astream.encode(af))
+            out.mux(astream.encode(None))
 
 
 # ------------------------------------------------------------------ audio
