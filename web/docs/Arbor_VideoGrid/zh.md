@@ -34,8 +34,8 @@
   0：每个分支一行。N：每个分支满 N 格换行——20 项的平铺列表变成 4 行 × 5 列；分支的行标签跨越它的所有行。换行排版时不显示列标签。
 - **行标签方向** `label_direction` · *COMBO (auto · horizontal · vertical)*  
   auto 自动（两行内放得下就横排，否则竖排）· horizontal 横排 · vertical 竖排。竖排时中文逐字竖排、字保持正立，其它文字从下往上读。
-- **说明位置** `caption_style` · *COMBO (below · overlay)*  
-  below：格子下方（对比图相应变高）· overlay：叠在画面底部的深色条上。
+- **说明位置** `caption_style` · *COMBO (below · above · overlay · overlay top)*  
+  below / above：格子下方 / 上方（对比图相应变高）· overlay / overlay top：叠在画面底部 / 顶部的深色条上。
 
 ## 输出
 

@@ -161,7 +161,8 @@ def _layout_inputs():
             IO.Combo.Input("label_direction", options=LABEL_DIRS, default="auto",
                            tooltip="Row labels — auto: horizontal while they fit in two lines, else standing up"),
             IO.Combo.Input("caption_style", options=CAPTION_STYLES, default="below",
-                           tooltip="below: under each cell · overlay: on a dark bar over the picture's bottom")]
+                           tooltip="below / above: under or over each cell · overlay / overlay top: on a dark bar "
+                                   "across the picture's bottom or top")]
 
 
 class ImageGrid(IO.ComfyNode):
@@ -255,11 +256,11 @@ class VideoGrid(IO.ComfyNode):
                 h, w = frames.shape[1:3]
                 x, y = sheet.place(i, j, w, h)
                 bar = None
-                if cap_rows and style == "overlay":
+                if cap_rows and style in ("overlay", "overlay top"):
                     img = sheet.overlay(cap_rows[i][j], w)
                     if img is not None:
                         rgba = np.asarray(img, dtype=np.float32) / 255.0
-                        bar = (rgba[..., :3] * 255.0, rgba[..., 3:])
+                        bar = (rgba[..., :3] * 255.0, rgba[..., 3:], style == "overlay top")
                 cells.append((x, y, frames, rate, bar))
         out_fps = unwrap(fps) or max((c[3] for c in cells), default=0) or 24.0
         length = max(len(c[2]) / (c[3] or out_fps) for c in cells)
@@ -274,11 +275,13 @@ class VideoGrid(IO.ComfyNode):
                     frame = f[min(int(t * (r or out_fps) + 1e-6), len(f) - 1)]
                     fh, fw = frame.shape[:2]
                     buf[y:y + fh, x:x + fw] = frame
-                    if bar is not None:  # caption over the picture's bottom
-                        rgb, a = bar
+                    if bar is not None:  # caption over the picture's bottom (or top)
+                        rgb, a, at_top = bar
                         bh = min(rgb.shape[0], fh)
-                        region = buf[y + fh - bh:y + fh, x:x + fw].astype(np.float32)
-                        buf[y + fh - bh:y + fh, x:x + fw] = (rgb[-bh:] * a[-bh:] + region * (1 - a[-bh:])).astype(np.uint8)
+                        y0 = y if at_top else y + fh - bh
+                        rgb, a = (rgb[:bh], a[:bh]) if at_top else (rgb[-bh:], a[-bh:])
+                        region = buf[y0:y0 + bh, x:x + fw].astype(np.float32)
+                        buf[y0:y0 + bh, x:x + fw] = (rgb * a + region * (1 - a)).astype(np.uint8)
                 yield buf
 
         sound = None

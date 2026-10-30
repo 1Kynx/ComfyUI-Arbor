@@ -251,14 +251,14 @@ node("Arbor_ImageGrid", en=dict(
             "captions": "One caption per cell — e.g. the prompts or seeds of a batch run: a tree shaped like the grid (item by item, branch by branch) or a flat list read cell by cell. Long captions wrap to three lines.",
             "columns": "0: one row per branch. N: every branch wraps after N cells — a flat list of 20 becomes 4 rows of 5; a branch's label spans all its rows. Column labels are left out when wrapping.",
             "label_direction": "Row labels: auto (horizontal while they fit in two lines, otherwise standing up) · horizontal · vertical. Standing up, Chinese stacks upright; other text reads bottom to top.",
-            "caption_style": "below: under each cell (the sheet grows to fit) · overlay: on a dark bar across the bottom of the picture."},
+            "caption_style": "below / above: under or over each cell (the sheet grows to fit) · overlay / overlay top: on a dark bar across the bottom or top of the picture."},
     outputs=["The comparison sheet as one image."],
     doc="""## How to use
 - **After a batch run**: connect the decoded images to *images* and **XY Lists'** *shape* to *shape*. Rows and columns come out right and are labelled — rows with the x values, columns with the y values. Nothing else to connect.
 - **From a tree**: connect any image tree — each branch becomes a row. Use **Reshape Tree** (*flip matrix*) first to swap rows and columns.
 
 ## Captions and layout
-- **captions**: one text per cell — connect a Prompt Template, the seeds of an XY run or Load Media's *names*. *caption_style* puts them under the cells or on a bar over the picture.
+- **captions**: one text per cell — connect a Prompt Template, the seeds of an XY run or Load Media's *names*. *caption_style* puts them under or over the cells, or on a bar across the picture's bottom or top.
 - **columns**: wrap long branches (or a flat list) after N cells instead of one very long row.
 - **fit = fill** crops every picture to the cell, so mixed sizes still make an even grid.
 - Long row labels stand up by themselves (*label_direction* auto).
@@ -282,7 +282,7 @@ node("Arbor_ImageGrid", en=dict(
             "captions": ("单元格说明", "每格一句说明——例如批量运行的提示词或种子：与网格结构相同的数据树（每个分支逐项对应），或按格子顺序读取的列表。过长的说明最多折成三行。"),
             "columns": ("每行列数", "0：每个分支一行。N：每个分支满 N 格换行——20 项的平铺列表变成 4 行 × 5 列；分支的行标签跨越它的所有行。换行排版时不显示列标签。"),
             "label_direction": ("行标签方向", "auto 自动（两行内放得下就横排，否则竖排）· horizontal 横排 · vertical 竖排。竖排时中文逐字竖排、字保持正立，其它文字从下往上读。"),
-            "caption_style": ("说明位置", "below：格子下方（对比图相应变高）· overlay：叠在画面底部的深色条上。")},
+            "caption_style": ("说明位置", "below / above：格子下方 / 上方（对比图相应变高）· overlay / overlay top：叠在画面底部 / 顶部的深色条上。")},
     outputs=[("图像", "合成后的对比图（一张）。")],
     doc="""## 用法
 - **批量运行之后**：解码后的图片接 *图像*，**XY 组合列表** 的 *结构* 接 *结构*，行列自动排好并标注——行是 x 的取值，列是 y 的取值，不用再接别的。
@@ -314,7 +314,7 @@ node("Arbor_VideoGrid", en=dict(
             "captions": "One caption per cell — e.g. the prompts or seeds of a batch run: a tree shaped like the grid (item by item, branch by branch) or a flat list read cell by cell. Long captions wrap to three lines.",
             "columns": "0: one row per branch. N: every branch wraps after N cells — a flat list of 20 becomes 4 rows of 5; a branch's label spans all its rows. Column labels are left out when wrapping.",
             "label_direction": "Row labels: auto (horizontal while they fit in two lines, otherwise standing up) · horizontal · vertical. Standing up, Chinese stacks upright; other text reads bottom to top.",
-            "caption_style": "below: under each cell (the sheet grows to fit) · overlay: on a dark bar across the bottom of the picture.",
+            "caption_style": "below / above: under or over each cell (the sheet grows to fit) · overlay / overlay top: on a dark bar across the bottom or top of the picture.",
             "fps": "Frame rate of the grid video; 0 = the highest frame rate among the clips. Every clip keeps its own speed.",
             "audio": "none: a silent grid · mix: every clip's sound mixed together (loudness kept below clipping)."},
     outputs=["The grid as one VIDEO (H.264 MP4 in the temp folder) — save it with Save by Path or Save Video, or compare it in the Compare Viewer."],
@@ -328,7 +328,7 @@ node("Arbor_VideoGrid", en=dict(
 - Clips are decoded straight at cell size, frame by frame, so long or large videos do not need much memory.
 
 ## Captions and layout
-- **captions**: one text per cell — connect a Prompt Template, the seeds of an XY run or Load Media's *names*. *caption_style* puts them under the cells or on a bar over the clip (drawn into every frame).
+- **captions**: one text per cell — connect a Prompt Template, the seeds of an XY run or Load Media's *names*. *caption_style* puts them under or over the cells, or on a bar across the clip's bottom or top (drawn into every frame).
 - **columns**: wrap long branches (or a flat list) after N cells instead of one very long row.
 - **fit = fill** crops every picture to the cell, so mixed sizes still make an even grid.
 - Long row labels stand up by themselves (*label_direction* auto).
@@ -352,7 +352,7 @@ node("Arbor_VideoGrid", en=dict(
             "captions": ("单元格说明", "每格一句说明——例如批量运行的提示词或种子：与网格结构相同的数据树（每个分支逐项对应），或按格子顺序读取的列表。过长的说明最多折成三行。"),
             "columns": ("每行列数", "0：每个分支一行。N：每个分支满 N 格换行——20 项的平铺列表变成 4 行 × 5 列；分支的行标签跨越它的所有行。换行排版时不显示列标签。"),
             "label_direction": ("行标签方向", "auto 自动（两行内放得下就横排，否则竖排）· horizontal 横排 · vertical 竖排。竖排时中文逐字竖排、字保持正立，其它文字从下往上读。"),
-            "caption_style": ("说明位置", "below：格子下方（对比图相应变高）· overlay：叠在画面底部的深色条上。"),
+            "caption_style": ("说明位置", "below / above：格子下方 / 上方（对比图相应变高）· overlay / overlay top：叠在画面底部 / 顶部的深色条上。"),
             "fps": ("帧率", "网格视频的帧率；0 = 各段视频中最高的帧率。每段视频保持自己的播放速度。"),
             "audio": ("音频", "none：无声 · mix：把所有视频的声音混在一起（自动压低音量避免爆音）。")},
     outputs=[("视频", "合成后的网格视频（VIDEO，临时文件夹里的 H.264 MP4）——用「按路径保存」或「保存视频」保存，也可以接「对比查看器」。")],

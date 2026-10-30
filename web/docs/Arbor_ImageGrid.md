@@ -30,8 +30,8 @@ Lay images out as an XY comparison sheet: each branch is a row, each item a colu
   0: one row per branch. N: every branch wraps after N cells — a flat list of 20 becomes 4 rows of 5; a branch's label spans all its rows. Column labels are left out when wrapping.
 - **label_direction** · *COMBO (auto · horizontal · vertical)*  
   Row labels: auto (horizontal while they fit in two lines, otherwise standing up) · horizontal · vertical. Standing up, Chinese stacks upright; other text reads bottom to top.
-- **caption_style** · *COMBO (below · overlay)*  
-  below: under each cell (the sheet grows to fit) · overlay: on a dark bar across the bottom of the picture.
+- **caption_style** · *COMBO (below · above · overlay · overlay top)*  
+  below / above: under or over each cell (the sheet grows to fit) · overlay / overlay top: on a dark bar across the bottom or top of the picture.
 
 ## Outputs
 
@@ -43,7 +43,7 @@ Lay images out as an XY comparison sheet: each branch is a row, each item a colu
 - **From a tree**: connect any image tree — each branch becomes a row. Use **Reshape Tree** (*flip matrix*) first to swap rows and columns.
 
 ## Captions and layout
-- **captions**: one text per cell — connect a Prompt Template, the seeds of an XY run or Load Media's *names*. *caption_style* puts them under the cells or on a bar over the picture.
+- **captions**: one text per cell — connect a Prompt Template, the seeds of an XY run or Load Media's *names*. *caption_style* puts them under or over the cells, or on a bar across the picture's bottom or top.
 - **columns**: wrap long branches (or a flat list) after N cells instead of one very long row.
 - **fit = fill** crops every picture to the cell, so mixed sizes still make an even grid.
 - Long row labels stand up by themselves (*label_direction* auto).

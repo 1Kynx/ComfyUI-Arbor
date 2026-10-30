@@ -135,7 +135,7 @@
       },
       "caption_style": {
         "name": "说明位置",
-        "tooltip": "below：格子下方（对比图相应变高）· overlay：叠在画面底部的深色条上。"
+        "tooltip": "below / above：格子下方 / 上方（对比图相应变高）· overlay / overlay top：叠在画面底部 / 顶部的深色条上。"
       }
     },
     "outputs": {
@@ -211,7 +211,7 @@
       },
       "caption_style": {
         "name": "说明位置",
-        "tooltip": "below：格子下方（对比图相应变高）· overlay：叠在画面底部的深色条上。"
+        "tooltip": "below / above：格子下方 / 上方（对比图相应变高）· overlay / overlay top：叠在画面底部 / 顶部的深色条上。"
       }
     },
     "outputs": {

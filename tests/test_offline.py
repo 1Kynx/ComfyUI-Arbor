@@ -623,6 +623,17 @@ def test_grid_layout():
     assert below.shape[1] > wrapped.shape[1] and below.shape[2] == wrapped.shape[2], "captions below add height"
     over = sheet(images=[flat], captions=[caps], **grid_kw(columns=4, caption_style="overlay"))
     assert over.shape == wrapped.shape and not torch.equal(over, wrapped), "overlay captions keep the size"
+    # above: the same band, over the picture instead of under it
+    above = sheet(images=[flat], captions=[caps], **grid_kw(columns=4, caption_style="above"))
+    cap_h = (below.shape[1] - wrapped.shape[1]) // 2
+    assert above.shape == below.shape and not torch.equal(above, below)
+    assert torch.allclose(below[0, 2:32, 2:62], pics[0][0], atol=0.01), "below: picture at the top of its cell"
+    assert torch.allclose(above[0, 2 + cap_h:32 + cap_h, 2:62], pics[0][0], atol=0.01), "above: picture under its caption"
+    # overlay top: the bar covers the picture's top rows instead of its bottom ones
+    over_top = sheet(images=[flat], captions=[caps], **grid_kw(columns=4, caption_style="overlay top"))
+    assert over_top.shape == wrapped.shape and not torch.equal(over_top, over)
+    assert torch.allclose(over[0, 2, 2:62], pics[0][0, 0], atol=0.01) and not torch.allclose(over_top[0, 2, 2:62], pics[0][0, 0], atol=0.01)
+    assert torch.allclose(over_top[0, 31, 2:62], pics[0][0, 29], atol=0.01) and not torch.allclose(over[0, 31, 2:62], pics[0][0, 29], atol=0.01)
     assert grid.caption_rows(T.DataTree({(0,): ["a"], (1,): ["b", "c"]}), [2, 2]) == [["a", ""], ["b", "c"]]
     assert grid.caption_rows(["a", "b", "c"], [2, 2]) == [["a", "b"], ["c", ""]], "a list is read cell by cell"
 
@@ -780,6 +791,16 @@ def test_compare_and_video_grid():
                            captions=[["a", "b", "c"]], caption_style="overlay"))[0]
             tw, th = tall.get_dimensions()
             assert th > 1.4 * h and tw < w and tall.get_frame_count() == 12, "3 rows of one clip instead of 2 rows"
+            top_bar = res(run(nodes_image.VideoGrid, videos=[videos], fit="fill", cell_size=64, gap=4, font_size=12,
+                              theme="light", path_labels=False, fps=0.0, audio="none", columns=1,
+                              captions=[["a", "b", "c"]], caption_style="overlay top"))[0]
+            assert top_bar.get_dimensions() == (tw, th) and top_bar.get_frame_count() == 12
+            first = lambda v: v.get_components().images[0]
+            assert not torch.equal(first(top_bar), first(tall)), "the bar moves to the top"
+            band = res(run(nodes_image.VideoGrid, videos=[videos], fit="fill", cell_size=64, gap=4, font_size=12,
+                           theme="light", path_labels=False, fps=0.0, audio="none", columns=1,
+                           captions=[["a", "b", "c"]], caption_style="above"))[0]
+            assert band.get_dimensions()[1] > th, "captions above add height"
             raises(ValueError, run, nodes_image.VideoGrid, videos=[T.DataTree({(0,): ["text"]})], fit="fit",
                    cell_size=64, gap=4, font_size=12, theme="light", path_labels=False, fps=0.0, audio="none")
         finally:

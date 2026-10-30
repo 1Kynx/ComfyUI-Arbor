@@ -135,7 +135,7 @@
       },
       "caption_style": {
         "name": "caption_style",
-        "tooltip": "below: under each cell (the sheet grows to fit) · overlay: on a dark bar across the bottom of the picture."
+        "tooltip": "below / above: under or over each cell (the sheet grows to fit) · overlay / overlay top: on a dark bar across the bottom or top of the picture."
       }
     },
     "outputs": {
@@ -211,7 +211,7 @@
       },
       "caption_style": {
         "name": "caption_style",
-        "tooltip": "below: under each cell (the sheet grows to fit) · overlay: on a dark bar across the bottom of the picture."
+        "tooltip": "below / above: under or over each cell (the sheet grows to fit) · overlay / overlay top: on a dark bar across the bottom or top of the picture."
       }
     },
     "outputs": {

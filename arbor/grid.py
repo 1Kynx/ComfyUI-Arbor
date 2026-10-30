@@ -138,7 +138,7 @@ def caption_rows(value, row_counts: list[int]) -> list[list[str]] | None:
 
 FITS = ["fit", "fill", "original", "stretch"]
 LABEL_DIRS = ["auto", "horizontal", "vertical"]
-CAPTION_STYLES = ["below", "overlay"]
+CAPTION_STYLES = ["below", "above", "overlay", "overlay top"]  # overlay = bar over the picture's bottom
 CAPTION_LINES = 3
 
 
@@ -201,14 +201,15 @@ def _is_cjk_only(text: str) -> bool:
 class Sheet:
     """A labelled grid: the background (labels and captions drawn) and where each cell sits."""
 
-    def __init__(self, image, left, top, cw, ch, gap, cap_h, cap_font, cap_line, colors):
+    def __init__(self, image, left, top, cw, ch, gap, cap_h, cap_font, cap_line, colors, cap_above=False):
         self.image, self.left, self.top, self.cw, self.ch, self.gap = image, left, top, cw, ch, gap
         self.cap_h, self.cap_font, self.cap_line, self.colors = cap_h, cap_font, cap_line, colors
+        self.cap_above = cap_above
 
     def cell(self, i: int, j: int) -> tuple[int, int]:
-        """Top-left corner of row i, column j."""
+        """Top-left corner of the picture area of row i, column j (under its caption when captions are above)."""
         return (self.left + self.gap + j * (self.cw + self.gap),
-                self.top + self.gap + i * (self.ch + self.cap_h + self.gap))
+                self.top + self.gap + i * (self.ch + self.cap_h + self.gap) + (self.cap_h if self.cap_above else 0))
 
     def place(self, i: int, j: int, w: int, h: int) -> tuple[int, int]:
         """Top-left corner of a w×h picture centred in its cell."""
@@ -216,7 +217,7 @@ class Sheet:
         return x0 + (self.cw - w) // 2, y0 + (self.ch - h) // 2
 
     def overlay(self, text: str, w: int) -> Image.Image | None:
-        """A caption bar (RGBA) for the bottom of a w-wide picture, or None for no text."""
+        """A caption bar (RGBA) across a w-wide picture, or None for no text."""
         if not text.strip():
             return None
         probe = ImageDraw.Draw(Image.new("RGB", (8, 8)))
@@ -268,7 +269,7 @@ def layout_sheet(sizes: list[list[tuple[int, int] | None]], row_labels=None, col
                  caption_style="below", label_dir="auto") -> Sheet:
     """Lay out rows of pictures of the given (w, h) sizes (None = empty cell) and draw the labels.
     `blocks` gives how many rows each row label spans (wrapped branches), `captions` one text per
-    cell (drawn below it here; overlay captions are drawn by the caller with Sheet.overlay).
+    cell (drawn below or above it here; overlay captions are drawn by the caller with Sheet.overlay).
     `even` rounds the sheet to even sides (video encoders need them)."""
     found = [wh for row in sizes for wh in row if wh]
     if not found:
@@ -289,10 +290,11 @@ def layout_sheet(sizes: list[list[tuple[int, int] | None]], row_labels=None, col
     cap_size = max(10, round(font_size * 0.75))
     cap_font, cap_line = _font(cap_size), int(cap_size * 1.3)
 
-    # captions below the cells: one height for every row, from the longest caption
+    # captions below / above the cells: one height for every row, from the longest caption
     cap_h = 0
     cap_lines = None
-    if captions and caption_style == "below" and any(c.strip() for r in captions for c in r):
+    above = caption_style == "above"
+    if captions and caption_style in ("below", "above") and any(c.strip() for r in captions for c in r):
         cap_lines = [[_wrap(probe, c, cap_font, cw - 8, CAPTION_LINES) for c in r] for r in captions]
         cap_h = max(len(l) for r in cap_lines for l in r) * cap_line + gap // 2 + 2
 
@@ -340,7 +342,7 @@ def layout_sheet(sizes: list[list[tuple[int, int] | None]], row_labels=None, col
             text = rl[k] if k < len(rl) else ""
             if not text:
                 continue
-            y0 = top + gap + start * (row_h + gap)
+            y0 = top + gap + start * (row_h + gap) + (cap_h if above else 0)  # centred on the pictures, not the captions
             if vertical:
                 _draw_vertical(sheet, text, font, line_h, gap, left - gap, y0, y0 + span(k) - cap_h, colors["fg"])
                 continue
@@ -350,12 +352,13 @@ def layout_sheet(sizes: list[list[tuple[int, int] | None]], row_labels=None, col
                 draw.text((left - gap - draw.textlength(line, font=font), ty), line, fill=colors["fg"], font=font)
                 ty += line_h
 
-    out = Sheet(sheet, left, top, cw, ch, gap, cap_h, cap_font, cap_line, colors)
+    out = Sheet(sheet, left, top, cw, ch, gap, cap_h, cap_font, cap_line, colors, cap_above=above and cap_h > 0)
     if cap_lines:
         for i, row in enumerate(cap_lines):
             for j, lines in enumerate(row):
                 x0, y0 = out.cell(i, j)
-                y = y0 + ch + gap // 2
+                # set close to the picture: under it, or ending just over it
+                y = y0 - gap // 2 - len(lines) * cap_line if above else y0 + ch + gap // 2
                 for line in lines:
                     draw.text((x0 + (cw - draw.textlength(line, font=cap_font)) / 2, y), line, fill=colors["fg"],
                               font=cap_font)
@@ -388,8 +391,9 @@ def build_grid(tree: DataTree, row_labels=None, col_labels=None, fit="fit", cell
                 im = im.crop(center_crop_box(w, h, sheet.cw, sheet.ch))
             x, y = sheet.place(i, j, im.width, im.height)
             sheet.image.paste(im, (x, y))
-            if cap_rows and caption_style == "overlay":
+            if cap_rows and caption_style in ("overlay", "overlay top"):
                 bar = sheet.overlay(cap_rows[i][j], im.width)
                 if bar:
-                    sheet.image.paste(bar, (x, y + im.height - bar.height), bar)
+                    by = y if caption_style == "overlay top" else y + im.height - bar.height
+                    sheet.image.paste(bar, (x, by), bar)
     return sheet.image
