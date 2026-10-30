@@ -27,7 +27,10 @@ function fmtTime(s) {
   return `${m}:${((tenths - m * 600) / 10).toFixed(1).padStart(4, "0")}`;
 }
 
-/* One picture / video / waveform on the stage (A or B). */
+/* One picture / video / waveform on the stage (A or B).
+   A video isn't put on the page: its frames are drawn into a canvas. A <video> on screen is scaled and
+   post-processed by the browser and graphics driver in ways that can differ between two players (one side
+   sharpened or blocky); a canvas shows the decoded pixels, the same way for A and B. */
 class Layer {
   constructor(stage, onMeta) {
     this.img = el("img");
@@ -35,17 +38,19 @@ class Layer {
     this.video.playsInline = true;
     this.video.preload = "auto";
     this.video.muted = true;
+    this.screen = el("canvas");
+    for (const ev of ["loadeddata", "seeked"]) this.video.addEventListener(ev, () => this.paint());
     this.audio = el("audio");
     this.audio.preload = "auto";
     this.wave = el("canvas", "arb-cmp-wave");
     for (const m of [this.video, this.audio]) m.addEventListener("loadedmetadata", onMeta);
-    stage.append(this.img, this.video, this.wave);
+    stage.append(this.img, this.screen, this.wave);
     this.slide = null;
   }
 
   get kind() { return this.slide?.kind || null; }
   get media() { return this.kind === "video" ? this.video : this.kind === "audio" ? this.audio : null; }
-  get elm() { return this.kind === "video" ? this.video : this.kind === "audio" ? this.wave : this.img; }
+  get elm() { return this.kind === "video" ? this.screen : this.kind === "audio" ? this.wave : this.img; }
   get dur() { return this.slide?.dur || this.media?.duration || 0; }
 
   show(slide) {
@@ -53,7 +58,7 @@ class Layer {
     this.slide = slide || null;
     if (before && before !== this.media) before.pause();
     this.img.style.display = this.kind === "image" ? "" : "none";
-    this.video.style.display = this.kind === "video" ? "" : "none";
+    this.screen.style.display = this.kind === "video" ? "" : "none";
     this.wave.style.display = this.kind === "audio" ? "" : "none";
     if (!slide) return;
     const target = slide.kind === "image" ? this.img : this.media;
@@ -62,7 +67,18 @@ class Layer {
       target.dataset.src = url;
       target.src = url;
       this.tries = 0;
+      if (target === this.video) this.screen.width = 0;  // no frame of the previous clip
     }
+  }
+
+  paint() {
+    const v = this.video, c = this.screen;
+    if (this.kind !== "video" || v.readyState < 2 || !v.videoWidth) return;
+    if (c.width !== v.videoWidth || c.height !== v.videoHeight) {
+      c.width = v.videoWidth;
+      c.height = v.videoHeight;
+    }
+    c.getContext("2d").drawImage(v, 0, 0);
   }
 
   stop() {
@@ -395,6 +411,14 @@ class SliderView {
     this.sync(true);
     clearInterval(this.timer);
     this.timer = setInterval(() => this.tick(), 40);
+    const frame = () => {  // the canvases follow the players at the display's rate
+      if (!this.playing) return;
+      this.A.paint();
+      this.B.paint();
+      this.raf = requestAnimationFrame(frame);
+    };
+    cancelAnimationFrame(this.raf);
+    this.raf = requestAnimationFrame(frame);
     this.transport();
   }
 
@@ -648,8 +672,8 @@ class SliderView {
     const box = (layer, x0, y0, w0, h0) => {
       const s = layer.slide;
       if (s.kind === "audio") return { x: x0 + 8, y: y0 + 8, w: Math.max(1, w0 - 16), h: Math.max(1, h0 - 16) };
-      const sw = s.w || layer.elm.videoWidth || layer.elm.naturalWidth || w0;
-      const sh = s.h || layer.elm.videoHeight || layer.elm.naturalHeight || h0;
+      const sw = s.w || layer.video.videoWidth || layer.img.naturalWidth || w0;
+      const sh = s.h || layer.video.videoHeight || layer.img.naturalHeight || h0;
       const k = this.scale === "real" ? Math.min(w0 / uw, h0 / uh) : Math.min(w0 / sw, h0 / sh);
       const w = sw * k, h = sh * k;
       return { x: x0 + (w0 - w) / 2, y: y0 + (h0 - h) / 2, w, h };
