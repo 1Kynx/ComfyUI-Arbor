@@ -86,12 +86,9 @@ class SliderView {
     this.node = node;
     this.all = [];      // every slide the node sent
     this.slides = [];   // the ones of the chosen group
-    this.group = node.properties?.arbor_group || "";  // "" = all
     this.index = 0;     // flip: shown slide; wipe: B
     this.a = 0;         // wipe: A
-    this.mode = node.properties?.arbor_mode || "flip";
-    this.scale = node.properties?.arbor_scale || "real";
-    this.loop = node.properties?.arbor_loop ?? true;
+    this.readProps();
     this.muted = false;
     this.div = 0.5;     // wipe divider, fraction of stage width
     this.top = false;   // stacked: pointer over the top half (A)
@@ -256,6 +253,15 @@ class SliderView {
 
     new ResizeObserver(() => this.layout()).observe(stage);
     this.render();
+  }
+
+  // the node's saved settings; a loaded workflow sets them after the node (and this view) is created
+  readProps() {
+    const p = this.node.properties || {};
+    this.group = p.arbor_group || "";  // "" = all
+    this.mode = p.arbor_mode || "flip";
+    this.scale = p.arbor_scale || "real";
+    this.loop = p.arbor_loop ?? true;
   }
 
   destroy() {
@@ -706,6 +712,13 @@ app.registerExtension({
       });
       const [w, h] = this.size || [0, 0];
       this.setSize?.([Math.max(w, 380), Math.max(h, 440)]);
+    });
+
+    chain(nodeType.prototype, "onConfigure", function () {
+      const view = this.__arborSlider;
+      if (!view) return;
+      view.readProps();
+      view.render();
     });
 
     chain(nodeType.prototype, "onExecuted", function (output) {
