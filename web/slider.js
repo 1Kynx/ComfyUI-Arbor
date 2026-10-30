@@ -49,7 +49,8 @@ class Layer {
   }
 
   get kind() { return this.slide?.kind || null; }
-  get media() { return this.kind === "video" ? this.video : this.kind === "audio" ? this.audio : null; }
+  // a twin (A on the same clip as B) has no player of its own: it shows B's frames
+  get media() { return this.twin ? null : this.kind === "video" ? this.video : this.kind === "audio" ? this.audio : null; }
   get elm() { return this.kind === "video" ? this.screen : this.kind === "audio" ? this.wave : this.img; }
   get dur() { return this.slide?.dur || this.media?.duration || 0; }
 
@@ -72,7 +73,7 @@ class Layer {
   }
 
   paint() {
-    const v = this.video, c = this.screen;
+    const v = (this.twin || this).video, c = this.screen;
     if (this.kind !== "video" || v.readyState < 2 || !v.videoWidth) return;
     if (c.width !== v.videoWidth || c.height !== v.videoHeight) {
       c.width = v.videoWidth;
@@ -147,6 +148,7 @@ class SliderView {
     const meta = () => { this.sync(true); this.layout(); };
     this.B = new Layer(stage, meta);
     this.A = new Layer(stage, meta);
+    for (const ev of ["loadeddata", "seeked"]) this.B.video.addEventListener(ev, () => this.A.twin && this.A.paint());
     this.divEl = el("div", "arb-cmp-div");
     this.tagA = el("div", "arb-cmp-tag");
     this.tagB = el("div", "arb-cmp-tag");
@@ -442,7 +444,7 @@ class SliderView {
     const now = performance.now();
     const L = this.length();
     // follow the longest clip while it plays; count real time while it loads or has ended
-    const lead = this.timed().reduce((a, l) => (!a || l.dur > a.dur ? l : a), null);
+    const lead = this.timed().filter((l) => l.media).reduce((a, l) => (!a || l.dur > a.dur ? l : a), null);
     const m = lead?.media;
     if (m && !m.paused && m.readyState >= 2 && m.currentTime < lead.dur - 0.05) this.time = m.currentTime;
     else this.time += (now - this.last) / 1000;
@@ -467,7 +469,7 @@ class SliderView {
 
   /* put every visible video / audio at the clock's time, playing or held */
   sync(force) {
-    const loud = this.audible();
+    const loud = this.audible().twin || this.audible();
     for (const layer of [this.A, this.B]) {
       const m = layer.media;
       const shown = this.layers().includes(layer);
@@ -628,7 +630,14 @@ class SliderView {
 
     const A = this.slides[this.a];
     this.B.show(cur);
+    this.A.twin = null;
     this.A.show(wipe ? A : null);
+    // A and B on the same video: one player for both, so they can't drift a frame apart while playing
+    if (wipe && A.kind === "video" && cur.kind === "video" && viewURL(A) === viewURL(cur)) {
+      this.A.video.pause();
+      this.A.twin = this.B;
+      this.A.paint();
+    }
     if (wipe) {
       this.chipA.innerHTML = `<b>A</b><span></span>`;
       this.chipA.lastChild.textContent = `${KIND_MARK[A.kind] || ""}${A.label}`;
