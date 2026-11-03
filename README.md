@@ -59,9 +59,12 @@ Branches can hold branches — `{scene;shot}`, `{character;outfit}` — and the 
 | **Arbor/Data** | Panel · Number Slider · Number Sequence · Split Text · Prompt Template · Expression · Random · Collect · Index Switch |
 | **Arbor/Tree** | XY Lists · Tree to Data · Construct Tree · Reshape Tree · Tree Branch · Merge · Tree Statistics |
 | **Arbor/List** | List Item · Dispatch · Partition · Repeat · Sort List · Cross Reference |
+| **Arbor/Sampling** | Tiled Refine for MiniMax H3 · Add Guide Frames for MiniMax H3 |
 
 *Media*: viewing, gridding, loading, saving and resizing pictures, videos and audio. *Data*: where values come from (typed,
 slid, generated, computed) and which one goes on. *Tree*: building, reshaping and flattening trees. *List*: the same operation on every branch.
+*Sampling*: re-sampling an existing MiniMax H3 video close to the original — overlapping spatial tiles that keep the whole
+timeline (2K refine on 16 GB, faster and closer to the original than one canvas) and single-frame guides from the original.
 
 Grasshopper's tree operations are grouped by what they do instead of one node each: **Reshape Tree** is Graft,
 Flatten, Simplify, Flip Matrix, Shift Paths and Renumber (pick the mode); **Merge** also entwines; **List Item**

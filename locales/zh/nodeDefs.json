@@ -1424,5 +1424,69 @@
         "tooltip": "B 按 A 的个数循环。"
       }
     }
+  },
+  "Arbor_H3TiledRefine": {
+    "display_name": "MiniMax H3 分块精修",
+    "description": "把 MiniMax H3 每一步的画面切成重叠的空间块分别采样、每步羽化融合，降低显存。每块保留全部帧（不切时间）；引导帧和去噪蒙版按块同步裁剪。",
+    "inputs": {
+      "model": {
+        "name": "模型",
+        "tooltip": "MiniMax H3 模型，接在 LoRA 和注意力补丁（Chunk FeedForward、Block Sparse Attention）之后。"
+      },
+      "tiles_x": {
+        "name": "横向块数",
+        "tooltip": "横向分几块。0 = 自动：每块约为 H3 原生 768 × 1344 尺寸时块数最少。与纵向都为 1 = 关闭。"
+      },
+      "tiles_y": {
+        "name": "纵向块数",
+        "tooltip": "纵向分几块。0 = 自动。"
+      },
+      "overlap": {
+        "name": "重叠",
+        "tooltip": "相邻块共享的像素，在这里融合预测，接缝看不出来。128 足够；0 会有明显接缝。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "模型",
+        "tooltip": "按块采样的模型，接到引导器（BasicGuider）。"
+      }
+    }
+  },
+  "Arbor_H3AddGuideFrames": {
+    "display_name": "MiniMax H3 逐帧引导",
+    "description": "把视频中列出的帧逐帧作为单帧引导，锚定到 MiniMax H3 目标视频的同一帧——相当于每帧一个核心「Add Guide for MiniMax H3」，合成一个节点。",
+    "inputs": {
+      "positive": {
+        "name": "正向条件",
+        "tooltip": "正向条件（来自 MiniMax H3 Image to Video 或 Reference to Video）。"
+      },
+      "vae": {
+        "name": "VAE",
+        "tooltip": "H3 视频 VAE。"
+      },
+      "latent": {
+        "name": "Latent",
+        "tooltip": "要采样的 H3 AV latent——精修时就是原片编码。"
+      },
+      "images": {
+        "name": "图像",
+        "tooltip": "原视频的帧（输出尺寸的图像批次），或直接接视频。"
+      },
+      "frames": {
+        "name": "帧",
+        "tooltip": "要锚定哪些帧，语法同批次挑选：0, 5, -1（倒数）, 3-5（闭区间）, 17::17（从 17 起每 17 帧）。重复的会去掉。"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "正向条件",
+        "tooltip": "每帧一个引导的条件。"
+      },
+      "1": {
+        "name": "数量",
+        "tooltip": "锚定的帧数。"
+      }
+    }
   }
 }

@@ -24,7 +24,7 @@ sys.modules["arbor_pkg"] = pkg
 _spec.loader.exec_module(pkg)
 
 from arbor_pkg.arbor import grid, live, nodes_data, nodes_files, nodes_image, nodes_list, nodes_panel, \
-    nodes_tree  # noqa: E402
+    nodes_sampling, nodes_tree  # noqa: E402
 from arbor_pkg.arbor import tree as T  # noqa: E402
 
 P = T.format_path
@@ -1016,6 +1016,92 @@ def test_live_preview():
 
 # ====================================================================== package
 
+def test_sampling():
+    from comfy.utils import pack_latents, unpack_latents
+    from comfy_extras.nodes_minimax_h3 import EmptyMiniMaxH3LatentAV, MiniMaxH3AddGuide
+    S = nodes_sampling
+
+    # Add Guide Frames: Batch Pick syntax, the same guides as one core Add Guide per frame
+    gi = S.guide_indices
+    assert gi("0, 17::17, -1", 124) == [0, 17, 34, 51, 68, 85, 102, 119, 123]
+    assert gi("0, 5::17", 124) == [0, 5, 22, 39, 56, 73, 90, 107]
+    assert gi("3-5, 4, -124", 124) == [3, 4, 5, 0], "ranges, repeats dropped, negatives"
+    raises(IndexError, gi, "124", 124)
+    raises(ValueError, gi, "x", 124)
+
+    class FakeVAE:  # encodes each picture to something that depends on its pixels
+        def encode(self, px):
+            assert px.shape[0] == 1, "single frames only"
+            return px.mean(dim=(1, 2, 3)).reshape(1, 1, 1, 1, 1).expand(1, 24, 1, 6, 4).clone()
+
+    latent = EmptyMiniMaxH3LatentAV.execute(64, 96, 124).result[0]
+    frames = torch.rand(124, 96, 64, 3)
+    cond = [[torch.zeros(1, 4, 8), {}]]
+    vae = FakeVAE()
+    ours, count = res(run(S.H3AddGuideFrames, positive=cond, vae=vae, latent=latent, images=frames,
+                          frames="0, 17::17, -1"))
+    chain = cond
+    for i in (0, 17, 34, 51, 68, 85, 102, 119, 123):
+        chain = MiniMaxH3AddGuide.execute(chain, latent, i, vae=vae, image=frames[i:i + 1]).result[0]
+    a, b = ours[0][1]["minimax_keyframes"], chain[0][1]["minimax_keyframes"]
+    assert count == 9 and [k["resolved_frame_index"] for k in a] == [k["resolved_frame_index"] for k in b]
+    assert all(torch.equal(x["latent"], y["latent"]) for x, y in zip(a, b)), "same guides as the core chain"
+    pre = MiniMaxH3AddGuide.execute(cond, latent, 60, vae=vae, image=frames[60:61]).result[0]
+    more = res(run(S.H3AddGuideFrames, positive=pre, vae=vae, latent=latent, images=frames, frames="0"))[0]
+    assert [k["resolved_frame_index"] for k in more[0][1]["minimax_keyframes"]] == [60, 0], "earlier guides kept"
+
+    # tiles cover the latent on the 2x2 patch grid and overlap; auto keeps them about H3's native size
+    for h, w, ty, tx in ((84, 48, 2, 2), (68, 120, 2, 3), (84, 48, 1, 1), (42, 24, 3, 2), (160, 90, 0, 0)):
+        boxes = S.plan_tiles(h, w, ty, tx, 8)
+        cover = torch.zeros(h, w)
+        for y0, y1, x0, x1 in boxes:
+            assert y0 % 2 == x0 % 2 == (y1 - y0) % 2 == (x1 - x0) % 2 == 0, boxes
+            cover[y0:y1, x0:x1] += 1
+        assert cover.min() >= 1 and (len(boxes) == 1 or cover.max() >= 2), (h, w, ty, tx)
+        assert all(S.tile_weights(b, h, w, 8).min() > 0 for b in boxes)
+    auto = lambda W, H: len(S.plan_tiles(H // 16, W // 16, 0, 0, 8))
+    assert (auto(768, 1344), auto(1088, 1920), auto(1440, 2560), auto(2048, 2048)) == (1, 2, 4, 6)
+    for W, H in ((1440, 2560), (2048, 2048), (2160, 3840)):
+        for y0, y1, x0, x1 in S.plan_tiles(H // 16, W // 16, 0, 0, 8):
+            th, tw = y1 - y0, x1 - x0
+            assert th * tw <= S.NATIVE_LATENT_AREA and max(th, tw) <= 2 * min(th, tw), (W, H, th, tw)
+
+    # the wrapper: 1x1 passes through, a 2x2 blend equals untiled for a pixel-wise model
+    T_, H, W = 3, 20, 16
+    video, audio = torch.randn(1, 24, T_, H, W), torch.randn(1, 32, 2, 7)
+    x, shapes = pack_latents([video, audio])
+    guide = torch.randn(1, 24, 1, H, W)
+    payload = {"keyframes": [{"resolved_frame_index": 0, "latent": guide}], "cond_video_latents": [guide],
+               "layout": object(), "seed": 0}
+    c = {"latent_shapes": shapes, "minimax_payload": payload, "denoise_mask": torch.rand(1, 1, T_, H, W),
+         "transformer_options": {}}
+    seen = []
+
+    def fake_apply(x_, t_, latent_shapes=None, minimax_payload=None, denoise_mask=None, **kw):
+        v, a_ = unpack_latents(x_, latent_shapes)
+        h_, w_ = v.shape[-2:]
+        g = minimax_payload["cond_video_latents"][0]
+        assert g.shape[-2:] == (h_, w_) and denoise_mask.shape[-2:] == (h_, w_), "guide and mask cropped to the tile"
+        assert "layout" not in minimax_payload or (h_, w_) == (H, W), "tile layout left to the model"
+        seen.append((h_, w_))
+        return pack_latents([v * 2 + g * denoise_mask, a_ * 3])[0]  # each position depends only on itself
+
+    full = fake_apply(x, None, **c)
+    seen.clear()
+    assert torch.equal(S.make_wrapper(1, 1, 2, 2)(fake_apply, {"input": x, "timestep": None, "c": c}), full)
+    assert seen == [(H, W)], "1x1 is a pass-through"
+    seen.clear()
+    out = S.make_wrapper(2, 2, 4, 4)(fake_apply, {"input": x, "timestep": None, "c": c})
+    assert len(seen) == 4 and all(s != (H, W) for s in seen)
+    assert torch.allclose(out, full, atol=1e-5), "blended tiles = untiled for a pixel-wise model"
+    assert payload.get("layout") is not None, "the original payload is left untouched"
+
+    class NotH3:
+        model = object()
+    raises(ValueError, S.H3TiledRefine.execute, NotH3(), 0, 0, 128)
+    print("sampling: OK  (guides = core chain, tiles exact on a pixel-wise model, auto grid)")
+
+
 def test_docs_and_locales():
     import json
     import re
@@ -1057,7 +1143,7 @@ def test_example_workflows():
 
 def test_registration():
     ids = [n.define_schema().node_id for n in pkg.NODES]
-    assert len(ids) == len(set(ids)) == 31, (len(ids), len(set(ids)))
+    assert len(ids) == len(set(ids)) == 33, (len(ids), len(set(ids)))
     cats = {}
     for n in pkg.NODES:
         s = n.define_schema()
@@ -1066,7 +1152,7 @@ def test_registration():
         assert s.node_id == f"Arbor_{n.__name__}", f"{s.node_id} is defined by class {n.__name__}"
         assert not s.is_deprecated
         cats[s.node_id] = s.category
-    assert set(cats.values()) == {"Arbor/Media", "Arbor/Data", "Arbor/Tree", "Arbor/List"}, set(cats.values())
+    assert set(cats.values()) == {"Arbor/Media", "Arbor/Data", "Arbor/Tree", "Arbor/List", "Arbor/Sampling"}, set(cats.values())
     assert cats["Arbor_IndexSwitch"] == "Arbor/Data" and cats["Arbor_ConstructTree"] == "Arbor/Tree"
     print(f"registration: OK ({len(ids)} nodes)")
 
@@ -1074,7 +1160,7 @@ def test_registration():
 if __name__ == "__main__":
     for test in [test_tree_algebra, test_cross_and_rebuild, test_data_nodes, test_number_slider, test_panel,
                  test_tree_nodes, test_list_nodes, test_grasshopper_matching, test_nested_trees, test_xy_lists, test_image_grid, test_grid_layout, test_image_nodes,
-                 test_compare_and_video_grid, test_load_media, test_files,
+                 test_compare_and_video_grid, test_load_media, test_files, test_sampling,
                  test_live_preview, test_docs_and_locales, test_example_workflows, test_registration]:
         test()
     print("ALL OK")

@@ -1424,5 +1424,69 @@
         "tooltip": "B cycled for every A."
       }
     }
+  },
+  "Arbor_H3TiledRefine": {
+    "display_name": "Tiled Refine for MiniMax H3",
+    "description": "Lower the memory of a MiniMax H3 step by sampling the video in overlapping spatial tiles, blended at every step. Every tile keeps all frames, so the video is never split in time; guide frames and denoise masks are cropped to each tile.",
+    "inputs": {
+      "model": {
+        "name": "model",
+        "tooltip": "A MiniMax H3 model, after its LoRAs and attention patches (Chunk FeedForward, Block Sparse Attention)."
+      },
+      "tiles_x": {
+        "name": "tiles_x",
+        "tooltip": "Tiles across. 0 = auto: the fewest tiles that keep each one about H3's native 768 × 1344 size. 1 with tiles_y 1 = off."
+      },
+      "tiles_y": {
+        "name": "tiles_y",
+        "tooltip": "Tiles down. 0 = auto."
+      },
+      "overlap": {
+        "name": "overlap",
+        "tooltip": "Pixels that neighbouring tiles share. Their predictions are blended there, so the joins don't show. 128 is plenty; 0 leaves visible seams."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "model",
+        "tooltip": "The model, patched to sample in tiles. Connect it to the guider (BasicGuider)."
+      }
+    }
+  },
+  "Arbor_H3AddGuideFrames": {
+    "display_name": "Add Guide Frames for MiniMax H3",
+    "description": "Anchor the listed frames of a video, each as its own single-frame guide, at the same frames of the MiniMax H3 target — the core 'Add Guide for MiniMax H3' once per frame, in one node.",
+    "inputs": {
+      "positive": {
+        "name": "positive",
+        "tooltip": "The positive conditioning (from MiniMax H3 Image to Video or Reference to Video)."
+      },
+      "vae": {
+        "name": "vae",
+        "tooltip": "The H3 video VAE."
+      },
+      "latent": {
+        "name": "latent",
+        "tooltip": "The H3 AV latent you sample — for a refine, the encoded original."
+      },
+      "images": {
+        "name": "images",
+        "tooltip": "The original video's frames (an image batch at the output size), or the video itself."
+      },
+      "frames": {
+        "name": "frames",
+        "tooltip": "Which frames to anchor, Batch Pick syntax: 0, 5, -1 (from the end), 3-5 (inclusive), 17::17 (every 17th from 17). Repeats are dropped."
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "positive",
+        "tooltip": "The conditioning with one guide per frame."
+      },
+      "1": {
+        "name": "count",
+        "tooltip": "How many frames were anchored."
+      }
+    }
   }
 }
