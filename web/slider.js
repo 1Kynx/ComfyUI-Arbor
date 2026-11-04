@@ -39,7 +39,18 @@ class Layer {
     this.video.preload = "auto";
     this.video.muted = true;
     this.screen = el("canvas");
-    for (const ev of ["loadeddata", "seeked"]) this.video.addEventListener(ev, () => this.paint());
+    this.onFrame = null;  // also told about every new frame (A shows B's frames when they share a clip)
+    // paint each frame as the decoder hands it over; drawImage still returns the previous frame for a
+    // moment after 'seeked', so a seek or load also repaints a few times while that settles
+    if (this.video.requestVideoFrameCallback) {
+      const frame = () => {
+        this.paint(true);
+        this.onFrame?.();
+        this.video.requestVideoFrameCallback(frame);
+      };
+      this.video.requestVideoFrameCallback(frame);
+    }
+    for (const ev of ["loadeddata", "seeked"]) this.video.addEventListener(ev, () => this.settle());
     this.audio = el("audio");
     this.audio.preload = "auto";
     this.wave = el("canvas", "arb-cmp-wave");
@@ -68,18 +79,41 @@ class Layer {
       target.dataset.src = url;
       target.src = url;
       this.tries = 0;
-      if (target === this.video) this.screen.width = 0;  // no frame of the previous clip
+      if (target === this.video) {
+        this.screen.width = 0;  // no frame of the previous clip
+        this.painted = -1;
+      }
     }
   }
 
-  paint() {
-    const v = (this.twin || this).video, c = this.screen;
-    if (this.kind !== "video" || v.readyState < 2 || !v.videoWidth) return;
+  /* draw the player's current frame; without force, only when a new frame is due (the display
+     refreshes faster than a clip's frame rate) */
+  paint(force = false) {
+    const src = this.twin || this, v = src.video, c = this.screen;
+    // mid-seek the decoder still holds the old frame: the seek's own repaints come after it
+    if (this.kind !== "video" || v.readyState < 2 || !v.videoWidth || v.seeking) return;
+    // currentTime runs smoothly between frames, so compare frame numbers
+    const frame = Math.floor(v.currentTime * (src.slide?.fps || 30) + 1e-3);
     if (c.width !== v.videoWidth || c.height !== v.videoHeight) {
       c.width = v.videoWidth;
       c.height = v.videoHeight;
+    } else if (!force && frame === this.painted) {
+      return;
     }
     c.getContext("2d").drawImage(v, 0, 0);
+    this.painted = frame;
+  }
+
+  /* after a seek or load: repaint a few times over ~0.4 s until the decoder has handed over the new frame */
+  settle() {
+    clearTimeout(this.settling);
+    let n = 0;
+    const again = () => {
+      this.paint(true);
+      this.onFrame?.();
+      if (++n < 5) this.settling = setTimeout(again, 100);
+    };
+    again();
   }
 
   stop() {
@@ -148,7 +182,7 @@ class SliderView {
     const meta = () => { this.sync(true); this.layout(); };
     this.B = new Layer(stage, meta);
     this.A = new Layer(stage, meta);
-    for (const ev of ["loadeddata", "seeked"]) this.B.video.addEventListener(ev, () => this.A.twin && this.A.paint());
+    this.B.onFrame = () => this.A.twin && this.A.paint(true);  // A on B's clip shows B's frames
     this.divEl = el("div", "arb-cmp-div");
     this.tagA = el("div", "arb-cmp-tag");
     this.tagB = el("div", "arb-cmp-tag");
@@ -401,6 +435,16 @@ class SliderView {
     return this.div > 0.5 ? this.A : this.B;
   }
 
+  /* the layer whose player drives the clock while playing: the one you hear (its sound must never be
+     stretched or seeked), else the longest clip still playing; null while nothing is playing yet */
+  clock() {
+    const running = (l) => l?.media && this.layers().includes(l) && !l.media.paused && l.media.readyState >= 2 &&
+      l.media.currentTime < l.dur - 0.05;
+    const loud = this.audible().twin || this.audible();
+    if (!this.muted && running(loud)) return loud;
+    return this.timed().filter(running).reduce((a, l) => (!a || l.dur > a.dur ? l : a), null);
+  }
+
   toggle() {
     this.playing ? this.pause() : this.play();
   }
@@ -443,10 +487,9 @@ class SliderView {
     if (!this.playing) return;
     const now = performance.now();
     const L = this.length();
-    // follow the longest clip while it plays; count real time while it loads or has ended
-    const lead = this.timed().filter((l) => l.media).reduce((a, l) => (!a || l.dur > a.dur ? l : a), null);
-    const m = lead?.media;
-    if (m && !m.paused && m.readyState >= 2 && m.currentTime < lead.dur - 0.05) this.time = m.currentTime;
+    // follow the clock player while it plays; count real time while it loads or has ended
+    const lead = this.clock();
+    if (lead) this.time = lead.media.currentTime;
     else this.time += (now - this.last) / 1000;
     this.last = now;
     if (!L) {
@@ -470,6 +513,8 @@ class SliderView {
   /* put every visible video / audio at the clock's time, playing or held */
   sync(force) {
     const loud = this.audible().twin || this.audible();
+    const master = this.playing && !force ? this.clock() : null;  // the clock itself is never retimed
+    const rate = (m, r) => { if (m.playbackRate !== r) m.playbackRate = r; };
     for (const layer of [this.A, this.B]) {
       const m = layer.media;
       const shown = this.layers().includes(layer);
@@ -481,13 +526,20 @@ class SliderView {
       const dur = layer.dur;
       const at = dur ? Math.min(this.time, Math.max(0, dur - 0.04)) : this.time;
       const drift = m.currentTime - at;
-      // held: on the clock's frame. Playing: seek only when far off (a seek stutters); a small drift is
-      // taken up by running that player a little faster or slower until it is back on the clock.
-      if (m.readyState >= 1 && (force || Math.abs(drift) > (this.playing ? 0.15 : 0.02))) {
+      if (layer === master) {
+        rate(m, 1);
+        layer.nudge = 0;
+      } else if (m.readyState >= 1 && (force || Math.abs(drift) > (this.playing ? 0.25 : 0.02))) {
+        // held: on the clock's frame; playing: only when far off, since a seek stutters
         try { m.currentTime = at; } catch {}
-        m.playbackRate = 1;
+        rate(m, 1);
+        layer.nudge = 0;
       } else if (this.playing) {
-        m.playbackRate = Math.abs(drift) < 0.02 ? 1 : drift > 0 ? 0.9 : 1.1;
+        // a follower takes up a small drift by running a little faster or slower; hysteresis keeps the
+        // rate from flipping every tick (each change re-times the player)
+        if (Math.abs(drift) > 0.02) layer.nudge = Math.sign(drift);  // half a frame at 24 fps
+        else if (Math.abs(drift) < 0.008) layer.nudge = 0;
+        rate(m, 1 - 0.05 * (layer.nudge || 0));
       }
       m.muted = this.muted || layer !== loud;
       const run = this.playing && (!dur || this.time < dur - 0.04);
@@ -636,7 +688,7 @@ class SliderView {
     if (wipe && A.kind === "video" && cur.kind === "video" && viewURL(A) === viewURL(cur)) {
       this.A.video.pause();
       this.A.twin = this.B;
-      this.A.paint();
+      this.A.paint(true);
     }
     if (wipe) {
       this.chipA.innerHTML = `<b>A</b><span></span>`;
