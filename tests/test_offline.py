@@ -546,6 +546,19 @@ def test_xy_lists():
     assert list(zip(x, y)) == [("a", 1), ("b", 2), ("c", 3), ("c", 4)], "the shorter branch repeats its last item"
     x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[ab], y=[10, 20], mode="cross"))
     assert n == 6 and y == [10, 20] * 3, "a plain list (one branch) repeats for every branch"
+    # a plain x against a grafted y: the branches sit side by side as columns, not stacked as row blocks
+    grafted = res(run(nodes_tree.ReshapeTree, tree=["a", "b"], mode={"mode": ["graft"]}))[0]
+    x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[1, 2, 3], y=[grafted], mode="cross"))
+    assert n == 6 and list(zip(x, y)) == [(1, "a"), (1, "b"), (2, "a"), (2, "b"), (3, "a"), (3, "b")]
+    assert shape.branches == {(0,): ["a", "b"], (1,): ["a", "b"], (2,): ["a", "b"]}
+    assert shape.names == {(0,): 1, (1,): 2, (2,): 3}, "rows named after x"
+    cells = T.rebuild([f"{xv}{yv}" for xv, yv in zip(x, y)], shape)
+    assert cells.branches[(1,)] == ["2a", "2b"], "each run lands in its own row and column"
+    tiles = [torch.full((1, 8, 8, 3), k / 10) for k in range(6)]
+    grid_img = res(run(nodes_image.ImageGrid, images=tiles, shape=[shape], **grid_kw(gap=0, font_size=8)))[0]
+    assert grid_img.shape[1] >= 3 * 8 and grid_img.shape[2] < 3 * 8 + 8 * 6, "3 rows x 2 columns"
+    x2, _, _, shape2, _ = res(run(nodes_tree.XYLists, x=[grafted], y=[1, 2, 3], mode="cross"))
+    assert shape2.paths() == [(0, 0, 0), (0, 1, 0)] and x2 == ["a"] * 3 + ["b"] * 3, "grafted x: rows a and b"
     # x only: flattens any tree, the shape is the tree itself
     branched = T.DataTree({(0,): [1, 2], (1,): [3]})
     x, y, z, shape, n = res(run(nodes_tree.XYLists, x=[branched], mode="cross"))

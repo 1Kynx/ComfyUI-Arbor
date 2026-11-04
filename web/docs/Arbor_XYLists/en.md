@@ -52,7 +52,7 @@ zip    → Mei·tea  Mei·bamboo  Kai·roof              shape {0} Mei: tea, bam
 cross  → the same three runs: every combination inside each branch
          shape {0;0} Mei: tea, bamboo · {1;0} Kai: roof  (one group of rows per branch)
 ```
-A plain list is one branch, so it combines with every branch of the other input; two plain lists give the classic XY plot.
+A plain list is one branch, so it combines with every branch of the other input; two plain lists give the classic XY plot. A plain x against a grafted (or branched) y keeps x as the rows and puts y's branches side by side as columns: x = 1, 2, 3 with y = Graft(a, b) gives 3 rows × 2 columns (a, b), not six one-picture rows.
 
 ## Flatten two trees side by side
 Two trees of the same layout — pictures and their edit instructions from **Cross Reference**, say — go to *x* and *y* in **zip** mode: both come out as plain data, item k with item k, and *shape* keeps the branches of the longest input for putting the results back. Template: *arbor_qwen_edit_by_scene*.

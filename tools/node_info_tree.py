@@ -52,7 +52,7 @@ zip    → Mei·tea  Mei·bamboo  Kai·roof              shape {0} Mei: tea, bam
 cross  → the same three runs: every combination inside each branch
          shape {0;0} Mei: tea, bamboo · {1;0} Kai: roof  (one group of rows per branch)
 ```
-A plain list is one branch, so it combines with every branch of the other input; two plain lists give the classic XY plot.
+A plain list is one branch, so it combines with every branch of the other input; two plain lists give the classic XY plot. A plain x against a grafted (or branched) y keeps x as the rows and puts y's branches side by side as columns: x = 1, 2, 3 with y = Graft(a, b) gives 3 rows × 2 columns (a, b), not six one-picture rows.
 
 ## Flatten two trees side by side
 Two trees of the same layout — pictures and their edit instructions from **Cross Reference**, say — go to *x* and *y* in **zip** mode: both come out as plain data, item k with item k, and *shape* keeps the branches of the longest input for putting the results back. Template: *arbor_qwen_edit_by_scene*.
@@ -97,7 +97,7 @@ zip    → Mei·tea  Mei·bamboo  Kai·roof              结构 {0} Mei: tea, ba
 cross  → 同样三次运行：每个分支内部的所有组合
          结构 {0;0} Mei: tea, bamboo · {1;0} Kai: roof（每个分支一组行）
 ```
-普通列表就是一个分支，所以会和另一输入的每个分支完整组合；两个普通列表就是常规的 XY 对比图。
+普通列表就是一个分支，所以会和另一输入的每个分支完整组合；两个普通列表就是常规的 XY 对比图。普通的 x 配上嫁接（或多分支）的 y 时，x 仍是行，y 的各分支并排成列：x = 1, 2, 3、y = Graft(a, b) 得到 3 行 × 2 列（a、b），而不是六行各一张。
 
 ## 并排展开两棵树
 两棵结构相同的数据树——例如 **交叉组合** 输出的图片和对应的编辑指令——分别接 *x* 和 *y*，用 **zip** 模式：两者都变成普通数据，第 k 项对第 k 项，*结构* 沿用最长那个输入的分支，用来把结果收回去。模板：*arbor_qwen_edit_by_scene*。

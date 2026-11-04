@@ -81,6 +81,22 @@ class XYLists(IO.ComfyNode):
         total = sum(len(bx or []) * len(by or []) * len(bz or [None]) for _, (bx, by, bz) in pairs)
         if total > MAX_COMBOS:
             raise ValueError(f"XY Lists: {total} combinations (max {MAX_COMBOS})")
+        if not zs and len(pairs) > 1 and len(tx.branches) == 1:
+            # one x list shared by every branch pair (y grafted or a tree): the pairs have the same rows, so
+            # they sit side by side — row i is x_i against every branch's y values, in branch order
+            bx = pairs[0][1][0] or []
+            rows = {}
+            for i, xv in enumerate(bx):
+                row = []
+                for path, (_, by, _) in pairs:
+                    for yv in by or []:
+                        ox.append(xv)
+                        oy.append(yv)
+                        oz.append(None)
+                        row.append(yv)
+                shape[(i,)] = row
+                rows[(i,)] = xv
+            return IO.NodeOutput(ox, oy, oz, T.DataTree(shape, rows), len(ox))
         # inside each branch pair: every combination, one row per x value (x × y with z). One branch pair
         # gives rows {i} / {i;j} as before; several give one group of rows per pair, under its path.
         single = len(pairs) == 1
