@@ -59,7 +59,7 @@ Branches can hold branches — `{scene;shot}`, `{character;outfit}` — and the 
 | **Arbor/Data** | Panel · Number Slider · Number Sequence · Split Text · Prompt Template · Expression · Random · Collect · Index Switch |
 | **Arbor/Tree** | XY Lists · Tree to Data · Construct Tree · Reshape Tree · Tree Branch · Merge · Tree Statistics |
 | **Arbor/List** | List Item · Dispatch · Partition · Repeat · Sort List · Cross Reference |
-| **Arbor/Sampling** | Tiled Refine for MiniMax H3 · Add Guide Frames for MiniMax H3 |
+| **Arbor/Sampling** | Tiled Refine for MiniMax H3 · Add Guide Frames for MiniMax H3 · Small Face Refine for MiniMax H3 |
 
 *Media*: viewing, gridding, loading, saving and resizing pictures, videos and audio. *Data*: where values come from (typed,
 slid, generated, computed) and which one goes on. *Tree*: building, reshaping and flattening trees. *List*: the same operation on every branch.

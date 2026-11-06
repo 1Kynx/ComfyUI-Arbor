@@ -5,6 +5,7 @@ Run with ComfyUI's embedded python so comfy_api / folder_paths import:
     python_embeded\\python.exe tests\\test_offline.py <path-to-ComfyUI>
 """
 
+import math
 import importlib.util
 import os
 import sys
@@ -23,7 +24,7 @@ pkg = importlib.util.module_from_spec(_spec)
 sys.modules["arbor_pkg"] = pkg
 _spec.loader.exec_module(pkg)
 
-from arbor_pkg.arbor import grid, live, nodes_data, nodes_files, nodes_image, nodes_list, nodes_panel, \
+from arbor_pkg.arbor import grid, live, nodes_data, nodes_face, nodes_files, nodes_image, nodes_list, nodes_panel, \
     nodes_sampling, nodes_tree  # noqa: E402
 from arbor_pkg.arbor import tree as T  # noqa: E402
 
@@ -1115,6 +1116,195 @@ def test_sampling():
     print("sampling: OK  (guides = core chain, tiles exact on a pixel-wise model, auto grid)")
 
 
+def test_face_refine():
+    import torch.nn.functional as F
+    Fc = nodes_face
+    H, W = 384, 672
+
+    def mask(*spans, n=60, size=(96, 168)):
+        """[n, h, w] mask from (frames, (x0, y0, x1, y1)) on a quarter-size grid."""
+        m = torch.zeros(n, *size)
+        for frames, box in spans:
+            for f in frames:
+                m[f, box[1]:box[3], box[0]:box[2]] = 1
+        return m
+
+    def faces(*spans, shots=(0,), **kw):
+        return Fc.link_faces(Fc.split_faces(mask(*spans, **kw), H, W)[1], list(shots))
+
+    # cuts
+    assert Fc.shot_starts(torch.cat([torch.zeros(10, 64, 64, 3), torch.ones(10, 64, 64, 3)])) == [0, 10]
+
+    # a mask comes apart into faces, in image pixels; a speck is not one, a face cut in two by a hair is one
+    labels, regions = Fc.split_faces(mask((range(3), (10, 10, 20, 30)), (range(3), (60, 10, 70, 20)), (range(3), (100, 50, 101, 51))), H, W)
+    assert labels.dtype == torch.uint8 and labels.shape == (60, 96, 168)
+    assert sorted(b for _, b in regions[0]) == [(40.0, 40.0, 80.0, 120.0), (240.0, 40.0, 280.0, 80.0)]
+    assert len(Fc.split_faces(mask((range(1), (10, 10, 20, 20)), (range(1), (21, 10, 30, 20))), H, W)[1][0]) == 1
+    big = torch.zeros(2, 1440, 2560)
+    big[:, 400:480, 800:880] = 1
+    assert Fc.split_faces(big, 1440, 2560)[1][0][0][1] == (800.0, 400.0, 880.0, 480.0), "a large mask is split at a smaller size"
+
+    # faces are followed by place and size: two stay two; hidden, a face comes back; a cut, a long gap or a jump is new
+    two = faces((range(30), (10, 10, 20, 20)), (range(30), (60, 10, 70, 20)))
+    assert [(r.number, r.first, r.last) for r in two] == [(1, 0, 29), (2, 0, 29)]
+    hidden = faces((list(range(0, 20)) + list(range(30, 50)), (10, 10, 20, 20)))
+    assert len(hidden) == 1 and 25 not in hidden[0].boxes
+    assert [(r.first, r.last) for r in faces((range(40), (10, 10, 20, 20)), shots=(0, 20))] == [(0, 19), (20, 39)]
+    assert len(faces((list(range(0, 10)) + list(range(40, 50)), (10, 10, 20, 20)))) == 2, "hidden too long"
+    assert len(faces((range(0, 20), (10, 10, 20, 20)), (range(20, 40), (120, 60, 130, 70)))) == 2, "somewhere else"
+    assert len(faces((range(0, 20), (10, 10, 20, 20)), (range(20, 40), (5, 5, 60, 60)))) == 2, "a jump in size is something else"
+    assert faces((range(0, 3), (10, 10, 20, 20))) == [], "a blip"
+    # faces that touch in the mask come and go as one piece: they stay one run, so nothing changes mid-shot
+    apart = [(range(20, 40), (40, 40, 50, 50)), (range(20, 40), (56, 40, 66, 50))]
+    together = [(list(range(0, 20)) + list(range(40, 60)), (40, 40, 66, 50))]
+    joined_up = faces(*apart, *together)
+    assert len(joined_up) == 1 and sorted(joined_up[0].boxes) == list(range(60)) and len(joined_up[0].parts[30]) == 2
+    assert joined_up[0].boxes[30] == joined_up[0].boxes[5], "the box holds both"
+    moving = [(range(f, f + 1), (10 + f, 20, 20 + f, 30)) for f in range(40)]
+    assert len(faces(*moving)) == 1, "a face that moves"
+    r = faces((range(10), (10, 10, 20, 30)))[0]
+    assert r.boxes[0] == (40.0, 40.0, 80.0, 120.0) and r.size == 80
+
+    # a push-in stays one face, smallest size decides, so it is redrawn whole
+    push = [(range(f, f + 1), (60, 40, 68 + f // 3, 48 + f // 3)) for f in range(60)]
+    grown = faces(*push)
+    assert len(grown) == 1 and len(grown[0].boxes) == 60 and grown[0].least < 50 and max(grown[0].sides) > 100
+    text = Fc.report(grown + faces((range(30), (10, 10, 60, 60))), 60)
+    assert "refine" in text.split("\n")[0] and "larger than max_face" in text.split("\n")[1]
+    assert Fc.report([], 60) == "no faces in the mask"
+
+    # neighbours share a crop only when group_size asks; faces far apart or at other times do not
+    def box(x, y):
+        return (x, y, x + 40, y + 40)
+
+    a = Fc.Run({f: box(100, 100) for f in range(20)})
+    b = Fc.Run({f: box(150, 100) for f in range(20)})
+    c = Fc.Run({f: box(560, 300) for f in range(20)})
+    d = Fc.Run({f: box(100, 100) for f in range(30, 50)})
+    assert sorted(len(g) for g in Fc.group_runs([a, b, c, d])) == [1, 1, 2]
+    assert sorted(len(g) for g in Fc.group_runs([a, b, c, d], 0)) == [1, 1, 1, 1], "0 keeps every face alone"
+    assert len(Fc.group_runs([a, c], 2048)) == 1, "a higher limit joins faces further apart"
+    row = [Fc.Run({f: box(i * 120, 100) for f in range(20)}) for i in range(5)]
+    assert all(Fc._crop_short([Fc._typical(r) for r in g], 768) <= Fc.GROUP_SIZE for g in Fc.group_runs(row))
+
+    # a lone face is square, others longer, never past 2:1; the crop has the canvas's shape; context reaches small faces
+    assert Fc.fit_crop(40, 50, 768) == (308, 308, (768, 768)) and Fc.fit_crop(90, 120, 768)[2] == (768, 768)
+    assert Fc.fit_crop(40, 50, 480)[2] == (480, 480)
+    assert Fc.fit_crop(400, 40, 768) == (1600, 800, (768, 1536)) and Fc.fit_crop(40, 400, 768) == (800, 1600, (1536, 768))
+    cw, ch, shape = Fc.fit_crop(150, 90, 768)
+    assert shape[1] > shape[0] and abs(cw / ch - shape[1] / shape[0]) < 1e-6 and cw >= 600 and ch >= 360
+    assert Fc.fit_crop(40, 50, 768, 2.0)[:2] == (154, 154) and Fc.fit_crop(100, 100, 768, 3.0)[:2] == (300, 300)
+    assert Fc._crop_short([box(100, 100), box(150, 100)], 768) <= Fc.GROUP_SIZE
+
+    # the crop stays inside the frame and follows the face; a steady face keeps one size; a growing one grows it smoothly
+    walking = Fc.Run({f: (f * 8.0, 100.0, f * 8.0 + 40, 140.0) for f in range(60)})
+    frames, pos, shape = Fc.crop_window([walking], H, W)
+    assert shape == (768, 768) and frames == list(range(60))
+    assert len({p[2:] for p in pos.values()}) == 1 and pos[0][2] == pos[0][3] >= 192
+    assert all(0 <= p[0] <= W - p[2] and 0 <= p[1] <= H - p[3] for p in pos.values()) and pos[59][0] > pos[0][0]
+    tall = Fc.Run({f: (100, 100, 140, 300) for f in range(10)})
+    window = Fc.crop_window([tall], H * 2, W, 768)
+    assert window[1][5][3] > window[1][5][2] and window[2] == (1536, 768)
+    big_h, big_w = 720, 1280
+    ones = torch.ones(60, 90, 160, dtype=torch.uint8)
+    wide_run = Fc.Run({f: (500 - f * 2, 340 - f * 2, 520 + f * 2, 360 + f * 2) for f in range(60)}, {f: [1] for f in range(60)}, labels=ones)
+    _, wpos, wshape = Fc.crop_window([wide_run], big_h, big_w)
+    assert wshape == (768, 768) and wpos[59][3] > 2 * wpos[0][3]
+    assert max(abs(wpos[f + 1][3] - wpos[f][3]) for f in range(59)) < 40
+    x = torch.zeros(1, 1, 40, 40)
+    x[0, 0, 20, 20] = 1
+    assert torch.equal(Fc._dilate(x, 9), F.max_pool2d(x, 9, stride=1, padding=4)), "same as the square kernel"
+
+    # a growing face: the paste follows it, on one grid
+    grid = Fc.paste_mask([wide_run], list(range(60)), wpos, big_h, big_w)
+    assert grid.shape == (60, max(p[3] for p in wpos.values()), max(p[2] for p in wpos.values()))
+    zoomed = torch.full((60, big_h, big_w, 3), 0.25)
+    sizes, areas = [], []
+
+    def fake(crops, area):
+        sizes.append(tuple(crops.shape))
+        assert area.shape == crops.shape[:3] and area.dtype == torch.bool and area.any()
+        areas.append(float(area.float().mean()))
+        out = crops.clone()
+        out[:, :, :crops.shape[2] // 2] += 0.5
+        return out
+
+    clip2, row2 = Fc.refine_group(zoomed, [wide_run], big_h, big_w, fake)
+    assert sizes == [(60, 768, 768, 3)] and clip2.shape == (60, 768, 768, 3) and "enlarged" in row2
+    assert (zoomed[59] - 0.25).abs().sum() > (zoomed[0] - 0.25).abs().sum(), "more is pasted as the face grows"
+
+    # only the face's frames and pixels change; colour is the shot's
+    source = mask((range(10, 30), (40, 40, 50, 50)), (range(0, 60), (130, 60, 140, 70)))
+    labels, regions = Fc.split_faces(source, H, W)
+    runs = Fc.link_faces(regions, [0])
+    run0 = next(r for r in runs if r.first == 10)
+    run0.labels = labels
+    images = torch.full((60, H, W, 3), 0.25)
+    sizes.clear()
+    clip, row = Fc.refine_group(images, [run0], H, W, fake)
+    assert sizes == [(20, 768, 768, 3)], sizes
+    assert areas[-1] < 0.5, "only around the face is redrawn"
+    assert clip.shape == (20, 768, 768, 3) and clip.dtype == torch.uint8 and "frames 10-29" in row, row
+    flat_frames = torch.full_like(images[:10], 0.25)
+    assert torch.equal(images[:10], flat_frames) and torch.equal(images[30:40], flat_frames)
+    changed = (images[20] - 0.25).abs().sum(-1) > 1e-4
+    assert changed.any() and int(changed.nonzero()[:, 0].min()) > 100, "the change stays around the face"
+    assert not changed[240:280, 520:560].any(), "another face in the mask is not touched by this crop"
+    assert abs(float(images[20][changed].mean()) - 0.25) < 0.05, "the shot's colour is kept"
+
+    # refine_size sets the canvas
+    other = torch.full((60, H, W, 3), 0.25)
+    sizes.clear()
+    Fc.refine_group(other, [run0], H, W, fake, 640)
+    assert sizes == [(20, 640, 640, 3)], sizes
+
+    # bbox: a steady box with no holes for a dropout, none where a face is hidden; grow and feather reach further
+    shaky = Fc.Run({f: (100.0 + (f % 2) * 6, 100.0, 140.0 + (f % 2) * 6, 140.0) for f in range(30) if f != 12})
+    steady = Fc.steady_boxes(shaky)
+    assert sorted(steady) == list(range(30)) and max(abs(steady[f][0] - steady[f + 1][0]) for f in range(5, 25)) < 1
+    gap = Fc.Run({f: (100, 100, 140, 140) for f in list(range(10)) + list(range(30, 40))})
+    assert 11 in Fc.steady_boxes(gap) and 20 not in Fc.steady_boxes(gap), "a hidden face is not pasted over"
+    win = Fc.crop_window([run0], H, W)[:2]
+    area = {}
+    for paste, grow, feather in (("mask", 0.35, 0.12), ("bbox", 0.35, 0.12), ("mask", 0.8, 0.12), ("mask", 0.35, 0.4)):
+        w = Fc.paste_mask([run0], *win, H, W, paste, grow, feather)
+        assert w.shape == (20, win[1][10][3], win[1][10][2]) and 0 <= float(w.min()) and float(w.max()) <= 1
+        area[paste, grow, feather] = int((w[10] > 0.01).sum())
+    assert area["mask", 0.8, 0.12] > area["mask", 0.35, 0.12] and area["mask", 0.35, 0.4] > area["mask", 0.35, 0.12]
+    assert area["bbox", 0.35, 0.12] > 0
+
+    # what is kept stays out of the paste, however near
+    nearby = torch.zeros(60, H, W, dtype=torch.bool)
+    nearby[:, 160:200, 200:230] = True
+    w = Fc.paste_mask([run0], *win, H, W, keep=nearby)
+    x0, y0 = win[1][20][:2]
+    assert float(w[10, 170 - y0, 215 - x0]) == 0, "a lead is not pasted over"
+
+    # a lead never shares a crop
+    lead = Fc.Run({f: box(120, 100) for f in range(20)}, lead=1)
+    assert sorted(len(g) for g in Fc.group_runs([a, b, lead])) == [1, 2]
+    assert Fc.numbered({"lead_mask_2": 1, "lead_mask_1": None}) == {2: 1} and Fc.numbered(None) == {}
+    text = Fc.report([lead], 16)
+    assert text.startswith("lead 1:") and "refine" in text, "a lead is redrawn whatever its size"
+
+    # several clips of any shape can be watched as one
+    assert Fc.join_clips([torch.full((3, 8, 8, 3), 255, dtype=torch.uint8), torch.full((2, 4, 16, 3), 255, dtype=torch.uint8)]).shape == (5, 8, 16, 3)
+    joined = Fc.join_clips([torch.full((1, 8, 8, 3), 255, dtype=torch.uint8), torch.zeros(1, 4, 16, 3, dtype=torch.uint8)])
+    assert joined[0, 4, 8, 0] == 1 and joined[0, 4, 0, 0] == 0, "a narrower clip sits in the middle"
+
+    # node: an empty mask returns the frames untouched; a wrong mask count is an error
+    frames_in = torch.zeros(60, H, W, 3)
+    args = (None, None, None, frames_in, None, None, "p", 0, 768, 4.0, 128, 0, "mask", 0.35, 0.12)
+    none = Fc.H3FaceRefine.execute(*args, masks=torch.zeros(60, 96, 168)).result
+    assert none[0] is frames_in and none[1].shape == (1, 768, 768, 3) and none[2] == "no faces in the mask"
+    assert Fc.H3FaceRefine.execute(*args).result[2] == "no faces in the mask", "nothing connected is fine"
+    raises(ValueError, Fc.H3FaceRefine.execute, *args, masks=torch.zeros(9, 96, 168))
+    raises(ValueError, Fc.H3FaceRefine.execute, *args, lead_masks={"lead_mask_1": torch.zeros(9, 96, 168)})
+    spare = Fc.H3FaceRefine.execute(*args, references={"reference_2": torch.zeros(1, 8, 8, 3)}).result[2]
+    assert "reference 2 has no lead mask" in spare
+    print("face refine: OK  (mask to faces, following, groups, crop window, paste)")
+
+
 def test_docs_and_locales():
     import json
     import re
@@ -1156,7 +1346,7 @@ def test_example_workflows():
 
 def test_registration():
     ids = [n.define_schema().node_id for n in pkg.NODES]
-    assert len(ids) == len(set(ids)) == 33, (len(ids), len(set(ids)))
+    assert len(ids) == len(set(ids)) == 34, (len(ids), len(set(ids)))
     cats = {}
     for n in pkg.NODES:
         s = n.define_schema()
@@ -1173,7 +1363,7 @@ def test_registration():
 if __name__ == "__main__":
     for test in [test_tree_algebra, test_cross_and_rebuild, test_data_nodes, test_number_slider, test_panel,
                  test_tree_nodes, test_list_nodes, test_grasshopper_matching, test_nested_trees, test_xy_lists, test_image_grid, test_grid_layout, test_image_nodes,
-                 test_compare_and_video_grid, test_load_media, test_files, test_sampling,
+                 test_compare_and_video_grid, test_load_media, test_files, test_sampling, test_face_refine,
                  test_live_preview, test_docs_and_locales, test_example_workflows, test_registration]:
         test()
     print("ALL OK")
