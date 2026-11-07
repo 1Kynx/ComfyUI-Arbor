@@ -1489,9 +1489,9 @@
       }
     }
   },
-  "Arbor_H3FaceRefine": {
-    "display_name": "Small Face Refine for MiniMax H3",
-    "description": "Redraw the small faces in a mask. Each face is cropped, enlarged, redrawn at low noise and feathered back. Other frames and pixels stay as they are.",
+  "Arbor_H3RegionRedraw": {
+    "display_name": "Region Redraw for MiniMax H3",
+    "description": "Repair the small faces of a finished video, which is what its defaults are for. With other settings it repairs or replaces anything else in a mask, from a reference picture if you like. Other frames and pixels stay as they are.",
     "inputs": {
       "model": {
         "name": "model",
@@ -1511,87 +1511,87 @@
       },
       "masks": {
         "name": "masks",
-        "tooltip": "The faces to redraw, one mask per frame. Any mask will do. With core SAM3, use SAM3 Video Track, then SAM3 Track to Mask, and list the objects you want in its `object_indices`. Write the tracker's prompt as `face:16`: `:N` is how many to find, and plain `face` finds one. Leads can stay in this mask: their own masks take them out."
+        "tooltip": "What to redraw from the prompt, one mask per frame. Any mask will do. With core SAM3, use SAM3 Video Track, then SAM3 Track to Mask, and list the objects you want in its `object_indices`. Write the tracker's prompt with a count, like `face:16`: `:N` is how many to find, and plain `face` finds one. Subjects can stay in this mask: their own masks take them out."
       },
-      "lead_masks": {
-        "name": "lead_masks",
-        "tooltip": "One mask per lead. Each lead is redrawn alone, from the reference of the same number. Without a reference they are redrawn alone from the prompt, which also keeps two touching faces apart."
+      "subject_masks": {
+        "name": "subject_masks",
+        "tooltip": "One mask per subject. Each is redrawn alone, from the reference of the same number. Without a reference it is redrawn alone from the prompt, which also keeps two touching regions apart."
       },
-      "lead_masks_lead_mask_1": {
-        "name": "lead_mask_1",
-        "tooltip": "One mask per lead. Each lead is redrawn alone, from the reference of the same number. Without a reference they are redrawn alone from the prompt, which also keeps two touching faces apart."
+      "subject_masks_subject_mask_1": {
+        "name": "subject_mask_1",
+        "tooltip": "One mask per subject. Each is redrawn alone, from the reference of the same number. Without a reference it is redrawn alone from the prompt, which also keeps two touching regions apart."
       },
-      "lead_masks_lead_mask_2": {
-        "name": "lead_mask_2",
-        "tooltip": "One mask per lead. Each lead is redrawn alone, from the reference of the same number. Without a reference they are redrawn alone from the prompt, which also keeps two touching faces apart."
+      "subject_masks_subject_mask_2": {
+        "name": "subject_mask_2",
+        "tooltip": "One mask per subject. Each is redrawn alone, from the reference of the same number. Without a reference it is redrawn alone from the prompt, which also keeps two touching regions apart."
       },
-      "lead_masks_lead_mask_3": {
-        "name": "lead_mask_3",
-        "tooltip": "One mask per lead. Each lead is redrawn alone, from the reference of the same number. Without a reference they are redrawn alone from the prompt, which also keeps two touching faces apart."
+      "subject_masks_subject_mask_3": {
+        "name": "subject_mask_3",
+        "tooltip": "One mask per subject. Each is redrawn alone, from the reference of the same number. Without a reference it is redrawn alone from the prompt, which also keeps two touching regions apart."
       },
-      "lead_masks_lead_mask_4": {
-        "name": "lead_mask_4",
-        "tooltip": "One mask per lead. Each lead is redrawn alone, from the reference of the same number. Without a reference they are redrawn alone from the prompt, which also keeps two touching faces apart."
+      "subject_masks_subject_mask_4": {
+        "name": "subject_mask_4",
+        "tooltip": "One mask per subject. Each is redrawn alone, from the reference of the same number. Without a reference it is redrawn alone from the prompt, which also keeps two touching regions apart."
       },
-      "lead_masks_lead_mask_5": {
-        "name": "lead_mask_5",
-        "tooltip": "One mask per lead. Each lead is redrawn alone, from the reference of the same number. Without a reference they are redrawn alone from the prompt, which also keeps two touching faces apart."
+      "subject_masks_subject_mask_5": {
+        "name": "subject_mask_5",
+        "tooltip": "One mask per subject. Each is redrawn alone, from the reference of the same number. Without a reference it is redrawn alone from the prompt, which also keeps two touching regions apart."
       },
-      "lead_masks_lead_mask_6": {
-        "name": "lead_mask_6",
-        "tooltip": "One mask per lead. Each lead is redrawn alone, from the reference of the same number. Without a reference they are redrawn alone from the prompt, which also keeps two touching faces apart."
+      "subject_masks_subject_mask_6": {
+        "name": "subject_mask_6",
+        "tooltip": "One mask per subject. Each is redrawn alone, from the reference of the same number. Without a reference it is redrawn alone from the prompt, which also keeps two touching regions apart."
       },
-      "lead_masks_lead_mask_7": {
-        "name": "lead_mask_7",
-        "tooltip": "One mask per lead. Each lead is redrawn alone, from the reference of the same number. Without a reference they are redrawn alone from the prompt, which also keeps two touching faces apart."
+      "subject_masks_subject_mask_7": {
+        "name": "subject_mask_7",
+        "tooltip": "One mask per subject. Each is redrawn alone, from the reference of the same number. Without a reference it is redrawn alone from the prompt, which also keeps two touching regions apart."
       },
-      "lead_masks_lead_mask_8": {
-        "name": "lead_mask_8",
-        "tooltip": "One mask per lead. Each lead is redrawn alone, from the reference of the same number. Without a reference they are redrawn alone from the prompt, which also keeps two touching faces apart."
+      "subject_masks_subject_mask_8": {
+        "name": "subject_mask_8",
+        "tooltip": "One mask per subject. Each is redrawn alone, from the reference of the same number. Without a reference it is redrawn alone from the prompt, which also keeps two touching regions apart."
       },
-      "lead_masks_lead_mask_9": {
-        "name": "lead_mask_9",
-        "tooltip": "One mask per lead. Each lead is redrawn alone, from the reference of the same number. Without a reference they are redrawn alone from the prompt, which also keeps two touching faces apart."
+      "subject_masks_subject_mask_9": {
+        "name": "subject_mask_9",
+        "tooltip": "One mask per subject. Each is redrawn alone, from the reference of the same number. Without a reference it is redrawn alone from the prompt, which also keeps two touching regions apart."
       },
-      "references": {
-        "name": "references",
-        "tooltip": "The lead's picture, for the lead mask of the same number."
+      "subject_references": {
+        "name": "subject_references",
+        "tooltip": "The picture for the subject mask of the same number. The prompt calls it `<Picture 1>`, whichever subject it is."
       },
-      "references_reference_1": {
-        "name": "reference_1",
-        "tooltip": "The lead's picture, for the lead mask of the same number."
+      "subject_references_subject_reference_1": {
+        "name": "subject_reference_1",
+        "tooltip": "The picture for the subject mask of the same number. The prompt calls it `<Picture 1>`, whichever subject it is."
       },
-      "references_reference_2": {
-        "name": "reference_2",
-        "tooltip": "The lead's picture, for the lead mask of the same number."
+      "subject_references_subject_reference_2": {
+        "name": "subject_reference_2",
+        "tooltip": "The picture for the subject mask of the same number. The prompt calls it `<Picture 1>`, whichever subject it is."
       },
-      "references_reference_3": {
-        "name": "reference_3",
-        "tooltip": "The lead's picture, for the lead mask of the same number."
+      "subject_references_subject_reference_3": {
+        "name": "subject_reference_3",
+        "tooltip": "The picture for the subject mask of the same number. The prompt calls it `<Picture 1>`, whichever subject it is."
       },
-      "references_reference_4": {
-        "name": "reference_4",
-        "tooltip": "The lead's picture, for the lead mask of the same number."
+      "subject_references_subject_reference_4": {
+        "name": "subject_reference_4",
+        "tooltip": "The picture for the subject mask of the same number. The prompt calls it `<Picture 1>`, whichever subject it is."
       },
-      "references_reference_5": {
-        "name": "reference_5",
-        "tooltip": "The lead's picture, for the lead mask of the same number."
+      "subject_references_subject_reference_5": {
+        "name": "subject_reference_5",
+        "tooltip": "The picture for the subject mask of the same number. The prompt calls it `<Picture 1>`, whichever subject it is."
       },
-      "references_reference_6": {
-        "name": "reference_6",
-        "tooltip": "The lead's picture, for the lead mask of the same number."
+      "subject_references_subject_reference_6": {
+        "name": "subject_reference_6",
+        "tooltip": "The picture for the subject mask of the same number. The prompt calls it `<Picture 1>`, whichever subject it is."
       },
-      "references_reference_7": {
-        "name": "reference_7",
-        "tooltip": "The lead's picture, for the lead mask of the same number."
+      "subject_references_subject_reference_7": {
+        "name": "subject_reference_7",
+        "tooltip": "The picture for the subject mask of the same number. The prompt calls it `<Picture 1>`, whichever subject it is."
       },
-      "references_reference_8": {
-        "name": "reference_8",
-        "tooltip": "The lead's picture, for the lead mask of the same number."
+      "subject_references_subject_reference_8": {
+        "name": "subject_reference_8",
+        "tooltip": "The picture for the subject mask of the same number. The prompt calls it `<Picture 1>`, whichever subject it is."
       },
-      "references_reference_9": {
-        "name": "reference_9",
-        "tooltip": "The lead's picture, for the lead mask of the same number."
+      "subject_references_subject_reference_9": {
+        "name": "subject_reference_9",
+        "tooltip": "The picture for the subject mask of the same number. The prompt calls it `<Picture 1>`, whichever subject it is."
       },
       "sampler": {
         "name": "sampler",
@@ -1599,11 +1599,15 @@
       },
       "sigmas": {
         "name": "sigmas",
-        "tooltip": "Redraw strength, as on a custom sampler. A lower start keeps more of the original face. Tested with Manual Sigmas `0.7, 0.494118, 0`."
+        "tooltip": "Redraw strength, as on a custom sampler. Repair with Manual Sigmas `0.7, 0.494118, 0`. To replace something, start near 1."
+      },
+      "denoise": {
+        "name": "denoise",
+        "tooltip": "How much of `sigmas` to take, from its end, exactly as Split Sigmas Denoise does: the steps are counted, not the noise levels. 1 takes them all, as they come. 0.5 of `0.7, 0.494118, 0` takes `0.494118, 0`; 0.5 of a schedule from 1.0 takes its lower half. 0 leaves everything as it was."
       },
       "prompt": {
         "name": "prompt",
-        "tooltip": "One description used for every redrawn face."
+        "tooltip": "What the regions should look like, subjects included. The default is for faces, so change it for anything else. With a subject reference, `<Picture 1>` is that subject's picture."
       },
       "seed": {
         "name": "seed",
@@ -1611,45 +1615,45 @@
       },
       "refine_size": {
         "name": "refine_size",
-        "tooltip": "Short edge a crop is enlarged to before it is redrawn. 768 is the short edge of H3's native 1344 × 768."
+        "tooltip": "Short edge a crop is enlarged to before it is redrawn. 512 repairs faces a third quicker than 768, the short edge of H3's native 1344 × 768, and as well. For replacing something, 768."
       },
       "context": {
         "name": "context",
-        "tooltip": "Crop size as a multiple of the face. Lower lets the face fill the crop and enlarges it more; higher shows the model more of what surrounds it. It does not change which faces share a crop."
+        "tooltip": "Crop size as a multiple of the region. Lower lets it fill the crop and enlarges it more; higher shows the model more of what surrounds it. 2 keeps faces closest to the original at the same speed as 4; below 2 the redrawn area can reach the crop's edge."
       },
-      "max_face": {
-        "name": "max_face",
-        "tooltip": "Faces that never get smaller than this many pixels stay as they are. A face that does, as in a push-in, is redrawn whole."
+      "max_size": {
+        "name": "max_size",
+        "tooltip": "Regions in `masks` that never get smaller than this many pixels stay as they are. One that does, as in a push-in, is redrawn whole. Subjects are always redrawn."
       },
       "group_size": {
         "name": "group_size",
-        "tooltip": "0 gives every face its own crop, which draws best. Above 0, nearby faces share one crop as long as its short edge is no more than this many pixels, which is quicker in a crowd. 288 is a good limit."
+        "tooltip": "How far across, in pixels of the video, a crop shared by nearby regions may be. They share one only when that is less work than a crop each, and each keeps the room around it and the enlargement it would have alone, so they are drawn as well; the shared canvas also stays within 1536 pixels, which can stop a group sooner. 0 gives every region a crop of its own."
       },
       "paste": {
         "name": "paste",
-        "tooltip": "What is pasted back: `mask` follows the mask's outline of the face, `bbox` is a steady box around it."
+        "tooltip": "What is redrawn and pasted back: `mask` follows the mask's outline, `bbox` is a steady box around it, which leaves room for something of another shape."
       },
       "grow": {
         "name": "grow",
-        "tooltip": "How far the pasted area reaches past the face, as a share of the face's size. It needs to cover the hair."
+        "tooltip": "How far the redrawn area reaches past the mask, as a share of the region's size. For a face it needs to cover the hair."
       },
       "feather": {
         "name": "feather",
-        "tooltip": "Softness of the pasted edge, as a share of the face's size."
+        "tooltip": "Softness of the pasted edge, as a share of the region's size."
       }
     },
     "outputs": {
       "0": {
         "name": "images",
-        "tooltip": "The video with the faces redrawn."
+        "tooltip": "The video with the regions redrawn."
       },
       "1": {
-        "name": "face_clips",
-        "tooltip": "Each crop as it was redrawn, before it is shrunk back, one after another. Crops of other shapes sit centred on black. Connect it to a video node to see what the model drew. The report says which frames are which crop."
+        "name": "compare",
+        "tooltip": "Each crop before and after it was redrawn, at the canvas size, as a list with one clip per crop: one above the other when the crop is wider than tall, side by side when it is taller."
       },
       "2": {
         "name": "report",
-        "tooltip": "One line per face: number, frames, position, size and what was done. Then one line per crop."
+        "tooltip": "One line per region: number, frames, position, size and what was done. Then one line per crop, in the order of the clips."
       }
     }
   }
