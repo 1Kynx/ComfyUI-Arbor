@@ -141,7 +141,7 @@ node("Arbor_H3RegionRedraw", en=dict(
             "max_size": "Regions in `masks` that never get smaller than this many pixels stay as they are. One that does, as in a push-in, is redrawn whole. Subjects are always redrawn.",
             "group_size": "How far across, in pixels of the video, a crop shared by nearby regions may be. They share one only when that is less work than a crop each, and each keeps the room around it and the enlargement it would have alone, so they are drawn as well; the shared canvas also stays within 1536 pixels, which can stop a group sooner. 0 gives every region a crop of its own.",
             "paste": "What is redrawn and pasted back: `mask` follows the mask's outline, `bbox` is a steady box around it, which leaves room for something of another shape.",
-            "grow": "How far the redrawn area reaches past the mask, as a share of the region's size. For a face it needs to cover the hair.",
+            "grow": "How far the redrawn area reaches past the mask, as a share of the region's size. For a face at 0.7 it needs to cover the hair. Starting near 1, set it to 0: what lies past the mask is what holds the pose.",
             "feather": "Softness of the pasted edge, as a share of the region's size."},
     outputs=["The video with the regions redrawn.", "Each crop before and after it was redrawn, at the canvas size, as a list with one clip per crop: one above the other when the crop is wider than tall, side by side when it is taller.", "One line per region: number, frames, position, size and what was done. Then one line per crop, in the order of the clips."],
     doc="""## What it is for
@@ -194,7 +194,11 @@ Write in English, as the guide does. Text that shows on screen goes in double qu
 Connect KSamplerSelect and Manual Sigmas as you would on a custom sampler.
 
 ## Repair or replace
-The sigmas decide. Starting at 0.7 keeps what is there and draws it better; starting near 1 keeps only the surroundings and draws what the prompt or picture says. To replace something, use a model without a refiner LoRA: with one, the object is erased and the surroundings fill the hole. For an object, `paste` set to `bbox` with a larger `grow` leaves room for a different shape. 
+The sigmas decide. Starting at 0.7 keeps what is there and draws it better; starting near 1 keeps only the surroundings and draws what the prompt or picture says. To replace something, use a model without a refiner LoRA: with one, the object is erased and the surroundings fill the hole. For an object, `paste` set to `bbox` with a larger `grow` leaves room for a different shape.
+
+Starting near 1, the model keeps a pose only where it can see one. What lies past the mask is all it has to go on, so set `grow` to 0, `feather` to about 0.03 and `context` to 1.5 or 2. With the face-repair settings, `grow` 0.35, a head looking down in profile came back facing the camera. With `grow` 0 it kept its angle and followed the original movement, and was a third quicker. Even 0.06 lost much of that, and more `feather` or a `context` of 1.2 did too.
+
+Name the style in the prompt as well, *live-action* for instance: from 1 the model can't see the style inside the mask, and the default, which only asks for the style to stay as it is, let a live-action face turn into anime. From 0.7 the style is still there to see.
 
 ## Replacing a whole person
 Stay with `paste` on `mask`, with `grow` about 0.06 and `feather` about 0.03. A larger `grow` redraws more of the background, a smaller one cuts into the person: `bbox` repaints the background inside its box, and the box shows. Set `context` to about 2, so the model sees what surrounds the person. The first sigma decides how much of the shot survives: `0.99, 0.972973, 0.923077, 0.8, 0.571429, 0.333333, 0` swaps the person fully and keeps a little of the pose; 1.0 takes the pose from the picture; 0.97 keeps the size and pose better, but the old hair and clothes can stay; below 0.92 the person stays.
@@ -230,7 +234,7 @@ What is redrawn is drawn anew, not recovered. It can change between seeds.
             "max_size": ("最大尺寸", "`蒙版` 里始终大于这个像素数的区域保持不变。有过小于它的时候（比如推镜），整段都重画。主体总会重画。"),
             "group_size": ("合并尺寸", "相邻区域共用的裁切框在原视频里最多多宽（像素）。只有合并后工作量更少时才合并，每块区域保留单独处理时的周围范围和放大倍数，所以画得一样好；共用画布也不会超过 1536 像素，这可能让一组更早停止合并。0 = 每块区域单独一个框。"),
             "paste": ("贴回方式", "重画和贴回的范围：`mask` 沿蒙版轮廓，`bbox` 用外面的稳定方框，能给形状不同的新东西留空间。"),
-            "grow": ("外扩", "重画范围超出蒙版多少，按区域尺寸的比例计算。修人脸时需要盖住头发。"),
+            "grow": ("外扩", "重画范围超出蒙版多少，按区域尺寸的比例计算。从 0.7 开始修人脸时需要盖住头发。起点接近 1 时设为 0：蒙版外面的部分是保住姿势的依据。"),
             "feather": ("羽化", "贴回边缘的柔和程度，按区域尺寸的比例计算。")},
     outputs=[("图像", "局部重绘后的视频。"), ("对比片段", "每个裁切框重画前后的对比，画布尺寸，列表形式，一个裁切框一段：横的框上下排列，竖的框左右排列。"), ("报告", "每块区域一行：编号、帧范围、位置、尺寸和处理结果；之后每个裁切框一行，顺序和片段一致。")],
     doc="""## 用途
@@ -284,6 +288,10 @@ KSamplerSelect 和 Manual Sigmas 的接法与自定义采样器相同。
 
 ## 修复还是替换
 由 sigmas 决定。从 0.7 开始会保留原来的内容，画得更好；从接近 1 开始只保留周围环境，按提示词或图片重画。替换时请用不带精修 LoRA 的模型：带了之后物体只会被抹掉，由周围画面填上。替换物体时，`贴回方式` 用 `bbox` 并调大 `外扩`，能给形状不同的新东西留空间。
+
+起点接近 1 时，模型只能从看得到的地方判断姿势：蒙版外面的部分是唯一的依据，所以 `外扩` 设为 0，`羽化` 约 0.03，`参考范围` 1.5 或 2。用修人脸的设置（`外扩` 0.35）时，一个低头的侧脸被重画成了正对镜头；`外扩` 为 0 时保住了原来的角度和动作，还快了三分之一。外扩即使只有 0.06 也会丢掉大部分效果，加大 `羽化` 或把 `参考范围` 降到 1.2 也一样。
+
+提示词里也要写明画风，比如 *live-action*：从 1 开始时，模型看不到蒙版里原来的画风，默认提示词只要求画风不变，结果一张写实的脸变成了动画风格。从 0.7 开始时原来的画风还在，不需要写。
 
 ## 替换整个人
 `贴回方式` 用 `mask`，`外扩` 约 0.06，`羽化` 约 0.03。`外扩` 调大会重画更多背景，调小会切到人物：`bbox` 会连框里的背景一起重画，方框边缘看得出来。`参考范围` 设为 2 左右，让模型看到人物周围的画面。第一个 sigma 决定原镜头留下多少：`0.99, 0.972973, 0.923077, 0.8, 0.571429, 0.333333, 0` 能完全换掉人物，并保留一点姿势；1.0 的姿势来自参考图；0.97 更能保住大小和姿势，但原来的头发和衣服可能留下；低于 0.92 人物基本不变。

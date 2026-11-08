@@ -1639,7 +1639,7 @@
       },
       "grow": {
         "name": "grow",
-        "tooltip": "How far the redrawn area reaches past the mask, as a share of the region's size. For a face it needs to cover the hair."
+        "tooltip": "How far the redrawn area reaches past the mask, as a share of the region's size. For a face at 0.7 it needs to cover the hair. Starting near 1, set it to 0: what lies past the mask is what holds the pose."
       },
       "feather": {
         "name": "feather",

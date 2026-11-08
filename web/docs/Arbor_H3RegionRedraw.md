@@ -39,7 +39,7 @@ Repair the small faces of a finished video, which is what its defaults are for. 
 - **paste** · *COMBO (mask · bbox)*  
   What is redrawn and pasted back: `mask` follows the mask's outline, `bbox` is a steady box around it, which leaves room for something of another shape.
 - **grow** · *FLOAT*  
-  How far the redrawn area reaches past the mask, as a share of the region's size. For a face it needs to cover the hair.
+  How far the redrawn area reaches past the mask, as a share of the region's size. For a face at 0.7 it needs to cover the hair. Starting near 1, set it to 0: what lies past the mask is what holds the pose.
 - **feather** · *FLOAT*  
   Softness of the pasted edge, as a share of the region's size.
 
@@ -102,7 +102,11 @@ Write in English, as the guide does. Text that shows on screen goes in double qu
 Connect KSamplerSelect and Manual Sigmas as you would on a custom sampler.
 
 ## Repair or replace
-The sigmas decide. Starting at 0.7 keeps what is there and draws it better; starting near 1 keeps only the surroundings and draws what the prompt or picture says. To replace something, use a model without a refiner LoRA: with one, the object is erased and the surroundings fill the hole. For an object, `paste` set to `bbox` with a larger `grow` leaves room for a different shape. 
+The sigmas decide. Starting at 0.7 keeps what is there and draws it better; starting near 1 keeps only the surroundings and draws what the prompt or picture says. To replace something, use a model without a refiner LoRA: with one, the object is erased and the surroundings fill the hole. For an object, `paste` set to `bbox` with a larger `grow` leaves room for a different shape.
+
+Starting near 1, the model keeps a pose only where it can see one. What lies past the mask is all it has to go on, so set `grow` to 0, `feather` to about 0.03 and `context` to 1.5 or 2. With the face-repair settings, `grow` 0.35, a head looking down in profile came back facing the camera. With `grow` 0 it kept its angle and followed the original movement, and was a third quicker. Even 0.06 lost much of that, and more `feather` or a `context` of 1.2 did too.
+
+Name the style in the prompt as well, *live-action* for instance: from 1 the model can't see the style inside the mask, and the default, which only asks for the style to stay as it is, let a live-action face turn into anime. From 0.7 the style is still there to see.
 
 ## Replacing a whole person
 Stay with `paste` on `mask`, with `grow` about 0.06 and `feather` about 0.03. A larger `grow` redraws more of the background, a smaller one cuts into the person: `bbox` repaints the background inside its box, and the box shows. Set `context` to about 2, so the model sees what surrounds the person. The first sigma decides how much of the shot survives: `0.99, 0.972973, 0.923077, 0.8, 0.571429, 0.333333, 0` swaps the person fully and keeps a little of the pose; 1.0 takes the pose from the picture; 0.97 keeps the size and pose better, but the old hair and clothes can stay; below 0.92 the person stays.
