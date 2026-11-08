@@ -628,8 +628,16 @@ def align(before: torch.Tensor, after: torch.Tensor, areas: list) -> tuple[torch
     back over before (areas: one [n, h, w] per region). A redraw of something that should stay put can come out a
     little off from frame to frame; pasted back, the region then shakes against what is around it. Regions sharing a
     crop are moved each on its own, and blended where their areas meet. A move that would not bring the two closer, or
-    would be large, is left out. Also the largest move made, in canvas pixels."""
-    dev = torch.device("cuda") if torch.cuda.is_available() else after.device
+    would be large, is left out. Also the largest move made, in canvas pixels. On the GPU if there is room, else here."""
+    if torch.cuda.is_available():
+        try:
+            return _align(before, after, areas, torch.device("cuda"))
+        except torch.cuda.OutOfMemoryError:
+            torch.cuda.empty_cache()
+    return _align(before, after, areas, after.device)
+
+
+def _align(before: torch.Tensor, after: torch.Tensor, areas: list, dev) -> tuple[torch.Tensor, float]:
     h, w = areas[0].shape[1:]
     most = ALIGN_MOST * min(h, w)
     out, largest = [], 0.0
@@ -758,9 +766,13 @@ def refine_groups(images, groups, height, width, redraw_many, size=768, paste="m
                          job.frames[0], job.frames[-1], moved)
             plan["compare"].append(compare(job.crops, new).cpu())
             # outside the area nothing was redrawn: any drift there is the VAE's
-            rest = ~job.area.to(new.device)
-            before = job.crops.to(new.device, torch.float32)
-            shift = (before - new)[rest].sum(0) / max(float(rest.sum()), 1e-6)
+            # frame by frame: a whole stretch at once would need several canvases' worth of memory at a time
+            total, shift = 0, torch.zeros(new.shape[-1], device=new.device)
+            for b, o, r in zip(job.crops, new, ~job.area):
+                r = r.to(new.device)
+                shift += (b.to(new.device, torch.float32) - o)[r].sum(0)
+                total += int(r.sum())
+            shift = shift / max(total, 1)
             crop.shifts.append((job.start, job.start + len(job.frames), shift.float().cpu()))
             crop.height, crop.width = height, width
             paste_crop(images, crop, new, job.start)
