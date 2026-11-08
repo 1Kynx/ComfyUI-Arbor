@@ -12,6 +12,8 @@ Lower the memory of a MiniMax H3 step by sampling the video in overlapping spati
   Tiles down. 0 = auto.
 - **overlap** · *INT*  
   Pixels that neighbouring tiles share. Their predictions are blended there, so the joins don't show. 128 is plenty; 0 leaves visible seams.
+- **guide_mask** · *MASK, optional*  
+  Where the guide counts, at any size, one mask per frame or one for all. The guide is a second copy of the video's tokens; only those inside the mask (grown by a token) go in. The masked area follows the guide; the rest keeps only what the start latent holds, so at high start noise it is redrawn (new faces, new detail) and at low noise it stays close. Fewer tokens run faster: with a third of the frame masked a step takes about half as long. For more margin than the one guide token (32 px) always kept around it, grow the mask first with Grow Mask. Not connected: the whole guide.
 
 ## Outputs
 

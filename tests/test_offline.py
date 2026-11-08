@@ -1109,6 +1109,70 @@ def test_sampling():
     assert len(seen) == 4 and all(s != (H, W) for s in seen)
     assert torch.allclose(out, full, atol=1e-5), "blended tiles = untiled for a pixel-wise model"
     assert payload.get("layout") is not None, "the original payload is left untouched"
+    # guide mask: only the guide tokens inside it go in
+    from comfy.ldm.minimax.model import PackedLayout
+    # which tokens: per latent frame (1, 4, 4.. pixel frames), 2x2 latent cells each, grown by a token
+    g3 = torch.zeros(9, 8, 8, dtype=torch.uint8)
+    g3[3, 0, 0] = 1  # pixel frame 3 = latent frame 1
+    k = S.guide_keep(g3, torch.zeros(1, 24, 3, 8, 8), 0, (0, 8, 0, 8)).reshape(3, 4, 4)
+    assert k[1].sum() == 4 and k[1, :2, :2].all() and not k[0].any() and not k[2].any(), k
+    assert not S.guide_keep(g3, torch.zeros(1, 24, 3, 8, 8), 0, (0, 8, 0, 8), margin=0).reshape(3, 4, 4)[1, 1, 1]
+    assert S.guide_keep(g3, torch.zeros(1, 24, 1, 8, 8), 3, (0, 8, 0, 8)).sum() == 4, "anchored at its frame"
+    # the pruned layout: the kept guide rows keep their positions, the target is untouched
+    kfs = [{"resolved_frame_index": 0, "latent": torch.zeros(1, 24, 2, 8, 8)}]
+    lay = PackedLayout(5, 3, 8, 8, 7, keyframes=kfs)
+    keep = torch.zeros(2 * 16, dtype=torch.bool)
+    keep[[0, 5, 17]] = True
+    new = S.prune_layout(lay, [keep])
+    assert new.seq_len == lay.seq_len - 29 and new.signature == lay.signature
+    (ca, cb, _), = [s for s in lay.segments if s[2] == "cond"]
+    (na, nb, _), = [s for s in new.segments if s[2] == "cond"]
+    assert nb - na == 3 and torch.equal(new.position_ids[na:nb], lay.position_ids[ca:cb][keep])
+    va, vb, _ = next(s for s in lay.segments if s[2] == "video")
+    wa, wb, _ = next(s for s in new.segments if s[2] == "video")
+    assert torch.equal(new.position_ids[wa:wb], lay.position_ids[va:vb])
+    assert int((~new.img_update).sum()) == 3 and int(new.img_update.sum()) == int(lay.img_update.sum())
+    assert torch.equal(new.position_ids[new.img_pos[~new.img_update]], lay.position_ids[ca:cb][keep])
+    assert torch.equal(new.position_ids[new.audio_pos], lay.position_ids[lay.audio_pos])
+    raises(ValueError, S.prune_layout, lay, [keep[:-1]])
+    # the row filter picks the kept guide rows, and leaves payloads without a mask alone
+
+    class FakeDM:
+        def _cond_video_rows(self, payload, device):
+            return torch.arange(6)[:, None].float()
+    dm = FakeDM()
+    assert S.install_row_filter(dm) and S.install_row_filter(dm)
+    pick = torch.tensor([1, 0, 0, 1, 0, 1], dtype=torch.bool)
+    assert dm._cond_video_rows({S.KEEP: pick}, "cpu")[:, 0].tolist() == [0, 3, 5]
+    assert dm._cond_video_rows({}, "cpu").shape[0] == 6
+    # through the wrapper: a corner mask gives the corner tile part of its guide and the other tiles none
+    calls = []
+
+    def count_guides(x_, t_, latent_shapes=None, minimax_payload=None, denoise_mask=None, **kw):
+        keep_ = minimax_payload.get(S.KEEP)
+        n = len(minimax_payload["cond_video_latents"])
+        assert len(minimax_payload.get("keyframes") or []) == n, "keyframes and latents agree"
+        calls.append((n, None if keep_ is None else int(keep_.sum())))
+        if keep_ is not None:
+            assert minimax_payload["layout"].seq_len < PackedLayout(
+                5, T_, *unpack_latents(x_, latent_shapes)[0].shape[-2:], 7,
+                keyframes=minimax_payload["keyframes"]).seq_len
+        return x_
+    cm = {**c, "c_crossattn": torch.zeros(1, 5, 8)}
+    corner = torch.zeros(5, H * 16, W * 16)
+    corner[0, :32, :32] = 1  # top left, the guide's frame
+    S.make_wrapper(2, 2, 4, 4, guide_mask=corner)(count_guides, {"input": x, "timestep": None, "c": cm})
+    assert calls == [(1, 4), (0, None), (0, None), (0, None)], calls
+    calls.clear()
+    S.make_wrapper(1, 1, 4, 4, guide_mask=torch.zeros(5, 32, 32))(count_guides, {"input": x, "timestep": None, "c": cm})
+    assert calls == [(0, None)], "an empty mask drops the guide even untiled"
+    calls.clear()
+    S.make_wrapper(1, 1, 4, 4, guide_mask=torch.ones(1, 32, 32))(count_guides, {"input": x, "timestep": None, "c": cm})
+    assert calls == [(1, None)] and cm["minimax_payload"] is payload, "a full mask changes nothing"
+    calls.clear()
+    S.make_wrapper(2, 2, 4, 4, guide_mask=corner)(count_guides, {"input": x, "timestep": None, "c": c})
+    assert calls == [(1, None)] * 4, "no text to rebuild the layout from: the whole guide, no failure"
+    assert len(payload["keyframes"]) == 1 and S.KEEP not in payload, "the original payload is left untouched"
 
     class NotH3:
         model = object()

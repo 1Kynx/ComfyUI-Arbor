@@ -7,7 +7,8 @@ node("Arbor_H3TiledRefine", en=dict(
     inputs={"model": "A MiniMax H3 model, after its LoRAs and attention patches (Chunk FeedForward, Block Sparse Attention).",
             "tiles_x": "Tiles across. 0 = auto: the fewest tiles that keep each one about H3's native 768 × 1344 size. 1 with tiles_y 1 = off.",
             "tiles_y": "Tiles down. 0 = auto.",
-            "overlap": "Pixels that neighbouring tiles share. Their predictions are blended there, so the joins don't show. 128 is plenty; 0 leaves visible seams."},
+            "overlap": "Pixels that neighbouring tiles share. Their predictions are blended there, so the joins don't show. 128 is plenty; 0 leaves visible seams.",
+            "guide_mask": "Where the guide counts, at any size, one mask per frame or one for all. The guide is a second copy of the video's tokens; only those inside the mask (grown by a token) go in. The masked area follows the guide; the rest keeps only what the start latent holds, so at high start noise it is redrawn (new faces, new detail) and at low noise it stays close. Fewer tokens run faster: with a third of the frame masked a step takes about half as long. For more margin than the one guide token (32 px) always kept around it, grow the mask first with Grow Mask. Not connected: the whole guide."},
     outputs=["The model, patched to sample in tiles. Connect it to the guider (BasicGuider)."],
     doc="""## What it is for
 Re-sampling an existing video at low denoise — detail repair, an upscale pass — so the result stays close to the original. The encoded original is the start latent, a few steps from sigma ≈ 0.5–0.7. That latent already fixes composition and motion, so every tile only has to add local detail.
@@ -42,7 +43,8 @@ No seams in the overlap zones. At 2K the 2 × 2 tiles are about H3's native size
     inputs={"model": ("模型", "MiniMax H3 模型，接在 LoRA 和注意力补丁（Chunk FeedForward、Block Sparse Attention）之后。"),
             "tiles_x": ("横向块数", "横向分几块。0 = 自动：每块约为 H3 原生 768 × 1344 尺寸时块数最少。与纵向都为 1 = 关闭。"),
             "tiles_y": ("纵向块数", "纵向分几块。0 = 自动。"),
-            "overlap": ("重叠", "相邻块共享的像素，在这里融合预测，接缝看不出来。128 足够；0 会有明显接缝。")},
+            "overlap": ("重叠", "相邻块共享的像素，在这里融合预测，接缝看不出来。128 足够；0 会有明显接缝。"),
+            "guide_mask": ("引导蒙版", "引导在哪里起作用，尺寸不限，每帧一张或全部共用一张。引导是视频 token 的第二份拷贝，只有蒙版内（外扩一个 token）的那部分送进模型。蒙版内跟随引导；蒙版外只保留起始 latent 里的内容：起始噪声高时会重画（新的脸、新的细节），噪声低时变化不大。token 少了就更快：蒙版占画面三分之一时每步约省一半。蒙版周围固定多留一个引导 token（32 px）；要留更多就先接 Grow Mask 扩大蒙版。不接时用完整引导。")},
     outputs=[("模型", "按块采样的模型，接到引导器（BasicGuider）。")],
     doc="""## 用途
 在原视频基础上低去噪二次采样——细节修复、放大精修——结果尽量贴近原片。原片编码成起始 latent，从 sigma ≈ 0.5–0.7 采几步。构图和动作已经由 latent 决定，每块只需补局部细节。

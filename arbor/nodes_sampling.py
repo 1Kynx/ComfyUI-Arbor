@@ -11,6 +11,7 @@ import logging
 import math
 
 import torch
+import torch.nn.functional as F
 
 from . import tree as T
 from .common import IO, schema
@@ -135,14 +136,20 @@ def tile_weights(box, h: int, w: int, feather: int) -> torch.Tensor:
     return _ramp(y0, y1, h, feather)[:, None] * _ramp(x0, x1, w, feather)[None, :]
 
 
-def crop_payload(payload: dict, box) -> dict:
-    """The H3 payload of one tile: guides cropped to it; the layout is left for the model to rebuild."""
+def crop_payload(payload: dict, box, guided: bool = True) -> dict:
+    """The H3 payload of one tile: guides cropped to it, or left out when not guided; the layout is left for the model
+    to rebuild."""
     y0, y1, x0, x1 = box
     keyframes = []
     for kf in payload.get("keyframes") or []:
         kf = dict(kf)
         if kf.get("latent") is not None:
-            kf["latent"] = kf["latent"][..., y0:y1, x0:x1]
+            if guided:
+                kf["latent"] = kf["latent"][..., y0:y1, x0:x1]
+            else:
+                del kf["latent"]
+                if kf.get("audio_latent") is None:
+                    continue
         keyframes.append(kf)
     out = {k: v for k, v in payload.items() if k != "layout"}
     if payload.get("keyframes") is not None:
@@ -153,16 +160,152 @@ def crop_payload(payload: dict, box) -> dict:
     return out
 
 
-def make_wrapper(tiles_y: int, tiles_x: int, overlap: int, feather: int, previous=None):
-    """model_function_wrapper: run each model call tile by tile and blend the denoised predictions."""
+# ----------------------------------------------------------------------- guide mask
+# A guide is a second copy of the clip's tokens, each with its own (time, row, column) position, packed before the
+# target. Left-out tokens leave that place unguided; the rest still anchor it. Two pieces of H3 make this work: the
+# packed layout (an object the model takes from the payload when its shape matches) and the guide rows, which a
+# small filter on the model picks from the kept tokens. If H3 changes either, masking turns off with a warning.
+
+KEEP = "arbor_guide_keep"  # payload key: which guide rows the model keeps
+LAYOUT_FIELDS = {"seq_len", "position_ids", "img_pos", "img_update", "audio_pos", "audio_update", "signature",
+                 "segments"}
+
+
+def mask_grid(mask, h: int, w: int) -> torch.Tensor:
+    """[frames, H, W] mask -> [frames, h, w] uint8 on the latent grid: 1 where any pixel of the cell is in it."""
+    out = [(F.adaptive_max_pool2d(mask[i:i + 8].float()[:, None], (h, w))[:, 0] > 0.5).to(torch.uint8)
+           for i in range(0, mask.shape[0], 8)]  # a few frames at a time: a 2K clip at once is gigabytes
+    return torch.cat(out)
+
+
+def guide_keep(grid: torch.Tensor, latent, frame: int, box, margin: int = 1) -> torch.Tensor:
+    """Which tokens of one guide stay, in the model's row order (time, row, column): those the mask touches in the
+    pixel frames of their latent frame, grown by `margin` tokens."""
+    from comfy.ldm.minimax.model import FRAME_PER_TOKEN
+    y0, y1, x0, x1 = box
+    g = grid[:, y0:y1, x0:x1]
+    last = g.shape[0] - 1
+    frames, p = [], int(frame)
+    for j in range(latent.shape[2]):
+        n = FRAME_PER_TOKEN[j % len(FRAME_PER_TOKEN)]
+        lo = min(max(p, 0), last)
+        frames.append(g[lo:min(max(p + n, lo + 1), last + 1)].amax(0))
+        p += n
+    m = F.max_pool2d(torch.stack(frames).float()[:, None], 2, 2, ceil_mode=True)  # 2x2 latent cells per token
+    if margin > 0:
+        m = F.max_pool2d(m, 2 * margin + 1, 1, margin)
+    return m.reshape(-1) > 0.5
+
+
+def prune_layout(layout, keeps: list):
+    """A copy of an H3 packed layout without the guide rows `keeps` leaves out (one bool per row, per guide)."""
+    import copy
+    if set(vars(layout)) != LAYOUT_FIELDS:
+        raise ValueError(f"unknown H3 layout fields {sorted(set(vars(layout)) ^ LAYOUT_FIELDS)}")
+    conds = [s for s in layout.segments if s[2] == "cond"]
+    if len(conds) != len(keeps) or any(b - a != k.numel() for (a, b, _), k in zip(conds, keeps)):
+        raise ValueError("H3 guide rows do not match the guides")
+    keep = torch.ones(layout.seq_len, dtype=torch.bool)
+    for (a, b, _), k in zip(conds, keeps):
+        keep[a:b] = k
+    new = copy.copy(layout)
+    index = keep.long().cumsum(0) - 1
+    new.seq_len = int(keep.sum())
+    new.position_ids = layout.position_ids[keep]
+    for pos, upd in (("img_pos", "img_update"), ("audio_pos", "audio_update")):
+        kept = keep[getattr(layout, pos)]
+        setattr(new, pos, index[getattr(layout, pos)[kept]])
+        setattr(new, upd, getattr(layout, upd)[kept])
+    segments, off = [], 0
+    for a, b, kind in layout.segments:
+        n = int(keep[a:b].sum())
+        if n or kind != "cond":
+            segments.append((off, off + n, kind))
+            off += n
+    new.segments = segments
+    return new
+
+
+def install_row_filter(diffusion_model) -> bool:
+    """Let the model drop guide rows a payload's KEEP leaves out. Once per model; False if H3 has no such step."""
+    if getattr(diffusion_model, "_arbor_row_filter", False):
+        return True
+    original = getattr(diffusion_model, "_cond_video_rows", None)
+    if original is None:
+        return False
+
+    def cond_video_rows(payload, device):
+        rows = original(payload, device)
+        keep = payload.get(KEEP)
+        if keep is None or rows is None:
+            return rows
+        if keep.numel() != rows.shape[0]:
+            raise RuntimeError(f"H3 Tiled Refine: guide mask covers {keep.numel()} rows, the guides have "
+                               f"{rows.shape[0]}")
+        return rows[keep.to(rows.device)]
+    diffusion_model._cond_video_rows = cond_video_rows
+    diffusion_model._arbor_row_filter = True
+    return True
+
+
+def mask_payload(payload: dict, box, grid, text_len: int, video_shape, audio_t: int, margin: int = 1):
+    """The tile payload with the guide tokens outside the mask left out: (payload, tokens kept, guide tokens)."""
+    from comfy.ldm.minimax.model import PackedLayout
+    keyframes = payload.get("keyframes") or []
+    keeps = [guide_keep(grid, kf["latent"], kf.get("resolved_frame_index", 0), box, margin)
+             for kf in keyframes if kf.get("latent") is not None]
+    kept, total = sum(int(k.sum()) for k in keeps), sum(k.numel() for k in keeps)
+    if kept == total:
+        return payload, kept, total
+    if kept == 0:
+        return crop_payload(payload, box, False), 0, total
+    _, _, lt, lh, lw = video_shape
+    layout = PackedLayout(text_len, lt, lh + lh % 2, lw + lw % 2, audio_t, keyframes=keyframes,
+                          refs=payload.get("refs"))
+    out = dict(payload)
+    out["layout"] = prune_layout(layout, keeps)
+    refs = [r["latent"] for r in payload.get("refs") or [] if "latent" in r]
+    out[KEEP] = torch.cat(keeps + [torch.ones(z.shape[2] * (z.shape[3] // 2) * (z.shape[4] // 2), dtype=torch.bool)
+                                   for z in refs])
+    return out, kept, total
+
+
+def make_wrapper(tiles_y: int, tiles_x: int, overlap: int, feather: int, previous=None, guide_mask=None,
+                 margin: int = 1):
+    """model_function_wrapper: run each model call tile by tile and blend the denoised predictions. With a guide mask,
+    only the guide tokens inside it go in: a tile it misses runs without the guide, a tile it touches with part of
+    it."""
     from comfy.model_management import throw_exception_if_processing_interrupted
     from comfy.utils import pack_latents, unpack_latents
     announced = set()
+    grids = {}
+    state = {"masking": guide_mask is not None}
 
     def run(apply_model, x, t, c, args):
         if previous is not None:
             return previous(apply_model, {**args, "input": x, "timestep": t, "c": c})
         return apply_model(x, t, **c)
+
+    def tile_payload(c, box, video_shape, audio_t, counts):
+        payload = c.get("minimax_payload")
+        if not isinstance(payload, dict):
+            return payload
+        cropped = crop_payload(payload, box) if video_shape[-2:] != c["_full_hw"] else payload
+        if not state["masking"]:
+            return cropped
+        try:
+            h, w = c["_full_hw"]
+            if (h, w) not in grids:
+                grids[(h, w)] = mask_grid(guide_mask, h, w)
+            out, kept, total = mask_payload(cropped, box, grids[(h, w)], int(c["c_crossattn"].shape[1]),
+                                            video_shape, audio_t, margin)
+        except Exception as e:  # H3 changed under us: refine with the whole guide rather than fail
+            log.warning("H3 Tiled Refine: guide mask off, every tile keeps the whole guide (%s)", e)
+            state["masking"] = False
+            return cropped
+        counts[0] += kept
+        counts[1] += total
+        return out
 
     def wrapper(apply_model, args):
         x, t, c = args["input"], args["timestep"], args["c"]
@@ -173,12 +316,22 @@ def make_wrapper(tiles_y: int, tiles_x: int, overlap: int, feather: int, previou
         video = streams[0]
         h, w = video.shape[-2:]
         boxes = plan_tiles(h, w, tiles_y, tiles_x, overlap)
-        if (h, w) not in announced:
+        counts = [0, 0]
+        c_full = {**c, "_full_hw": (h, w)}
+        audio_t = int(shapes[1][-1])
+
+        def report():
+            if (h, w) in announced:
+                return
             announced.add((h, w))
-            log.info("H3 Tiled Refine: %dx%d px in %d tiles of up to %dx%d px", w * 16, h * 16, len(boxes),
-                     max(b[3] - b[2] for b in boxes) * 16, max(b[1] - b[0] for b in boxes) * 16)
+            log.info("H3 Tiled Refine: %dx%d px in %d tiles of up to %dx%d px%s", w * 16, h * 16, len(boxes),
+                     max(b[3] - b[2] for b in boxes) * 16, max(b[1] - b[0] for b in boxes) * 16,
+                     f", guide mask keeps {counts[0] / counts[1]:.0%} of the guide tokens" if counts[1] else "")
+
         if len(boxes) == 1:
-            return run(apply_model, x, t, c, args)
+            payload = tile_payload(c_full, boxes[0], tuple(video.shape), audio_t, counts)
+            report()
+            return run(apply_model, x, t, {**c, "minimax_payload": payload} if payload is not None else c, args)
 
         out_v = torch.zeros_like(video, dtype=torch.float32)
         weight = torch.zeros(h, w, device=video.device)
@@ -186,11 +339,12 @@ def make_wrapper(tiles_y: int, tiles_x: int, overlap: int, feather: int, previou
         for box in boxes:
             throw_exception_if_processing_interrupted()  # a step is several model calls: let Cancel in between
             y0, y1, x0, x1 = box
-            xt, tshapes = pack_latents([video[..., y0:y1, x0:x1]] + list(streams[1:]))
+            tile = video[..., y0:y1, x0:x1]
+            xt, tshapes = pack_latents([tile] + list(streams[1:]))
             ct = dict(c)
             ct["latent_shapes"] = tshapes
             if isinstance(c.get("minimax_payload"), dict):
-                ct["minimax_payload"] = crop_payload(c["minimax_payload"], box)
+                ct["minimax_payload"] = tile_payload(c_full, box, tuple(tile.shape), audio_t, counts)
             if torch.is_tensor(c.get("denoise_mask")):
                 ct["denoise_mask"] = c["denoise_mask"][..., y0:y1, x0:x1]
             pred = unpack_latents(run(apply_model, xt, t, ct, args), tshapes)
@@ -200,6 +354,7 @@ def make_wrapper(tiles_y: int, tiles_x: int, overlap: int, feather: int, previou
             for acc, p in zip(rest, pred[1:]):
                 acc += p.float()  # audio is shared by every tile: average its predictions
             del pred, xt, ct
+        report()
         out_v /= weight
         rest = [r / len(boxes) for r in rest]
         return pack_latents([out_v.to(video.dtype)] + [r.to(s.dtype) for r, s in zip(rest, streams[1:])])[0]
@@ -220,13 +375,18 @@ class H3TiledRefine(IO.ComfyNode):
                           tooltip="Tiles across; 0 = auto (tiles about H3's native 768 x 1344 size)"),
              IO.Int.Input("tiles_y", default=0, min=0, max=6, tooltip="Tiles down; 0 = auto"),
              IO.Int.Input("overlap", default=128, min=0, max=1024, step=32,
-                          tooltip="Pixels neighbouring tiles share; predictions are blended there")],
+                          tooltip="Pixels neighbouring tiles share; predictions are blended there"),
+             IO.Mask.Input("guide_mask", optional=True,
+                           tooltip="Where the guide counts, frame by frame. Only the guide tokens inside it go in: "
+                                   "the masked area follows the guide, the rest is redrawn freely (how freely "
+                                   "depends on the start noise), and fewer tokens run faster. Not connected: the "
+                                   "whole guide. Grow it with Grow Mask for more margin")],
             [IO.Model.Output(display_name="model")],
             ["h3 tiled", "tiled diffusion", "multidiffusion", "tiled sampling", "low vram", "refine", "upscale"],
             input_list=False)
 
     @classmethod
-    def execute(cls, model, tiles_x, tiles_y, overlap) -> IO.NodeOutput:
+    def execute(cls, model, tiles_x, tiles_y, overlap, guide_mask=None) -> IO.NodeOutput:
         if type(model.model).__name__ != "MiniMaxH3":
             raise ValueError(f"Tiled Refine for MiniMax H3: needs a MiniMax H3 model, got {type(model.model).__name__}")
         ov = max(0, int(overlap) // 16)
@@ -236,7 +396,11 @@ class H3TiledRefine(IO.ComfyNode):
                         "tiling saves memory but runs slower in this mode")
         m = model.clone()
         previous = m.model_options.get("model_function_wrapper")
-        m.set_model_unet_function_wrapper(make_wrapper(int(tiles_y), int(tiles_x), ov, ov, previous))
+        mask = None if guide_mask is None else (guide_mask[None] if guide_mask.dim() == 2 else guide_mask).cpu()
+        if mask is not None and not install_row_filter(m.model.diffusion_model):
+            log.warning("H3 Tiled Refine: this H3 build can't take a guide mask; every tile keeps the whole guide")
+            mask = None
+        m.set_model_unet_function_wrapper(make_wrapper(int(tiles_y), int(tiles_x), ov, ov, previous, mask))
         return IO.NodeOutput(m)
 
 
