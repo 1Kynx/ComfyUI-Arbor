@@ -385,16 +385,18 @@ def crop_window(group: list[Run], height: int, width: int, size: int = 768, cont
         heights = [max(heights)] * len(frames)
     else:
         heights = [sum(heights[max(0, i - 12):i + 13]) / len(heights[max(0, i - 12):i + 13]) for i in range(len(frames))]
+    # sizes and places stay fractional: a crop that grows in a push-in, rounded to whole pixels, would change scale by a
+    # different error each frame, and that shake comes back on the way out as the redrawn region wobbling against the rest
     sizes = []
     for ch in heights:
         scale = min(1.0, width / (ch * ratio), height / ch)
-        sizes.append((int(ch * ratio * scale) // 2 * 2, int(ch * scale) // 2 * 2))
+        sizes.append((round(ch * ratio * scale, 3), round(ch * scale, 3)))
     # half of the margin is room to wander, the other half is what stays around the region
     xs = _hold([c[0] for c in centres], [max(s[0] - b[0], 0) / 4 for s, b in zip(sizes, spans)])
     ys = _hold([c[1] for c in centres], [max(s[1] - b[1], 0) / 4 for s, b in zip(sizes, spans)])
     pos = {}
     for f, (cx, cy), (cw, ch) in zip(frames, _glide(list(zip(xs, ys))), sizes):
-        pos[f] = (min(max(round(cx - cw / 2), 0), width - cw), min(max(round(cy - ch / 2), 0), height - ch), cw, ch)
+        pos[f] = (round(min(max(cx - cw / 2, 0), width - cw), 3), round(min(max(cy - ch / 2, 0), height - ch), 3), cw, ch)
     return frames, pos, shape
 
 
@@ -403,36 +405,39 @@ def paste_mask(group: list[Run], frames: list[int], pos: dict, height: int, widt
     """[frames, h, w] blend weights on the largest crop's grid: the group's faces, grown over the head and feathered, away
     from keep. "mask" follows the mask's outline; "bbox" is a steady box that ignores it."""
     steady = [steady_boxes(r) for r in group] if paste == "bbox" else []
-    grid = max(p[3] for p in pos.values()), max(p[2] for p in pos.values())
+    grid = max(_px(p[3]) for p in pos.values()), max(_px(p[2]) for p in pos.values())
     usual = sorted(p[3] for p in pos.values())[len(pos) // 2]
     size = max(r.size for r in group)
 
     def region(t):  # the crop of a mask of any size, as nearest scaling to the frame would give, without scaling all of it
         x0, y0, cw, ch = pos[f]
-        rows = torch.arange(y0, y0 + ch) * t.shape[0] // height
-        cols = torch.arange(x0, x0 + cw) * t.shape[1] // width
+        gh, gw = _px(ch), _px(cw)
+        rows = ((y0 + (torch.arange(gh) + 0.5) * ch / gh) * t.shape[0] / height).long().clamp(0, t.shape[0] - 1)
+        cols = ((x0 + (torch.arange(gw) + 0.5) * cw / gw) * t.shape[1] / width).long().clamp(0, t.shape[1] - 1)
         return t[rows][:, cols].float()[None, None]
 
     out = []
     for f in frames:
         x0, y0, cw, ch = pos[f]
+        gh, gw = _px(ch), _px(cw)  # this frame's crop on a grid of about one cell per pixel, spanning it exactly
         here = size * ch / usual  # the crop follows the face, so the face's size here follows the crop
         kernel = int(here * grow) * 2 + 1
         if paste == "bbox":
-            m = torch.zeros(1, 1, ch, cw)
+            m = torch.zeros(1, 1, gh, gw)
             for boxes in steady:
                 if f in boxes:
-                    a, b, c, d = boxes[f]
-                    m[..., max(round(b) - y0, 0):max(round(d) - y0, 0), max(round(a) - x0, 0):max(round(c) - x0, 0)] = 1
+                    a, b, c, d = ((v - o) * n / s for v, o, n, s in
+                                  zip(boxes[f], (x0, y0, x0, y0), (gw, gh, gw, gh), (cw, ch, cw, ch)))
+                    m[..., max(round(b), 0):max(round(d), 0), max(round(a), 0):max(round(c), 0)] = 1
         else:
-            m = torch.zeros(1, 1, ch, cw)
+            m = torch.zeros(1, 1, gh, gw)
             for r in group:
                 for part in r.parts.get(f, ()):
                     m = torch.maximum(m, region(r.labels[f] == part))
         w = _gaussian(_dilate(m, kernel), max(1.0, here * feather))
         if keep is not None:
             w = w * (1 - _dilate(region(keep[f]), 9))
-        out.append(w[0, 0] if (ch, cw) == grid else F.interpolate(w, size=grid, mode="bilinear", align_corners=False)[0, 0])
+        out.append(w[0, 0] if (gh, gw) == grid else F.interpolate(w, size=grid, mode="bilinear", align_corners=False)[0, 0])
     w = torch.stack(out)
     # a gap in the mask eases in and out over a few frames, so nothing pops. Not the two ends: a run mostly ends at a cut,
     # where the old picture would show through what replaced it
@@ -539,6 +544,122 @@ def _resize(x: torch.Tensor, hw, mode: str) -> torch.Tensor:
     return out.movedim(1, -1).reshape(*x.shape[:-3], *hw, x.shape[-1])
 
 
+def _px(v: float) -> int:
+    """A fractional length as a whole number of cells, at least one."""
+    return max(1, round(v))
+
+
+def _cover(box, height: int, width: int) -> tuple[int, int, int, int]:
+    """(ax, ay, bx, by): the whole pixels a fractional box (x0, y0, w, h) touches, within the frame."""
+    x0, y0, w, h = box
+    return (max(int(math.floor(x0)), 0), max(int(math.floor(y0)), 0),
+            min(int(math.ceil(x0 + w)), width), min(int(math.ceil(y0 + h)), height))
+
+
+def _grid(box, hw, span, device) -> torch.Tensor:
+    """grid_sample coordinates [1, h, w, 2] for an output of hw covering box (x0, y0, w, h), read from a picture that
+    spans span (ax, ay, bx, by), all in the same pixels."""
+    x0, y0, bw, bh = box
+    ax, ay, bx, by = span
+    xs = (x0 + (torch.arange(hw[1], device=device, dtype=torch.float32) + 0.5) * bw / hw[1] - ax) / (bx - ax) * 2 - 1
+    ys = (y0 + (torch.arange(hw[0], device=device, dtype=torch.float32) + 0.5) * bh / hw[0] - ay) / (by - ay) * 2 - 1
+    gy, gx = torch.meshgrid(ys, xs, indexing="ij")
+    return torch.stack([gx, gy], -1)[None]
+
+
+def _shrunk(x: torch.Tensor, hw) -> torch.Tensor:
+    """[1, c, h, w] filtered down towards hw where it is larger, as a resize with antialias would, so sampling it does not
+    alias. It spans the same area as before."""
+    h, w = min(x.shape[2], hw[0]), min(x.shape[3], hw[1])
+    if (h, w) == tuple(x.shape[2:]):
+        return x
+    return F.interpolate(x, size=(h, w), mode="bicubic", align_corners=False, antialias=True)
+
+
+def window(image: torch.Tensor, box, hw) -> torch.Tensor:
+    """The fractional box (x0, y0, w, h) of image [H, W, c], resampled to hw: what a crop and resize would give, without
+    rounding the box to whole pixels."""
+    span = _cover(box, image.shape[0], image.shape[1])
+    part = image[span[1]:span[3], span[0]:span[2]].float().movedim(-1, 0)[None]
+    part = _shrunk(part, (round(part.shape[2] * hw[0] / box[3]), round(part.shape[3] * hw[1] / box[2])))
+    return F.grid_sample(part, _grid(box, hw, span, part.device), mode="bicubic", padding_mode="border",
+                         align_corners=False)[0].movedim(0, -1)
+
+
+ALIGN_MOST = 0.05  # share of the canvas's short edge a redrawn frame may be moved back by
+ALIGN_CHUNK = 16   # frames aligned at once
+
+
+def _moved(x: torch.Tensor, dy: torch.Tensor, dx: torch.Tensor, mode: str = "bilinear") -> torch.Tensor:
+    """[n, c, h, w] with each frame's content moved by its own (dy, dx) pixels ([n] each)."""
+    n, _, h, w = x.shape
+    ys = (torch.arange(h, device=x.device, dtype=torch.float32) + 0.5) / h * 2 - 1
+    xs = (torch.arange(w, device=x.device, dtype=torch.float32) + 0.5) / w * 2 - 1
+    gy = (ys[None, :, None] - dy[:, None, None] * 2 / h).expand(n, h, w)
+    gx = (xs[None, None, :] - dx[:, None, None] * 2 / w).expand(n, h, w)
+    return F.grid_sample(x, torch.stack([gx, gy], -1), mode=mode, padding_mode="border", align_corners=False)
+
+
+def offsets(before: torch.Tensor, after: torch.Tensor, weight: torch.Tensor, levels: int = 4, iters: int = 6):
+    """[n, 2] (dy, dx) that move each frame of after onto before (all [n, 1, h, w]; weight says where to look): least
+    squares on the brightness, coarse to fine, so a move of several pixels is found as well as a fraction of one."""
+    d = torch.zeros(before.shape[0], 2, device=before.device)
+    for level in range(levels - 1, -1, -1):
+        s = 2 ** level
+        b, a, wt = ((F.avg_pool2d(t, s) if s > 1 else t) for t in (before, after, weight))
+        b, a = _gaussian(b, 1.0), _gaussian(a, 1.0)
+        gy, gx = torch.gradient(b, dim=(2, 3))
+        syy, syx, sxx = ((wt * u * v).sum((1, 2, 3)) for u, v in ((gy, gy), (gy, gx), (gx, gx)))
+        det = syy * sxx - syx * syx
+        ok = det > 1e-9 * (syy + sxx) ** 2 + 1e-20
+        det = torch.where(ok, det, torch.ones_like(det))
+        for _ in range(iters):
+            r = _moved(a, d[:, 0] / s, d[:, 1] / s) - b
+            vy, vx = -(wt * gy * r).sum((1, 2, 3)), -(wt * gx * r).sum((1, 2, 3))
+            step = torch.stack([(sxx * vy - syx * vx) / det, (syy * vx - syx * vy) / det], 1) * ok[:, None]
+            d = d - step * s
+            if float(step.abs().max()) < 0.01:
+                break
+    return d
+
+
+def align(before: torch.Tensor, after: torch.Tensor, areas: list) -> tuple[torch.Tensor, float]:
+    """after [n, h, w, c] with each region of each frame moved by the fraction of a pixel or the few pixels that lay it
+    back over before (areas: one [n, h, w] per region). A redraw of something that should stay put can come out a
+    little off from frame to frame; pasted back, the region then shakes against what is around it. Regions sharing a
+    crop are moved each on its own, and blended where their areas meet. A move that would not bring the two closer, or
+    would be large, is left out. Also the largest move made, in canvas pixels."""
+    dev = torch.device("cuda") if torch.cuda.is_available() else after.device
+    h, w = areas[0].shape[1:]
+    most = ALIGN_MOST * min(h, w)
+    out, largest = [], 0.0
+    for c in range(0, len(after), ALIGN_CHUNK):
+        b = before[c:c + ALIGN_CHUNK].to(dev, torch.float32).mean(-1)[:, None]
+        x = after[c:c + ALIGN_CHUNK].to(dev, torch.float32)
+        a = x.mean(-1)[:, None]
+        total, mix = torch.zeros_like(a), torch.zeros_like(x)
+        for area in areas:
+            wt = _gaussian(F.max_pool2d(area[c:c + ALIGN_CHUNK].to(dev, torch.float32)[:, None], 9, 1, 4),
+                           max(h, w) * 0.02)
+            d = offsets(b, a, wt)
+            r0 = (wt * (a - b) ** 2).sum((1, 2, 3))
+            r1 = (wt * (_moved(a, d[:, 0], d[:, 1]) - b) ** 2).sum((1, 2, 3))
+            d = d * ((d.abs().amax(1) <= most) & (r1 < r0))[:, None]
+            largest = max(largest, float(d.abs().amax()) if len(d) else 0.0)
+            moved = torch.where((d.abs().amax(1) > 0)[:, None, None, None],
+                                _moved(x.movedim(-1, 1), d[:, 0], d[:, 1], "bicubic").movedim(1, -1).clamp(0, 1), x)
+            if len(areas) == 1:
+                mix, total = moved, None
+                break
+            total = total + wt
+            mix = mix + wt.movedim(1, -1) * moved
+        if total is not None:  # each region where it is, the frame as it was elsewhere
+            t = total.movedim(1, -1)
+            mix = torch.where(t > 1e-4, mix / t.clamp(min=1e-4), x) * t.clamp(max=1) + x * (1 - t.clamp(max=1))
+        out.append(mix.to(after.device))
+    return torch.cat(out), largest
+
+
 def _each(xs: list, hw_of, mode: str) -> list:
     """Resize a list of [h, w, c] at once when they are all one size, as a steady crop's frames are."""
     sizes = [tuple(hw_of(i)) for i in range(len(xs))]
@@ -565,6 +686,7 @@ class Crop:
     weights: torch.Tensor
     shifts: list = field(default_factory=list)  # (first index, end index, [3] shift)
     text: str = ""
+    parts: list = field(default_factory=list)  # each region's own weights, when regions share the crop
     height: int = 0
     width: int = 0
 
@@ -576,12 +698,17 @@ def paste_crop(images: torch.Tensor, crop: Crop, drawn: torch.Tensor, first: int
     for i, new in enumerate(drawn, first):
         f = crop.frames[i]
         x0, y0, cw, ch = crop.pos[f]
-        ax, ay = round(x0 * sx), round(y0 * sy)
-        bx, by = min(round((x0 + cw) * sx), images.shape[2]), min(round((y0 + ch) * sy), images.shape[1])
+        box = (x0 * sx, y0 * sy, cw * sx, ch * sy)
+        ax, ay, bx, by = _cover(box, images.shape[1], images.shape[2])
         hw = (by - ay, bx - ax)
+        # each pixel takes the canvas at its own centre: the box's fraction of a pixel is kept, not rounded away.
+        # Outside the box the weight is 0
+        inverse = _grid((ax, ay, bx - ax, by - ay), hw, (box[0], box[1], box[0] + box[2], box[1] + box[3]), images.device)
         shift = next(v for a, b, v in crop.shifts if a <= i < b).to(images.device)
-        w = _resize(crop.weights[i, ..., None].float() / 255, hw, "bilinear").to(images.device)
-        n = _resize(new.float()[None], hw, "bicubic" if hw[0] < new.shape[0] else "bilinear")[0].to(images.device)
+        w = F.grid_sample(crop.weights[i][None, None].float().to(images.device) / 255, inverse, mode="bilinear",
+                          padding_mode="zeros", align_corners=False)[0].movedim(0, -1)
+        n = _shrunk(new.float().to(images.device).movedim(-1, 0)[None], hw)
+        n = F.grid_sample(n, inverse, mode="bicubic", padding_mode="border", align_corners=False)[0].movedim(0, -1)
         o = images[f, ay:by, ax:bx].float()
         images[f, ay:by, ax:bx] = (o * (1 - w) + (n + shift) * w).clamp(0, 1).to(images.dtype)
 
@@ -594,7 +721,7 @@ def refine_groups(images, groups, height, width, redraw_many, size=768, paste="m
     for g, group in enumerate(groups):
         frames, pos, shape = crop_window(group, height, width, size, context)
         short = sorted(min(p[2], p[3]) for p in pos.values())
-        wide, tall = max(p[2] for p in pos.values()), max(p[3] for p in pos.values())
+        wide, tall = round(max(p[2] for p in pos.values())), round(max(p[3] for p in pos.values()))
         scale = f"{min(shape) / short[-1]:.1f}x" if short[0] == short[-1] else f"{min(shape) / short[-1]:.1f}-{min(shape) / short[0]:.1f}x"
         who = f"subject {group[0].subject}" if group[0].subject else f"regions {sorted(r.number for r in group)}"
         text = (f"{who}, frames {frames[0]}-{frames[-1]}, crop up to {wide} x {tall}, "
@@ -612,24 +739,28 @@ def refine_groups(images, groups, height, width, redraw_many, size=768, paste="m
             if s == 0:
                 weights = paste_mask(groups[g], crop.frames, crop.pos, height, width, paste, grow, feather, plan["keep"])
                 crop.weights = (weights * 255).round().to(torch.uint8)
+                if len(groups[g]) > 1 and not groups[g][0].subject:  # each face is moved back on its own
+                    crop.parts = [(paste_mask([r], crop.frames, crop.pos, height, width, paste, grow, feather, plan["keep"])
+                                   * 255).round().to(torch.uint8) for r in groups[g]]
             pos, shape = crop.pos, crop.shape
-            orig = [images[f, pos[f][1]:pos[f][1] + pos[f][3], pos[f][0]:pos[f][0] + pos[f][2]].float() for f in part]
-            big = torch.stack(_each(orig, lambda i: shape, "bicubic")).clamp(0, 1)
+            big = torch.stack([window(images[f], pos[f], shape) for f in part]).clamp(0, 1)
             area = torch.stack([w[..., 0] > 2 for w in _each([crop.weights[s + i, ..., None].float() for i in range(len(part))],
                                                               lambda i: shape, "bilinear")])
-            ready.append(Job(g, s, part, big, area, groups[g][0].subject))
+            parts = [torch.stack([w[..., 0] > 2 for w in _each([p[s + i, ..., None].float() for i in range(len(part))],
+                                                               lambda i: shape, "bilinear")]) for p in crop.parts]
+            ready.append(Job(g, s, part, big, area, groups[g][0].subject, parts))
         for job, new in zip(ready, redraw_many(ready)):
             plan, crop = plans[job.group], plans[job.group]["crop"]
             new = new.to(images.device, torch.float32).clamp(0, 1)
+            if not job.subject:  # what is repaired should stay where it was; a subject may be drawn anew
+                new, moved = align(job.crops, new, job.parts or [job.area])
+                log.info("H3 Region Redraw: %s, frames %d-%d moved back by up to %.1f px", crop.text.split(",")[0],
+                         job.frames[0], job.frames[-1], moved)
             plan["compare"].append(compare(job.crops, new).cpu())
-            pos = crop.pos
-            orig = [images[f, pos[f][1]:pos[f][1] + pos[f][3], pos[f][0]:pos[f][0] + pos[f][2]].float() for f in job.frames]
-            small = _each(list(new), lambda i: orig[i].shape[:2], "bicubic")
-            rest = [x[..., 0] <= 2 for x in _each([crop.weights[job.start + i, ..., None].float() for i in range(len(orig))],
-                                                  lambda i: orig[i].shape[:2], "bilinear")]
             # outside the area nothing was redrawn: any drift there is the VAE's
-            total = max(sum(float(x.sum()) for x in rest), 1e-6)
-            shift = sum((o - n)[x].sum(0) for o, n, x in zip(orig, small, rest)) / total
+            rest = ~job.area.to(new.device)
+            before = job.crops.to(new.device, torch.float32)
+            shift = (before - new)[rest].sum(0) / max(float(rest.sum()), 1e-6)
             crop.shifts.append((job.start, job.start + len(job.frames), shift.float().cpu()))
             crop.height, crop.width = height, width
             paste_crop(images, crop, new, job.start)
@@ -645,6 +776,7 @@ class Job:
     crops: torch.Tensor
     area: torch.Tensor
     subject: int = 0
+    parts: list = field(default_factory=list)  # each region's own area, when regions share the crop
 
 
 def refine_group(images, group, height, width, redraw_fn, size=768, paste="mask", grow=0.35, feather=0.12,

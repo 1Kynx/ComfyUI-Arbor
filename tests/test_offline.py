@@ -1342,7 +1342,7 @@ def test_region_redraw():
     area = {}
     for paste, grow, feather in (("mask", 0.35, 0.12), ("bbox", 0.35, 0.12), ("mask", 0.8, 0.12), ("mask", 0.35, 0.4)):
         w = Fc.paste_mask([run0], *win, H, W, paste, grow, feather)
-        assert w.shape == (20, win[1][10][3], win[1][10][2]) and 0 <= float(w.min()) and float(w.max()) <= 1
+        assert w.shape == (20, round(win[1][10][3]), round(win[1][10][2])) and 0 <= float(w.min()) and float(w.max()) <= 1
         area[paste, grow, feather] = int((w[10] > 0.01).sum())
     assert area["mask", 0.8, 0.12] > area["mask", 0.35, 0.12] and area["mask", 0.35, 0.4] > area["mask", 0.35, 0.12]
     assert area["bbox", 0.35, 0.12] > 0
@@ -1352,7 +1352,47 @@ def test_region_redraw():
     nearby[:, 160:200, 200:230] = True
     w = Fc.paste_mask([run0], *win, H, W, keep=nearby)
     x0, y0 = win[1][20][:2]
-    assert float(w[10, 170 - y0, 215 - x0]) == 0, "a lead is not pasted over"
+    assert float(w[10, round(170 - y0), round(215 - x0)]) == 0, "a lead is not pasted over"
+
+    # crops keep their fraction of a pixel: a crop that grows smoothly in a push-in is cut and pasted where it is, so the
+    # redrawn region does not wobble against the rest by each frame's rounding
+    sp_run = Fc.Run({f: (300 - 2.3 * f, 200 - 1.3 * f, 340 + 2.3 * f, 240 + 1.3 * f) for f in range(40)})
+    sp_pos = Fc.crop_window([sp_run], 1000, 1000, 512, 2.0)[1]
+    assert any(p[2] != round(p[2]) for p in sp_pos.values()), "sizes are not rounded to whole pixels"
+    sp_ramp = torch.arange(1000, dtype=torch.float32)[None, :, None].expand(1000, 1000, 3) / 1000
+    sp_box = (100.25, 50.5, 80.5, 80.5)
+    sp_cut = Fc.window(sp_ramp, sp_box, (161, 161))  # 2x
+    sp_want = (sp_box[0] + (torch.arange(161) + 0.5) * sp_box[2] / 161) / 1000
+    assert float((sp_cut[80, :, 0] - sp_want).abs()[2:-2].max()) < 1e-3, "a window samples exactly the fractional box"
+    sp_frame = torch.zeros(1, 1000, 1000, 3)
+    sp_crop = Fc.Crop([0], {0: sp_box}, (161, 161), torch.full((1, 161, 161), 255, dtype=torch.uint8), [(0, 1, torch.zeros(3))],
+                   height=1000, width=1000)
+    Fc.paste_crop(sp_frame, sp_crop, sp_cut[None])
+    sp_in = sp_frame[0, 52:129, 102:179, 0]
+    assert float((sp_in - sp_ramp[52:129, 102:179, 0]).abs().max()) < 2e-3, "pasted back where it came from"
+    assert float(sp_frame[0, 140:, :, 0].abs().max()) == 0 and float(sp_frame[0, :, 190:, 0].abs().max()) == 0
+    # a redraw that comes out a little off is moved back over where it was, a fraction of a pixel too; one in place stays
+    torch.manual_seed(0)
+    al_before = Fc._gaussian(torch.rand(3, 1, 128, 128), 3.0).expand(3, 3, 128, 128).movedim(1, -1).contiguous()
+    al_true = torch.tensor([[1.6, -2.3], [0.0, 0.0], [-0.4, 0.7]])
+    al_after = Fc._moved(al_before.movedim(-1, 1), al_true[:, 0], al_true[:, 1]).movedim(1, -1)
+    al_area = torch.zeros(3, 128, 128, dtype=torch.bool)
+    al_area[:, 32:96, 32:96] = True
+    al_fixed, al_most = Fc.align(al_before, al_after, [al_area])
+    al_err = (al_fixed - al_before)[:, 40:88, 40:88].abs().amax((1, 2, 3))
+    assert float(al_err.max()) < 0.01 and 2.0 < al_most < 2.5, (al_err, al_most)
+    assert torch.equal(al_fixed[1], al_after[1]), "a frame in place is not resampled"
+    # two regions in one crop, off in different ways: each is moved back on its own
+    al_two = al_before.clone()
+    al_two[:, :, 64:] = Fc._moved(al_before.movedim(-1, 1), al_true[:, 1], al_true[:, 0]).movedim(1, -1)[:, :, 64:]
+    al_left, al_right = torch.zeros(3, 128, 128, dtype=torch.bool), torch.zeros(3, 128, 128, dtype=torch.bool)
+    al_left[:, 32:96, 8:52] = True
+    al_right[:, 32:96, 76:120] = True
+    al_mixed = al_after.clone()
+    al_mixed[:, :, 64:] = al_two[:, :, 64:]
+    al_both, _ = Fc.align(al_before, al_mixed, [al_left, al_right])
+    al_err2 = (al_both - al_before)[:, 40:88].abs()
+    assert float(al_err2[:, :, 14:46].max()) < 0.01 and float(al_err2[:, :, 82:114].max()) < 0.01, al_err2.amax((1, 3))
 
     # the crop holds still while the mask wobbles, and moves only when the region would near its edge
     wobble = Fc.Run({f: (200.0 + 6 * (f % 3), 120.0 + 5 * (f % 2), 260.0 + 6 * (f % 3), 180.0 + 5 * (f % 2)) for f in range(60)})

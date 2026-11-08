@@ -189,7 +189,7 @@ Write in English, as the guide does. Text that shows on screen goes in double qu
 ## How it works
 1. Every separate piece of a mask is a region. Each is followed from frame to frame by where it is and how large, within a shot, so something that is there for two seconds costs nothing afterwards. A region hidden for up to a second is picked up again.
 2. Each region gets a crop that holds still, and moves only when the region would near its edge: the model takes a moving crop for a moving camera, and shakes what surrounds the region. It grows with the region in a push-in. The crop is enlarged to `refine_size` and redrawn without a guide. Only the area around the mask is redrawn, as with Set Latent Noise Mask: the rest of the crop stays and gives the model something to match. Regions that are on screen together and near each other share a crop when that is less work, each as large on its canvas as it would be alone. H3 samples one video at a time and every call costs about as much as a small crop does, so crops of one canvas are put one after another into one video, cut to cut, and sampled together: each starts on a clip of the VAE, which encodes clips apart, so none leaks into the next. In a crowd this is up to about twice as quick.
-3. The result is shrunk and feathered back in.
+3. Each redrawn frame is first moved back over the original, by the fraction of a pixel or the few pixels it came out off, region by region: a redraw that drifts a little from frame to frame would otherwise make its region shake against what is around it. Subjects are drawn anew and are not moved. Then the result is shrunk and feathered back in. Crops are cut and pasted at their exact, fractional place, so a crop that grows in a push-in does not shake by each frame's rounding either.
 
 Connect KSamplerSelect and Manual Sigmas as you would on a custom sampler.
 
@@ -282,7 +282,7 @@ non_diegetic_music: N/A
 ## 原理
 1. 蒙版里每一块独立的区域单独处理。在同一镜头内按位置和大小逐帧跟随，所以只出现两秒的东西，后面的画面不受影响。被遮挡不超过一秒，会重新接上。
 2. 每块区域一个裁切框，框保持不动，区域快到框边时才移动：模型会把移动的框当成镜头在动，周围画面就会抖。推镜时框跟着变大。裁切后放大到 `精修尺寸`，不带引导重画。和 Set Latent Noise Mask 一样，只重画蒙版附近的区域，框里其余部分保持不变，给模型作参照。同一时间挨在一起的区域，在工作量更少时共用一个框，每块区域在画布上和单独处理时一样大。H3 一次只能采样一段视频，每次调用的固定开销和一个小框的采样差不多，所以同尺寸的框会按时间首尾相连，拼成一段视频一起采样：每段都从 VAE 的一个编码块开头，各块单独编码，所以不会互相串。人多时最多能快到约两倍。
-3. 结果缩回原尺寸，羽化贴回。
+3. 每一帧重画的结果先逐个区域对齐回原片：偏了零点几个像素或几个像素的，挪回原来的位置。否则重画结果每帧略有偏移，贴回后区域会相对周围抖动。主体是重新画的，不做对齐。之后缩回原尺寸，羽化贴回。裁切和贴回都按精确的小数位置进行，推镜时变大的裁切框也不会因每帧取整而抖动。
 
 KSamplerSelect 和 Manual Sigmas 的接法与自定义采样器相同。
 
