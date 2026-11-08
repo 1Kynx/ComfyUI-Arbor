@@ -134,7 +134,7 @@ node("Arbor_H3RegionRedraw", en=dict(
             "sampler": "From KSamplerSelect, as on a custom sampler. Tested with `lcm`.",
             "sigmas": "Redraw strength, as on a custom sampler. Repair with Manual Sigmas `0.7, 0.494118, 0`. To replace something, start near 1.",
             "denoise": "How much of `sigmas` to take, from its end, exactly as Split Sigmas Denoise does: the steps are counted, not the noise levels. 1 takes them all, as they come. 0.5 of `0.7, 0.494118, 0` takes `0.494118, 0`; 0.5 of a schedule from 1.0 takes its lower half. 0 leaves everything as it was.",
-            "prompt": "What the regions should look like, subjects included. The default is for faces, so change it for anything else. With a subject reference, `<Picture 1>` is that subject's picture.",
+            "prompt": "What the regions should look like, subjects included, in H3's prompt format. The default repairs faces in any style; change it for anything else. With a subject reference, `<Picture 1>` is that subject's picture. See Writing the prompt.",
             "seed": "Noise seed. Each crop adds its own offset.",
             "refine_size": "Short edge a crop is enlarged to before it is redrawn. 512 repairs faces a third quicker than 768, the short edge of H3's native 1344 × 768, and as well. For replacing something, 768.",
             "context": "Crop size as a multiple of the region. Lower lets it fill the crop and enlarges it more; higher shows the model more of what surrounds it. 2 keeps faces closest to the original at the same speed as 4; below 2 the redrawn area can reach the crop's edge.",
@@ -149,6 +149,42 @@ A face a few dozen pixels wide is more than the model can draw at 2K. More tiles
 
 ## Repairing faces
 It works on a 768p draft as well as on a 2K video. Connect SAM3 Track to Mask with `face:16` as the SAM3 prompt to `masks`, and Manual Sigmas `0.7, 0.494118, 0` with the lcm sampler. The other settings can stay as they are. If a face still looks unlike the original, lower `denoise` or use Manual Sigmas `0.5, 0.3, 0`: both repair less. Faces in the mask that are under `max_size` are redrawn, a lead's among them, so leave out of the mask with `object_indices` any face that must not change.
+
+## Writing the prompt
+The default is written the way MiniMax H3's prompt guide asks: `integrated_multimodal_description`, then `overall_soundscape` and `non_diegetic_music`, which are `N/A` because the sound is kept silent here. It names no style, only that the style stays as it is, so it serves live action, anime and 3D alike. Besides clear eyes, nose and mouth, it asks for small natural movement: breathing, blinking, glances, slight head turns. Without it, faces that are redrawn tend to go still.
+
+To redraw something else from text, keep the three fields and change the description. Say what is there and what it does, not where the shot is:
+
+```
+integrated_multimodal_description: [Shot 1] The style, colors and lighting stay the same throughout the shot. Her hand holds a small worn paperback book with a deep red cover and gold lettering.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A
+```
+
+With a subject picture, H3 works in its reference mode, which has fields of its own:
+
+```
+subject_definitions:
+<Subject 1> is the person in <Picture 1>, with the same face, hair and clothing.
+
+summary:
+[reference generation] <Subject 1> takes the place of the person in this shot.
+
+retention_analysis:
+<Subject 1> (appears in [Shot 1]): fully_preserved - face, hair and clothing are kept.
+
+detailed_description:
+The style, colors and lighting stay the same throughout the shot.
+[Shot 1] <Subject 1> stands still in place of the person in this shot, with the same pose, framing and light.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A
+```
+
+Write in English, as the guide does. Text that shows on screen goes in double quotes, as it reads.
 
 ## How it works
 1. Every separate piece of a mask is a region. Each is followed from frame to frame by where it is and how large, within a shot, so something that is there for two seconds costs nothing afterwards. A region hidden for up to a second is picked up again.
@@ -187,7 +223,7 @@ What is redrawn is drawn anew, not recovered. It can change between seeds.
             "sampler": ("采样器", "接 KSamplerSelect，和自定义采样器一样。测试用的是 `lcm`。"),
             "sigmas": ("Sigmas", "重画强度，和自定义采样器一样。修复用 Manual Sigmas `0.7, 0.494118, 0`。要替换东西，起点接近 1。"),
             "denoise": ("降噪", "从 `sigmas` 末尾取多少步，和 Split Sigmas Denoise 完全一致：按步数算，不按噪声大小算。1 = 全部照用。对 `0.7, 0.494118, 0` 取 0.5 得到 `0.494118, 0`；对从 1.0 开始的调度取 0.5 得到后一半。0 = 什么都不改。"),
-            "prompt": ("提示词", "重画的区域（包括主体）要画成什么样。默认内容是给人脸用的，修其他东西请改掉。接了主体参考图时，`<Picture 1>` 指那个主体的图片。"),
+            "prompt": ("提示词", "重画的区域（包括主体）要画成什么样，按 H3 的提示词格式写。默认内容用来修复人脸，任何画风都适用，修其他东西请改掉。接了主体参考图时，`<Picture 1>` 指那个主体的图片。见“提示词怎么写”。"),
             "seed": ("种子", "噪声种子。每个裁切区域会加上自己的偏移。"),
             "refine_size": ("精修尺寸", "裁切区域重画前，短边放大到的像素数。修人脸时 512 比 768（H3 原生 1344 × 768 的短边）快三分之一，效果相当。替换东西时用 768。"),
             "context": ("参考范围", "裁切框是区域的多少倍。调小后区域占满框、放大更多；调大后模型能看到更多周围的画面。2 的速度和 4 一样，人脸最贴近原片；低于 2 时重画范围可能碰到裁切框边缘。"),
@@ -202,6 +238,42 @@ What is redrawn is drawn anew, not recovered. It can change between seeds.
 
 ## 修复人脸
 768p 草稿和 2K 成片都能用。把 SAM3 提示词写成 `face:16`，SAM3 Track to Mask 接到 `蒙版`，Manual Sigmas 用 `0.7, 0.494118, 0`，采样器用 lcm。其余设置保持默认即可。如果脸和原片还是差得多，调小 `降噪`，或者把 Manual Sigmas 改用 `0.5, 0.3, 0`：两者都会修复得更少。蒙版里小于 `最大尺寸` 的脸都会重画，主角也不例外，不能变的脸请用 `object_indices` 排除在蒙版外。
+
+## 提示词怎么写
+默认提示词按 MiniMax H3 官方提示词指南的格式写：先是 `integrated_multimodal_description`，然后是 `overall_soundscape` 和 `non_diegetic_music`。这里声音保持静音，所以后两项写 `N/A`。它不指定画风，只要求画风保持不变，所以写实、动画、3D 都能直接用。除了清楚的眼睛、鼻子和嘴，它还描述了细小的自然动作：呼吸、眨眼、看向别处、轻微转头。不写这些，重画的脸容易僵住。
+
+按文字重画别的东西时，保留这三项，只改描述。写那里有什么、在做什么，不要写镜头在什么地方：
+
+```
+integrated_multimodal_description: [Shot 1] The style, colors and lighting stay the same throughout the shot. Her hand holds a small worn paperback book with a deep red cover and gold lettering.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A
+```
+
+接了主体参考图时，H3 用的是参考模式，有它自己的几项：
+
+```
+subject_definitions:
+<Subject 1> is the person in <Picture 1>, with the same face, hair and clothing.
+
+summary:
+[reference generation] <Subject 1> takes the place of the person in this shot.
+
+retention_analysis:
+<Subject 1> (appears in [Shot 1]): fully_preserved - face, hair and clothing are kept.
+
+detailed_description:
+The style, colors and lighting stay the same throughout the shot.
+[Shot 1] <Subject 1> stands still in place of the person in this shot, with the same pose, framing and light.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A
+```
+
+和指南一样用英文写。画面里出现的文字放在双引号里，照原样写。
 
 ## 原理
 1. 蒙版里每一块独立的区域单独处理。在同一镜头内按位置和大小逐帧跟随，所以只出现两秒的东西，后面的画面不受影响。被遮挡不超过一秒，会重新接上。

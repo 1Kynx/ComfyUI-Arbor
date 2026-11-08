@@ -1611,7 +1611,7 @@
       },
       "prompt": {
         "name": "prompt",
-        "tooltip": "What the regions should look like, subjects included. The default is for faces, so change it for anything else. With a subject reference, `<Picture 1>` is that subject's picture."
+        "tooltip": "What the regions should look like, subjects included, in H3's prompt format. The default repairs faces in any style; change it for anything else. With a subject reference, `<Picture 1>` is that subject's picture. See Writing the prompt."
       },
       "seed": {
         "name": "seed",

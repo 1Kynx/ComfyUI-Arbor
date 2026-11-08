@@ -25,7 +25,7 @@ Repair the small faces of a finished video, which is what its defaults are for. 
 - **denoise** · *FLOAT*  
   How much of `sigmas` to take, from its end, exactly as Split Sigmas Denoise does: the steps are counted, not the noise levels. 1 takes them all, as they come. 0.5 of `0.7, 0.494118, 0` takes `0.494118, 0`; 0.5 of a schedule from 1.0 takes its lower half. 0 leaves everything as it was.
 - **prompt** · *STRING*  
-  What the regions should look like, subjects included. The default is for faces, so change it for anything else. With a subject reference, `<Picture 1>` is that subject's picture.
+  What the regions should look like, subjects included, in H3's prompt format. The default repairs faces in any style; change it for anything else. With a subject reference, `<Picture 1>` is that subject's picture. See Writing the prompt.
 - **seed** · *INT*  
   Noise seed. Each crop adds its own offset.
 - **refine_size** · *INT*  
@@ -57,6 +57,42 @@ A face a few dozen pixels wide is more than the model can draw at 2K. More tiles
 
 ## Repairing faces
 It works on a 768p draft as well as on a 2K video. Connect SAM3 Track to Mask with `face:16` as the SAM3 prompt to `masks`, and Manual Sigmas `0.7, 0.494118, 0` with the lcm sampler. The other settings can stay as they are. If a face still looks unlike the original, lower `denoise` or use Manual Sigmas `0.5, 0.3, 0`: both repair less. Faces in the mask that are under `max_size` are redrawn, a lead's among them, so leave out of the mask with `object_indices` any face that must not change.
+
+## Writing the prompt
+The default is written the way MiniMax H3's prompt guide asks: `integrated_multimodal_description`, then `overall_soundscape` and `non_diegetic_music`, which are `N/A` because the sound is kept silent here. It names no style, only that the style stays as it is, so it serves live action, anime and 3D alike. Besides clear eyes, nose and mouth, it asks for small natural movement: breathing, blinking, glances, slight head turns. Without it, faces that are redrawn tend to go still.
+
+To redraw something else from text, keep the three fields and change the description. Say what is there and what it does, not where the shot is:
+
+```
+integrated_multimodal_description: [Shot 1] The style, colors and lighting stay the same throughout the shot. Her hand holds a small worn paperback book with a deep red cover and gold lettering.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A
+```
+
+With a subject picture, H3 works in its reference mode, which has fields of its own:
+
+```
+subject_definitions:
+<Subject 1> is the person in <Picture 1>, with the same face, hair and clothing.
+
+summary:
+[reference generation] <Subject 1> takes the place of the person in this shot.
+
+retention_analysis:
+<Subject 1> (appears in [Shot 1]): fully_preserved - face, hair and clothing are kept.
+
+detailed_description:
+The style, colors and lighting stay the same throughout the shot.
+[Shot 1] <Subject 1> stands still in place of the person in this shot, with the same pose, framing and light.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A
+```
+
+Write in English, as the guide does. Text that shows on screen goes in double quotes, as it reads.
 
 ## How it works
 1. Every separate piece of a mask is a region. Each is followed from frame to frame by where it is and how large, within a shot, so something that is there for two seconds costs nothing afterwards. A region hidden for up to a second is picked up again.

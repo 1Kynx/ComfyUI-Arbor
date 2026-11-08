@@ -39,8 +39,16 @@ CONTEXT = 2.0                   # default crop size / the face: closer to the or
 CHUNK = 24                      # crops prepared per round, to be put together into a few videos
 REEL_TOKENS = 24000             # crops of one canvas are sampled as one video of up to this many tokens
 REFINE_SIZE = 512               # faster than H3's 768 by a third, and repairs collapsed faces as well or better
-DEFAULT_PROMPT = ("Ordinary people in the background of a film shot. Realistic natural faces with clear eyes, noses "
-                  "and mouths, natural skin, shot on a cinema camera.")
+# in the H3 prompt guide's format (docs/VIDEO_PROMPT_WRITING_GUIDE_base_en.md): no style named, so it suits any style;
+# the audio is held silent, so the sound fields are N/A
+DEFAULT_PROMPT = (
+    "integrated_multimodal_description: [Shot 1] The style, colors, lighting, focus and grain stay the same throughout the "
+    "shot. Each person keeps their place, pose, head angle, clothing and hair, and carries on naturally with what they are "
+    "doing: they breathe, blink now and then, glance around, turn their heads a little and shift their weight, and their "
+    "expressions change gently with the moment. Every face is clear and well-formed, drawn with the same technique and level "
+    "of detail as the rest of the image: two matching eyes looking the same way, defined eyebrows, a well-shaped nose, a "
+    "natural mouth, and natural skin and hair. Faces that are partly hidden, turned away or out of focus stay that way."
+    "\n\noverall_soundscape: N/A\n\nnon_diegetic_music: N/A")
 
 
 @dataclass
@@ -706,7 +714,7 @@ class H3RegionRedraw(IO.ComfyNode):
                             tooltip="Share of the sigmas' steps to take, from the end, as Split Sigmas Denoise does: 1 "
                                     "takes them all, as they are; 0.5 of 0.7, 0.494118, 0 takes 0.494118, 0"),
              IO.String.Input("prompt", multiline=True, default=DEFAULT_PROMPT,
-                             tooltip="What the regions should look like, subjects included. The default is for faces. "
+                             tooltip="What the regions should look like, subjects included, in H3's prompt format. The default repairs faces in any style. "
                                      "A subject's picture is <Picture 1>"),
              IO.Int.Input("seed", default=0, min=0, max=0xffffffffffffffff, control_after_generate=True),
              IO.Int.Input("refine_size", default=REFINE_SIZE, min=384, max=1536, step=32,

@@ -25,7 +25,7 @@
 - **降噪** `denoise` · *FLOAT*  
   从 `sigmas` 末尾取多少步，和 Split Sigmas Denoise 完全一致：按步数算，不按噪声大小算。1 = 全部照用。对 `0.7, 0.494118, 0` 取 0.5 得到 `0.494118, 0`；对从 1.0 开始的调度取 0.5 得到后一半。0 = 什么都不改。
 - **提示词** `prompt` · *STRING*  
-  重画的区域（包括主体）要画成什么样。默认内容是给人脸用的，修其他东西请改掉。接了主体参考图时，`<Picture 1>` 指那个主体的图片。
+  重画的区域（包括主体）要画成什么样，按 H3 的提示词格式写。默认内容用来修复人脸，任何画风都适用，修其他东西请改掉。接了主体参考图时，`<Picture 1>` 指那个主体的图片。见“提示词怎么写”。
 - **种子** `seed` · *INT*  
   噪声种子。每个裁切区域会加上自己的偏移。
 - **精修尺寸** `refine_size` · *INT*  
@@ -57,6 +57,42 @@
 
 ## 修复人脸
 768p 草稿和 2K 成片都能用。把 SAM3 提示词写成 `face:16`，SAM3 Track to Mask 接到 `蒙版`，Manual Sigmas 用 `0.7, 0.494118, 0`，采样器用 lcm。其余设置保持默认即可。如果脸和原片还是差得多，调小 `降噪`，或者把 Manual Sigmas 改用 `0.5, 0.3, 0`：两者都会修复得更少。蒙版里小于 `最大尺寸` 的脸都会重画，主角也不例外，不能变的脸请用 `object_indices` 排除在蒙版外。
+
+## 提示词怎么写
+默认提示词按 MiniMax H3 官方提示词指南的格式写：先是 `integrated_multimodal_description`，然后是 `overall_soundscape` 和 `non_diegetic_music`。这里声音保持静音，所以后两项写 `N/A`。它不指定画风，只要求画风保持不变，所以写实、动画、3D 都能直接用。除了清楚的眼睛、鼻子和嘴，它还描述了细小的自然动作：呼吸、眨眼、看向别处、轻微转头。不写这些，重画的脸容易僵住。
+
+按文字重画别的东西时，保留这三项，只改描述。写那里有什么、在做什么，不要写镜头在什么地方：
+
+```
+integrated_multimodal_description: [Shot 1] The style, colors and lighting stay the same throughout the shot. Her hand holds a small worn paperback book with a deep red cover and gold lettering.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A
+```
+
+接了主体参考图时，H3 用的是参考模式，有它自己的几项：
+
+```
+subject_definitions:
+<Subject 1> is the person in <Picture 1>, with the same face, hair and clothing.
+
+summary:
+[reference generation] <Subject 1> takes the place of the person in this shot.
+
+retention_analysis:
+<Subject 1> (appears in [Shot 1]): fully_preserved - face, hair and clothing are kept.
+
+detailed_description:
+The style, colors and lighting stay the same throughout the shot.
+[Shot 1] <Subject 1> stands still in place of the person in this shot, with the same pose, framing and light.
+
+overall_soundscape: N/A
+
+non_diegetic_music: N/A
+```
+
+和指南一样用英文写。画面里出现的文字放在双引号里，照原样写。
 
 ## 原理
 1. 蒙版里每一块独立的区域单独处理。在同一镜头内按位置和大小逐帧跟随，所以只出现两秒的东西，后面的画面不受影响。被遮挡不超过一秒，会重新接上。
