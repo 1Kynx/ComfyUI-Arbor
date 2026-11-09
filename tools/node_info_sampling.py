@@ -37,6 +37,9 @@ No seams in the overlap zones. At 2K the 2 × 2 tiles are about H3's native size
 - Keep ComfyUI's default **dynamic VRAM**. With `--disable-dynamic-vram` or `--lowvram` the weights are streamed from RAM for every model call, so each tile streams them again: tiling still saves memory but runs slower.
 - For text-to-video from noise, tiles can drift apart in content — use it for refinement, not generation.
 - Pair it with **Add Guide Frames for MiniMax H3** to anchor the original's frames; the guides are cropped to every tile.
+
+## Reference pictures and videos
+From **MiniMax H3 Reference to Video**, reference pictures and videos have a canvas of their own and go to every tile whole. A reference video that shows the same frame as the video, as long and the same shape within 3%, is cut to each tile instead: that is how the IC refiner (Regenerate-2K-IC) and edits give their source, the draft as `<Video 1>`. Each tile then gets the matching part of the draft, not the whole of it. On a 2K IC refine of 124 frames in 2 × 2 tiles this took 565 s instead of 945 s, as sharp (10.74 against 10.83) and closer to the draft. A motion, camera or style reference of another shape or length still goes in whole, and costs a whole video's tokens in every tile: shrink or shorten it if it is slow.
 """), zh=dict(
     name="MiniMax H3 分块精修",
     desc="把 MiniMax H3 每一步的画面切成重叠的空间块分别采样、每步羽化融合，降低显存。每块保留全部帧（不切时间）；引导帧和去噪蒙版按块同步裁剪。",
@@ -73,6 +76,9 @@ No seams in the overlap zones. At 2K the 2 × 2 tiles are about H3's native size
 - 保持 ComfyUI 默认的 **动态显存**。用 `--disable-dynamic-vram` 或 `--lowvram` 时，权重每次模型调用都从内存读取，每个块都要再读一遍：仍然省显存，但更慢。
 - 从噪声开始的文生视频，各块内容可能对不上——用于精修，不用于生成。
 - 配合 **MiniMax H3 逐帧引导** 锚定原片的帧；引导会裁到每一块。
+
+## 参考图和参考视频
+**MiniMax H3 参考转视频** 接入的参考图和参考视频有自己的画布，会完整地送进每一块。参考视频如果和要精修的视频是同一画面（时长相同、宽高比相差 3% 以内），则改为裁到每一块：IC 精修（Regenerate-2K-IC）和视频编辑就是这样把草稿作为 `<Video 1>` 传入的。这样每块只拿到草稿对应的部分，不是整张。2K、124 帧、2 × 2 分块的 IC 精修实测：耗时从 945 秒降到 565 秒，清晰度相当（10.74 对 10.83），而且更贴近草稿。形状或时长不同的动作、运镜、画风参考视频仍完整送进每一块，每块都要多算一整段视频的 token，太慢时请缩小或剪短。
 """))
 
 node("Arbor_H3AddGuideFrames", en=dict(

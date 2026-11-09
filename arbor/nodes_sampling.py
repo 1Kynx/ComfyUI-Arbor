@@ -136,8 +136,36 @@ def tile_weights(box, h: int, w: int, feather: int) -> torch.Tensor:
     return _ramp(y0, y1, h, feather)[:, None] * _ramp(x0, x1, w, feather)[None, :]
 
 
-def crop_payload(payload: dict, box, guided: bool = True) -> dict:
-    """The H3 payload of one tile: guides cropped to it, or left out when not guided; the layout is left for the model
+SAME_FRAMING = 0.03  # a reference video this close to the video's shape, and as long, shows the same frame
+
+
+def framed_like(ref: dict, latent_t: int, h: int, w: int) -> bool:
+    """Whether a reference video shows the same frame as the video being refined: as long, and the same shape within
+    3%. That is how the IC refiner and edits give their source, and such a reference is cropped to each tile like the
+    video. A reference of another shape or length (a motion, camera or style reference) goes to every tile whole."""
+    z = ref.get("latent")
+    if ref.get("kind") not in ("video", "video_audio") or z is None or z.dim() != 5:
+        return False
+    return z.shape[2] == latent_t and abs((z.shape[4] / z.shape[3]) / (w / h) - 1) < SAME_FRAMING
+
+
+def crop_ref(ref: dict, box, h: int, w: int) -> dict:
+    """A same-framed reference video cut to one tile: the box (on the video's latent grid of h x w) taken to the
+    reference's own grid, out to whole 2 x 2 patches."""
+    z = ref["latent"]
+    rh, rw = z.shape[3], z.shape[4]
+    y0, y1, x0, x1 = box
+    a, b = 2 * math.floor(y0 * rh / h / 2), min(rh, 2 * math.ceil(y1 * rh / h / 2))
+    c, d = 2 * math.floor(x0 * rw / w / 2), min(rw, 2 * math.ceil(x1 * rw / w / 2))
+    out = dict(ref)
+    out["latent"] = z[..., a:b, c:d]
+    out["latent_h"], out["latent_w"] = b - a, d - c
+    return out
+
+
+def crop_payload(payload: dict, box, guided: bool = True, full=None) -> dict:
+    """The H3 payload of one tile: guides cropped to it, or left out when not guided; with full (latent t, h, w of the
+    whole video), a reference video framed like the video is cropped to the tile too. The layout is left for the model
     to rebuild."""
     y0, y1, x0, x1 = box
     keyframes = []
@@ -154,9 +182,15 @@ def crop_payload(payload: dict, box, guided: bool = True) -> dict:
     out = {k: v for k, v in payload.items() if k != "layout"}
     if payload.get("keyframes") is not None:
         out["keyframes"] = keyframes
-    # same order as MiniMaxH3._cond_latents: keyframes, then references (whole: they have their own canvas)
+    refs = payload.get("refs") or []
+    if full is not None and refs:
+        t, h, w = full
+        refs = [crop_ref(r, box, h, w) if framed_like(r, t, h, w) else r for r in refs]
+        out["refs"] = refs
+    # same order as MiniMaxH3._cond_latents: keyframes, then references (whole, but for one framed like the video:
+    # the others have a canvas of their own)
     out["cond_video_latents"] = ([kf["latent"] for kf in keyframes if kf.get("latent") is not None]
-                                 + [r["latent"] for r in payload.get("refs") or [] if "latent" in r])
+                                 + [r["latent"] for r in refs if "latent" in r])
     return out
 
 
@@ -290,7 +324,14 @@ def make_wrapper(tiles_y: int, tiles_x: int, overlap: int, feather: int, previou
         payload = c.get("minimax_payload")
         if not isinstance(payload, dict):
             return payload
-        cropped = crop_payload(payload, box) if video_shape[-2:] != c["_full_hw"] else payload
+        full = (video_shape[2], *c["_full_hw"])
+        cropped = crop_payload(payload, box, full=full) if video_shape[-2:] != c["_full_hw"] else payload
+        videos = [r for r in payload.get("refs") or [] if r.get("kind") in ("video", "video_audio")]
+        framed = [i + 1 for i, r in enumerate(videos) if framed_like(r, *full)]  # numbered as <Video N>
+        if framed and video_shape[-2:] != c["_full_hw"] and "refs" not in announced:
+            announced.add("refs")
+            log.info("H3 Tiled Refine: <Video %s> has the video's framing and is cropped to each tile",
+                     ">, <Video ".join(map(str, framed)))
         if not state["masking"]:
             return cropped
         try:

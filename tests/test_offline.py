@@ -1173,6 +1173,30 @@ def test_sampling():
     S.make_wrapper(2, 2, 4, 4, guide_mask=corner)(count_guides, {"input": x, "timestep": None, "c": c})
     assert calls == [(1, None)] * 4, "no text to rebuild the layout from: the whole guide, no failure"
     assert len(payload["keyframes"]) == 1 and S.KEEP not in payload, "the original payload is left untouched"
+    # a reference video framed like the video (the IC refiner's source) is cropped to each tile; others go in whole
+    rv = {"kind": "video", "latent_t": T_, "latent_h": 10, "latent_w": 8, "ref_audio_t": 0,
+          "latent": torch.randn(1, 24, T_, 10, 8)}
+    other = {"kind": "video", "latent_t": 2, "latent_h": 10, "latent_w": 8, "ref_audio_t": 0,
+             "latent": torch.randn(1, 24, 2, 10, 8)}
+    img = {"kind": "image", "latent_h": 6, "latent_w": 6, "latent": torch.randn(1, 24, 1, 6, 6)}
+    assert S.framed_like(rv, T_, H, W) and not S.framed_like(other, T_, H, W) and not S.framed_like(img, T_, H, W)
+    rp = {**payload, "refs": [img, rv, other]}
+    tile = S.crop_payload(rp, (0, 12, 0, 10), full=(T_, H, W))
+    assert tile["refs"][1]["latent"].shape[-2:] == (6, 6) and tile["refs"][1]["latent_h"] == 6
+    assert tile["refs"][0] is img and tile["refs"][2] is other and rp["refs"][1]["latent"].shape[-2:] == (10, 8)
+    assert [z.shape[-3:] for z in tile["cond_video_latents"][1:]] == [(1, 6, 6), (T_, 6, 6), (2, 10, 8)]
+    tl = PackedLayout(5, T_, 12, 10, 7, keyframes=tile["keyframes"], refs=tile["refs"])
+    rows = sum(z.shape[2] * (z.shape[3] // 2) * (z.shape[4] // 2) for z in tile["cond_video_latents"])
+    assert int((~tl.img_update).sum()) == rows, "the layout and the rows agree"
+    assert S.crop_payload(rp, (0, 12, 0, 10))["refs"][1] is rv, "without the whole video's size, nothing is cropped"
+    ref_sizes = []
+
+    def see_refs(x_, t_, latent_shapes=None, minimax_payload=None, denoise_mask=None, **kw):
+        ref_sizes.append(tuple(minimax_payload["refs"][1]["latent"].shape[-2:]))
+        assert minimax_payload["refs"][0] is img and minimax_payload["refs"][2] is other
+        return x_
+    S.make_wrapper(2, 2, 4, 4)(see_refs, {"input": x, "timestep": None, "c": {**c, "minimax_payload": rp}})
+    assert len(ref_sizes) == 4 and all(h_ < 10 and w_ < 8 for h_, w_ in ref_sizes), ref_sizes
 
     class NotH3:
         model = object()
