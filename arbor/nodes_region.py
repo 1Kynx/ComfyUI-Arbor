@@ -588,6 +588,7 @@ def window(image: torch.Tensor, box, hw) -> torch.Tensor:
 
 ALIGN_MOST = 0.05  # share of the canvas's short edge a redrawn frame may be moved back by
 ALIGN_CHUNK = 16   # frames aligned at once
+ALIGN_SCALE = 0.05  # largest change of size a redrawn region may be put back with
 
 
 def _moved(x: torch.Tensor, dy: torch.Tensor, dx: torch.Tensor, mode: str = "bilinear") -> torch.Tensor:
@@ -600,35 +601,62 @@ def _moved(x: torch.Tensor, dy: torch.Tensor, dx: torch.Tensor, mode: str = "bil
     return F.grid_sample(x, torch.stack([gx, gy], -1), mode=mode, padding_mode="border", align_corners=False)
 
 
-def offsets(before: torch.Tensor, after: torch.Tensor, weight: torch.Tensor, levels: int = 4, iters: int = 6):
-    """[n, 2] (dy, dx) that move each frame of after onto before (all [n, 1, h, w]; weight says where to look): least
-    squares on the brightness, coarse to fine, so a move of several pixels is found as well as a fraction of one."""
-    d = torch.zeros(before.shape[0], 2, device=before.device)
+def _warped(x: torch.Tensor, p: torch.Tensor, centre: torch.Tensor, mode: str = "bilinear") -> torch.Tensor:
+    """[n, c, h, w] with each frame read at centre + (1 + s)(q - centre) + (dy, dx) for its p = (dy, dx, s): a shift and
+    a change of size about centre ([n, 2] as y, x, in pixels)."""
+    n, _, h, w = x.shape
+    ys = torch.arange(h, device=x.device, dtype=torch.float32)[None, :, None] + 0.5
+    xs = torch.arange(w, device=x.device, dtype=torch.float32)[None, None, :] + 0.5
+    cy, cx = centre[:, 0, None, None], centre[:, 1, None, None]
+    k = 1 + p[:, 2, None, None]
+    sy = (cy + k * (ys - cy) + p[:, 0, None, None]).expand(n, h, w)
+    sx = (cx + k * (xs - cx) + p[:, 1, None, None]).expand(n, h, w)
+    return F.grid_sample(x, torch.stack([sx / w * 2 - 1, sy / h * 2 - 1], -1), mode=mode, padding_mode="border",
+                         align_corners=False)
+
+
+def offsets(before: torch.Tensor, after: torch.Tensor, weight: torch.Tensor, levels: int = 4, iters: int = 8):
+    """(p [n, 3], centre [n, 2]): where to read each frame of after, as _warped does, so that it lies over before (all
+    [n, 1, h, w]; weight says where to look, and its middle is the centre a size change is about). Least squares on
+    the brightness, coarse to fine, so a move of several pixels is found as well as a fraction of one, and a region
+    redrawn a little larger or smaller is put back at its size."""
+    n, _, h, w = before.shape
+    ys = torch.arange(h, device=before.device, dtype=torch.float32)[:, None] + 0.5
+    xs = torch.arange(w, device=before.device, dtype=torch.float32)[None] + 0.5
+    mass = weight[:, 0].sum((1, 2)).clamp(min=1e-6)
+    centre = torch.stack([(weight[:, 0] * ys).sum((1, 2)) / mass, (weight[:, 0] * xs).sum((1, 2)) / mass], 1)
+    p = torch.zeros(n, 3, device=before.device)
     for level in range(levels - 1, -1, -1):
         s = 2 ** level
         b, a, wt = ((F.avg_pool2d(t, s) if s > 1 else t) for t in (before, after, weight))
-        b, a = _gaussian(b, 1.0), _gaussian(a, 1.0)
-        gy, gx = torch.gradient(b, dim=(2, 3))
-        syy, syx, sxx = ((wt * u * v).sum((1, 2, 3)) for u, v in ((gy, gy), (gy, gx), (gx, gx)))
-        det = syy * sxx - syx * syx
-        ok = det > 1e-9 * (syy + sxx) ** 2 + 1e-20
-        det = torch.where(ok, det, torch.ones_like(det))
+        b, a, wt = _gaussian(b, 1.0)[:, 0], _gaussian(a, 1.0), wt[:, 0]
+        c = centre / s
+        yy = torch.arange(b.shape[1], device=b.device, dtype=torch.float32)[None, :, None] + 0.5 - c[:, 0, None, None]
+        xx = torch.arange(b.shape[2], device=b.device, dtype=torch.float32)[None, None, :] + 0.5 - c[:, 1, None, None]
         for _ in range(iters):
-            r = _moved(a, d[:, 0] / s, d[:, 1] / s) - b
-            vy, vx = -(wt * gy * r).sum((1, 2, 3)), -(wt * gx * r).sum((1, 2, 3))
-            step = torch.stack([(sxx * vy - syx * vx) / det, (syy * vx - syx * vy) / det], 1) * ok[:, None]
-            d = d - step * s
-            if float(step.abs().max()) < 0.01:
+            q = torch.stack([p[:, 0] / s, p[:, 1] / s, p[:, 2]], 1)
+            wa = _warped(a, q, c)[:, 0]
+            gy, gx = torch.gradient(wa, dim=(1, 2))
+            J = torch.stack([gy, gx, gy * yy + gx * xx], 1)
+            A = torch.einsum("nihw,njhw,nhw->nij", J, J, wt)
+            v = -torch.einsum("nihw,nhw->ni", J, (wa - b) * wt)
+            tr = A.diagonal(dim1=1, dim2=2).sum(1)
+            ok = torch.linalg.det(A) > 1e-12 * tr ** 3 + 1e-30
+            A = torch.where(ok[:, None, None], A, torch.eye(3, device=A.device).expand_as(A))
+            step = torch.linalg.solve(A, v) * ok[:, None]
+            p = p + torch.stack([step[:, 0] * s, step[:, 1] * s, step[:, 2]], 1)
+            if float(step[:, :2].abs().max()) < 0.01 and float(step[:, 2].abs().max()) < 1e-4:
                 break
-    return d
+    return p, centre
 
 
 def align(before: torch.Tensor, after: torch.Tensor, areas: list) -> tuple[torch.Tensor, float]:
-    """after [n, h, w, c] with each region of each frame moved by the fraction of a pixel or the few pixels that lay it
-    back over before (areas: one [n, h, w] per region). A redraw of something that should stay put can come out a
-    little off from frame to frame; pasted back, the region then shakes against what is around it. Regions sharing a
-    crop are moved each on its own, and blended where their areas meet. A move that would not bring the two closer, or
-    would be large, is left out. Also the largest move made, in canvas pixels. On the GPU if there is room, else here."""
+    """after [n, h, w, c] with each region of each frame moved by the fraction of a pixel or the few pixels, and brought
+    back to the size, that lay it over before (areas: one [n, h, w] per region). A redraw of something that should stay
+    put can come out a little off, or a little larger or smaller, from frame to frame; pasted back, the region then
+    shakes or breathes against what is around it. Regions sharing a crop are moved each on its own, and blended where
+    their areas meet. A move that would not bring the two closer, or would be large, is left out. Also the largest move
+    made at a region's edge, in canvas pixels. On the GPU if there is room, else here."""
     if torch.cuda.is_available():
         try:
             return _align(before, after, areas, torch.device("cuda"))
@@ -649,13 +677,17 @@ def _align(before: torch.Tensor, after: torch.Tensor, areas: list, dev) -> tuple
         for area in areas:
             wt = _gaussian(F.max_pool2d(area[c:c + ALIGN_CHUNK].to(dev, torch.float32)[:, None], 9, 1, 4),
                            max(h, w) * 0.02)
-            d = offsets(b, a, wt)
+            p, centre = offsets(b, a, wt)
             r0 = (wt * (a - b) ** 2).sum((1, 2, 3))
-            r1 = (wt * (_moved(a, d[:, 0], d[:, 1]) - b) ** 2).sum((1, 2, 3))
-            d = d * ((d.abs().amax(1) <= most) & (r1 < r0))[:, None]
-            largest = max(largest, float(d.abs().amax()) if len(d) else 0.0)
-            moved = torch.where((d.abs().amax(1) > 0)[:, None, None, None],
-                                _moved(x.movedim(-1, 1), d[:, 0], d[:, 1], "bicubic").movedim(1, -1).clamp(0, 1), x)
+            r1 = (wt * (_warped(a, p, centre) - b) ** 2).sum((1, 2, 3))
+            # how far the region's edge moves: the shift, and the size change at the region's reach from its centre
+            reach = (wt[:, 0] > 0.5).flatten(1).float().sum(1).sqrt() / 2
+            edge = p[:, :2].abs().amax(1) + p[:, 2].abs() * reach
+            use = (p[:, :2].abs().amax(1) <= most) & (p[:, 2].abs() <= ALIGN_SCALE) & (r1 < r0)
+            p = p * use[:, None]
+            largest = max(largest, float((edge * use).amax()) if len(p) else 0.0)
+            moved = torch.where(use[:, None, None, None],
+                                _warped(x.movedim(-1, 1), p, centre, "bicubic").movedim(1, -1).clamp(0, 1), x)
             if len(areas) == 1:
                 mix, total = moved, None
                 break

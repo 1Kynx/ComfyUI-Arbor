@@ -1382,6 +1382,12 @@ def test_region_redraw():
     al_err = (al_fixed - al_before)[:, 40:88, 40:88].abs().amax((1, 2, 3))
     assert float(al_err.max()) < 0.01 and 2.0 < al_most < 2.5, (al_err, al_most)
     assert torch.equal(al_fixed[1], al_after[1]), "a frame in place is not resampled"
+    # one redrawn a little larger or smaller is put back at its size too
+    al_p = torch.tensor([[0.8, -1.2, 0.03], [0.0, 0.0, -0.025], [-0.5, 0.4, 0.0]])
+    al_sized = Fc._warped(al_before.movedim(-1, 1), al_p, torch.full((3, 2), 64.0)).movedim(1, -1)
+    al_back, al_edge = Fc.align(al_before, al_sized, [al_area])
+    al_err3 = (al_back - al_before)[:, 40:88, 40:88].abs().amax((1, 2, 3))
+    assert float(al_err3.max()) < 0.01 and al_edge > 1.5, (al_err3, al_edge)
     # two regions in one crop, off in different ways: each is moved back on its own
     al_two = al_before.clone()
     al_two[:, :, 64:] = Fc._moved(al_before.movedim(-1, 1), al_true[:, 1], al_true[:, 0]).movedim(1, -1)[:, :, 64:]
