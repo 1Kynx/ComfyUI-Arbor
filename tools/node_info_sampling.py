@@ -3,11 +3,11 @@
 from node_info import node
 
 node("Arbor_H3TiledRefine", en=dict(
-    desc="Lower the memory of a MiniMax H3 step by sampling the video in overlapping spatial tiles, blended at every step. Every tile keeps all frames, so the video is never split in time; guide frames and denoise masks are cropped to each tile.",
+    desc="Lower the memory of a MiniMax H3 step by sampling the video in overlapping spatial tiles, blended at every step. Every tile keeps all frames, so the video is never split in time; guide frames, denoise masks and a reference video of the same frame are cropped to each tile.",
     inputs={"model": "A MiniMax H3 model, after its LoRAs and attention patches (Chunk FeedForward, Block Sparse Attention).",
             "tiles_x": "Tiles across. 0 = auto: the fewest tiles that keep each one about H3's native 768 × 1344 size. 1 with tiles_y 1 = off.",
             "tiles_y": "Tiles down. 0 = auto.",
-            "overlap": "Pixels that neighbouring tiles share. Their predictions are blended there, so the joins don't show. 128 is plenty; 0 leaves visible seams.",
+            "overlap": "Pixels that neighbouring tiles share. Their predictions are blended there, so the joins don't show. 128 is plenty; 0 leaves visible seams. 64 was a tenth quicker on a 2K refine and still seamless, half a dB further from an untiled run.",
             "guide_mask": "Where the guide counts, at any size, one mask per frame or one for all. The guide is a second copy of the video's tokens; only those inside the mask (grown by a token) go in. The masked area follows the guide; the rest keeps only what the start latent holds, so at high start noise it is redrawn (new faces, new detail) and at low noise it stays close. Fewer tokens run faster: with a third of the frame masked a step takes about half as long. For more margin than the one guide token (32 px) always kept around it, grow the mask first with Grow Mask. Not connected: the whole guide."},
     outputs=["The model, patched to sample in tiles. Connect it to the guider (BasicGuider)."],
     doc="""## What it is for
@@ -40,13 +40,22 @@ No seams in the overlap zones. At 2K the 2 × 2 tiles are about H3's native size
 
 ## Reference pictures and videos
 From **MiniMax H3 Reference to Video**, reference pictures and videos have a canvas of their own and go to every tile whole. A reference video that shows the same frame as the video, as long and the same shape within 3%, is cut to each tile instead: that is how the IC refiner (Regenerate-2K-IC) and edits give their source, the draft as `<Video 1>`. Each tile then gets the matching part of the draft, not the whole of it. On a 2K IC refine of 124 frames in 2 × 2 tiles this took 565 s instead of 945 s, as sharp (10.74 against 10.83) and closer to the draft. A motion, camera or style reference of another shape or length still goes in whole, and costs a whole video's tokens in every tile: shrink or shorten it if it is slow.
+
+Two more things follow that reference into a tile:
+
+- **What the text says of it.** The text encoder is shown the reference video as well, two frames a second, and its picture tokens sit among the prompt's own: 6000 of a tile's 59000 tokens for a 5 s draft, more for a longer one, and the same 6000 in every tile. A tile keeps the ones over its own part, about half the text in a 2 × 2 grid. The prompt itself stays whole.
+- **Where it lies.** The draft's grid is coarser than the video's and is cut out to whole patches, so the piece a tile gets reaches up to 5% past the tile. It is given the positions of where it really lies; H3 would otherwise read it as the tile exactly, a little off.
+
+The same 2K refine, three steps: sampling 355 s instead of 423 s, as sharp, as close to the draft (27.7 against 27.5 dB) and to an untiled run, and no seams.
+
+With core **Model Sparse Attention**, leave `sink_conditioning` on. It keeps the text and the references exact for every token, and that is most of the attention's work in a refine. Letting the reference be attended sparsely like the video was a tenth quicker in the same test, and came out 1 dB further from the draft.
 """), zh=dict(
     name="MiniMax H3 分块精修",
-    desc="把 MiniMax H3 每一步的画面切成重叠的空间块分别采样、每步羽化融合，降低显存。每块保留全部帧（不切时间）；引导帧和去噪蒙版按块同步裁剪。",
+    desc="把 MiniMax H3 每一步的画面切成重叠的空间块分别采样、每步羽化融合，降低显存。每块保留全部帧（不切时间）；引导帧、去噪蒙版和同画面的参考视频按块同步裁剪。",
     inputs={"model": ("模型", "MiniMax H3 模型，接在 LoRA 和注意力补丁（Chunk FeedForward、Block Sparse Attention）之后。"),
             "tiles_x": ("横向块数", "横向分几块。0 = 自动：每块约为 H3 原生 768 × 1344 尺寸时块数最少。与纵向都为 1 = 关闭。"),
             "tiles_y": ("纵向块数", "纵向分几块。0 = 自动。"),
-            "overlap": ("重叠", "相邻块共享的像素，在这里融合预测，接缝看不出来。128 足够；0 会有明显接缝。"),
+            "overlap": ("重叠", "相邻块共享的像素，在这里融合预测，接缝看不出来。128 足够；0 会有明显接缝。2K 精修实测 64 快一成，仍然没有接缝，与不分块结果的差距大了 0.5 dB。"),
             "guide_mask": ("引导蒙版", "引导在哪里起作用，尺寸不限，每帧一张或全部共用一张。引导是视频 token 的第二份拷贝，只有蒙版内（外扩一个 token）的那部分送进模型。蒙版内跟随引导；蒙版外只保留起始 latent 里的内容：起始噪声高时会重画（新的脸、新的细节），噪声低时变化不大。token 少了就更快：蒙版占画面三分之一时每步约省一半。蒙版周围固定多留一个引导 token（32 px）；要留更多就先接 Grow Mask 扩大蒙版。不接时用完整引导。")},
     outputs=[("模型", "按块采样的模型，接到引导器（BasicGuider）。")],
     doc="""## 用途
@@ -79,6 +88,15 @@ From **MiniMax H3 Reference to Video**, reference pictures and videos have a can
 
 ## 参考图和参考视频
 **MiniMax H3 参考转视频** 接入的参考图和参考视频有自己的画布，会完整地送进每一块。参考视频如果和要精修的视频是同一画面（时长相同、宽高比相差 3% 以内），则改为裁到每一块：IC 精修（Regenerate-2K-IC）和视频编辑就是这样把草稿作为 `<Video 1>` 传入的。这样每块只拿到草稿对应的部分，不是整张。2K、124 帧、2 × 2 分块的 IC 精修实测：耗时从 945 秒降到 565 秒，清晰度相当（10.74 对 10.83），而且更贴近草稿。形状或时长不同的动作、运镜、画风参考视频仍完整送进每一块，每块都要多算一整段视频的 token，太慢时请缩小或剪短。
+
+跟着这段参考视频一起裁到每一块的还有两样：
+
+- **文本里对它的描述。** 文本编码器也会看参考视频（每秒两帧），它的画面 token 和提示词排在一起：5 秒的草稿约 6000 个，而一块总共 59000 个 token，视频越长越多，并且每一块都要带上同样的一份。现在每块只保留自己那部分画面对应的 token，2 × 2 分块时文本约剩一半。提示词本身完整保留。
+- **它的位置。** 草稿的网格比成片粗，裁切时要取整到完整的补丁，所以每块拿到的那片参考最多比这一块大出 5%。现在按它真实所在的位置给位置编码；否则 H3 会把它当成正好等于这一块，有一点错位。
+
+同一个 2K 精修（三步）：采样从 423 秒降到 355 秒，清晰度不变，与草稿（27.7 对 27.5 dB）和不分块结果的贴合度不变，没有接缝。
+
+配合核心节点 **Model Sparse Attention** 时，`sink_conditioning` 请保持开启。它让每个 token 都精确地看到文本和参考，这也是精修时注意力的主要开销。测试过让参考视频和画面一样走稀疏注意力：同一测试里快一成，但结果离草稿远了 1 dB。
 """))
 
 node("Arbor_H3AddGuideFrames", en=dict(
@@ -142,7 +160,7 @@ node("Arbor_H3RegionRedraw", en=dict(
             "denoise": "How much of `sigmas` to take, from its end, exactly as Split Sigmas Denoise does: the steps are counted, not the noise levels. 1 takes them all, as they come. 0.5 of `0.7, 0.494118, 0` takes `0.494118, 0`; 0.5 of a schedule from 1.0 takes its lower half. 0 leaves everything as it was.",
             "prompt": "What the regions should look like, subjects included, in H3's prompt format. The default repairs faces in any style; change it for anything else. With a subject reference, `<Picture 1>` is that subject's picture. See Writing the prompt.",
             "seed": "Noise seed. Each crop adds its own offset.",
-            "refine_size": "Short edge a crop is enlarged to before it is redrawn. 512 repairs faces a third quicker than 768, the short edge of H3's native 1344 × 768, and as well. For replacing something, 768.",
+            "refine_size": "Short edge a crop is enlarged to before it is redrawn. 448 repairs faces as well as 512 in two thirds of the time: H3's VAE works in 256 px tiles, 4 for a 448 canvas and 9 for 512. 640 costs the VAE what 512 does and gives the face half as many pixels again. For replacing something, 768, the short edge of H3's native 1344 × 768.",
             "context": "Crop size as a multiple of the region. Lower lets it fill the crop and enlarges it more; higher shows the model more of what surrounds it. 2 keeps faces closest to the original at the same speed as 4; below 2 the redrawn area can reach the crop's edge.",
             "max_size": "Regions in `masks` that never get smaller than this many pixels stay as they are. One that does, as in a push-in, is redrawn whole. Subjects are always redrawn.",
             "group_size": "How far across, in pixels of the video, a crop shared by nearby regions may be. They share one only when that is less work than a crop each, and each keeps the room around it and the enlargement it would have alone, so they are drawn as well; the shared canvas also stays within 1536 pixels, which can stop a group sooner. 0 gives every region a crop of its own.",
@@ -199,6 +217,9 @@ Write in English, as the guide does. Text that shows on screen goes in double qu
 
 Connect KSamplerSelect and Manual Sigmas as you would on a custom sampler.
 
+## How long it takes
+A 768p shot of 243 frames with 22 crops, two steps: 268 s, of which the VAE takes 116 s and sampling 107 s. The VAE is as much of the work as the model, and it works in tiles of 256 px that overlap by at least 64: one or two tiles across cover up to 448 px, three up to 640, four up to 832. That is why `refine_size` is 448 and not 512, which took 425 s for the same shot, the faces no better. Cutting, masking, aligning and pasting the crops is done on the GPU, a few frames at a time, and falls back to the CPU when it has no room.
+
 ## Repair or replace
 The sigmas decide. Starting at 0.7 keeps what is there and draws it better; starting near 1 keeps only the surroundings and draws what the prompt or picture says. To replace something, use a model without a refiner LoRA: with one, the object is erased and the surroundings fill the hole. For an object, `paste` set to `bbox` with a larger `grow` leaves room for a different shape.
 
@@ -235,7 +256,7 @@ What is redrawn is drawn anew, not recovered. It can change between seeds.
             "denoise": ("降噪", "从 `sigmas` 末尾取多少步，和 Split Sigmas Denoise 完全一致：按步数算，不按噪声大小算。1 = 全部照用。对 `0.7, 0.494118, 0` 取 0.5 得到 `0.494118, 0`；对从 1.0 开始的调度取 0.5 得到后一半。0 = 什么都不改。"),
             "prompt": ("提示词", "重画的区域（包括主体）要画成什么样，按 H3 的提示词格式写。默认内容用来修复人脸，任何画风都适用，修其他东西请改掉。接了主体参考图时，`<Picture 1>` 指那个主体的图片。见“提示词怎么写”。"),
             "seed": ("种子", "噪声种子。每个裁切区域会加上自己的偏移。"),
-            "refine_size": ("精修尺寸", "裁切区域重画前，短边放大到的像素数。修人脸时 512 比 768（H3 原生 1344 × 768 的短边）快三分之一，效果相当。替换东西时用 768。"),
+            "refine_size": ("精修尺寸", "裁切区域重画前，短边放大到的像素数。修人脸时 448 和 512 效果相当，耗时只要三分之二：H3 的 VAE 按 256 像素分块处理，448 的画布是 4 块，512 是 9 块。640 的 VAE 开销和 512 一样，脸的像素多一半。替换东西时用 768（H3 原生 1344 × 768 的短边）。"),
             "context": ("参考范围", "裁切框是区域的多少倍。调小后区域占满框、放大更多；调大后模型能看到更多周围的画面。2 的速度和 4 一样，人脸最贴近原片；低于 2 时重画范围可能碰到裁切框边缘。"),
             "max_size": ("最大尺寸", "`蒙版` 里始终大于这个像素数的区域保持不变。有过小于它的时候（比如推镜），整段都重画。主体总会重画。"),
             "group_size": ("合并尺寸", "相邻区域共用的裁切框在原视频里最多多宽（像素）。只有合并后工作量更少时才合并，每块区域保留单独处理时的周围范围和放大倍数，所以画得一样好；共用画布也不会超过 1536 像素，这可能让一组更早停止合并。0 = 每块区域单独一个框。"),
@@ -291,6 +312,9 @@ non_diegetic_music: N/A
 3. 每一帧重画的结果先逐个区域对齐回原片：偏了零点几个像素或几个像素的，挪回原来的位置；画得略大或略小的，缩放回原来的大小。否则重画结果每帧略有偏移或忽大忽小，贴回后区域会相对周围抖动或一缩一放。主体是重新画的，不做对齐。之后缩回原尺寸，羽化贴回。裁切和贴回都按精确的小数位置进行，推镜时变大的裁切框也不会因每帧取整而抖动。
 
 KSamplerSelect 和 Manual Sigmas 的接法与自定义采样器相同。
+
+## 耗时
+768p、243 帧、22 个裁切框、两步采样：268 秒，其中 VAE 116 秒，采样 107 秒。VAE 的工作量和模型差不多，而且它按 256 像素的块处理，相邻块至少重叠 64 像素：448 像素以内横向一到两块，640 以内三块，832 以内四块。所以 `精修尺寸` 默认是 448 而不是 512——同一段片子用 512 要 425 秒，脸并没有更好。裁切、蒙版、对齐、贴回都在 GPU 上分批完成，显存不够时自动退回 CPU。
 
 ## 修复还是替换
 由 sigmas 决定。从 0.7 开始会保留原来的内容，画得更好；从接近 1 开始只保留周围环境，按提示词或图片重画。替换时请用不带精修 LoRA 的模型：带了之后物体只会被抹掉，由周围画面填上。替换物体时，`贴回方式` 用 `bbox` 并调大 `外扩`，能给形状不同的新东西留空间。

@@ -1123,8 +1123,8 @@ def test_sampling():
     lay = PackedLayout(5, 3, 8, 8, 7, keyframes=kfs)
     keep = torch.zeros(2 * 16, dtype=torch.bool)
     keep[[0, 5, 17]] = True
-    new = S.prune_layout(lay, [keep])
-    assert new.seq_len == lay.seq_len - 29 and new.signature == lay.signature
+    new, left = S.repack(lay, [keep])
+    assert new.seq_len == lay.seq_len - 29 and new.signature == lay.signature and left == [0]
     (ca, cb, _), = [s for s in lay.segments if s[2] == "cond"]
     (na, nb, _), = [s for s in new.segments if s[2] == "cond"]
     assert nb - na == 3 and torch.equal(new.position_ids[na:nb], lay.position_ids[ca:cb][keep])
@@ -1134,7 +1134,58 @@ def test_sampling():
     assert int((~new.img_update).sum()) == 3 and int(new.img_update.sum()) == int(lay.img_update.sum())
     assert torch.equal(new.position_ids[new.img_pos[~new.img_update]], lay.position_ids[ca:cb][keep])
     assert torch.equal(new.position_ids[new.audio_pos], lay.position_ids[lay.audio_pos])
-    raises(ValueError, S.prune_layout, lay, [keep[:-1]])
+    raises(ValueError, S.repack, lay, [keep[:-1]])
+    assert S.repack(lay, [torch.zeros(32, dtype=torch.bool)])[1] == [], "a guide with no row left is left out"
+    # with references: only the guide loses rows, and nothing asked for changes nothing
+    img_ = {"kind": "image", "latent_h": 4, "latent_w": 4, "latent": torch.zeros(1, 24, 1, 4, 4)}
+    vid_ = {"kind": "video", "latent_t": 3, "latent_h": 4, "latent_w": 4, "ref_audio_t": 0,
+            "latent": torch.zeros(1, 24, 3, 4, 4)}
+    lay2 = PackedLayout(5, 3, 8, 8, 7, keyframes=kfs, refs=[img_, vid_])
+    assert [k for _, _, k in lay2.segments] == ["text", "cond", "ref_img", "ref_img", "audio", "video"]
+    less, left = S.repack(lay2, [keep, None, None])
+    assert left == [0, 1, 2] and less.seq_len == lay2.seq_len - 29
+    assert less.img_update.tolist() == [False] * (3 + 4 + 12) + [True] * 48
+    assert torch.equal(less.img_pos, torch.cat([torch.arange(a, b) for a, b, k in less.segments if k in S.PICTURES]))
+    assert torch.equal(less.position_ids[less.audio_pos], lay2.position_ids[lay2.audio_pos]) and less.audio_update.all()
+    assert S.repack(lay2, [torch.zeros(32, dtype=torch.bool), None, None])[1] == [1, 2]
+    same, left = S.repack(lay2, [None] * 3)
+    assert left == [0, 1, 2] and same.segments == lay2.segments and torch.equal(same.position_ids, lay2.position_ids)
+    assert torch.equal(same.img_pos, lay2.img_pos) and torch.equal(same.img_update, lay2.img_update)
+    assert torch.equal(same.audio_pos, lay2.audio_pos) and torch.equal(same.audio_update, lay2.audio_update)
+    # what the text says of a same-framed reference video is cut to the tile: its blocks of picture tokens keep the
+    # tokens over the tile, with the marker either side, and everything else stays
+    assert [S.ref_frames(n) for n in (2, 7, 37, 72)] == [5, 22, 124, 243]
+    rv8 = {"kind": "video", "latent_t": 7, "latent_h": 8, "latent_w": 12, "ref_audio_t": 0,
+           "latent": torch.zeros(1, 24, 7, 8, 12)}  # 22 frames: two frames shown, one block of 4 x 6 tokens
+    block = [0] * (4 * 6 + 2)
+    tags = torch.tensor([1, 1] + [0] * 6 + [1] + block + [1, 1, 1])  # a picture's block, the video's, the prompt
+    pic = {"kind": "image", "latent_h": 4, "latent_w": 4, "latent": torch.zeros(1, 24, 1, 4, 4)}
+    tk = S.text_keep(tags, [pic, rv8], (0, 16, 0, 12), (7, 16, 24))  # the top left tile: all rows, half the columns
+    assert tk is not None and int(tk.sum()) == tags.numel() - 12 and tk[:10].all() and tk[-4:].all()
+    assert tk[10:34].reshape(4, 6).tolist() == [[True] * 3 + [False] * 3] * 4
+    tk = S.text_keep(tags, [pic, rv8], (8, 16, 12, 24), (7, 16, 24))
+    assert tk[10:34].reshape(4, 6).tolist() == [[False] * 6] * 2 + [[False] * 3 + [True] * 3] * 2
+    assert S.text_keep(tags, [pic, rv8], (0, 16, 0, 24), (7, 16, 24)) is None, "the whole frame keeps every row"
+    assert S.text_keep(tags, [rv8], (0, 16, 0, 12), (7, 16, 24)) is None, "blocks that don't match the references"
+    assert S.text_keep(tags[:-5], [pic, rv8], (0, 16, 0, 12), (7, 16, 24)) is None, "a block of another size"
+    assert S.text_keep(tags, [pic, {**rv8, "latent": torch.zeros(1, 24, 2, 8, 12), "latent_t": 2}],
+                       (0, 16, 0, 12), (7, 16, 24)) is None, "a video of another length is not cropped"
+    # a reference cut to a tile reaches a little past it, and gets the positions of where it lies: showing exactly
+    # the canvas is H3's own layout, and anything else is spread over the same span
+    assert S.ref_place(rv8, (0, 16, 0, 12), 16, 24) == (0.0, 1.0, 0.0, 1.0)
+    wide = {**rv8, "latent": torch.zeros(1, 24, 7, 10, 8)}  # on a 20 x 16 video: 2 latents of the video each
+    assert S.ref_place(wide, (0, 12, 0, 10), 20, 16) == (0.0, 1.0, 0.0, 1.2), "cut out to whole patches: 6 of 5 across"
+    assert S.ref_place(wide, (8, 20, 6, 16), 20, 16) == (0.0, 1.0, -0.2, 1.0)
+    lay3 = PackedLayout(5, 3, 8, 8, 7, refs=[vid_])
+    stock = lay3.position_ids.clone()
+    S.place(lay3, [vid_["latent"]], [(0.0, 1.0, 0.0, 1.0)], 8, 8)
+    assert torch.allclose(lay3.position_ids, stock), "a reference that shows the canvas stays where H3 puts it"
+    S.place(lay3, [vid_["latent"]], [(0.0, 1.25, -0.25, 1.0)], 8, 8)
+    (ra, rb, _), = [s for s in lay3.segments if s[2] == "ref_img"]
+    assert lay3.position_ids[ra:ra + 4, 1:].tolist() == [[0.0, -8.0], [0.0, 12.0], [20.0, -8.0], [20.0, 12.0]]
+    assert torch.equal(lay3.position_ids[ra:rb, 1:], lay3.position_ids[ra:ra + 4, 1:].repeat(3, 1)), "every frame"
+    assert torch.equal(lay3.position_ids[:, 0], stock[:, 0]) and torch.equal(lay3.position_ids[rb:], stock[rb:])
+    raises(ValueError, S.place, lay3, [vid_["latent"][:, :, :2]], [(0.0, 1.0, 0.0, 1.0)], 8, 8)
     # the row filter picks the kept guide rows, and leaves payloads without a mask alone
 
     class FakeDM:
@@ -1197,6 +1248,38 @@ def test_sampling():
         return x_
     S.make_wrapper(2, 2, 4, 4)(see_refs, {"input": x, "timestep": None, "c": {**c, "minimax_payload": rp}})
     assert len(ref_sizes) == 4 and all(h_ < 10 and w_ < 8 for h_, w_ in ref_sizes), ref_sizes
+    # with the text at hand a tile packs itself: what the text says of the reference is cut to the tile, and the
+    # reference lies where its patches are
+    packs = []
+
+    def see_pack(x_, t_, latent_shapes=None, minimax_payload=None, c_crossattn=None, **kw):
+        lay, v = minimax_payload.get("layout"), unpack_latents(x_, latent_shapes)[0]
+        if lay is None:
+            return x_
+        assert lay.signature == (c_crossattn.shape[1], T_, *v.shape[-2:], 7), "the model takes this layout as its own"
+        assert minimax_payload["text_token_tags"].numel() == c_crossattn.shape[1]
+        assert int((~lay.img_update).sum()) == sum(S.rows_of(z) for z in minimax_payload["cond_video_latents"])
+        (a, b), (va_, _) = (next((a, b) for a, b, k in lay.segments if k == kind) for kind in ("ref_img", "video"))
+        frame = (v.shape[-2] // 2) * (v.shape[-1] // 2)
+        packs.append(([k for _, _, k in lay.segments], c_crossattn[0, :, 0].tolist(), lay.position_ids[a:b, 1:],
+                      lay.position_ids[va_:va_ + frame, 1:].reshape(v.shape[-2] // 2, v.shape[-1] // 2, 2)))
+        return x_
+    tags29 = torch.tensor([1] * 3 + [0] * 22 + [1] * 4)  # the 5-frame reference is one block of 5 x 4 tokens
+    ct = {**c, "c_crossattn": torch.arange(29.0)[None, :, None].expand(1, 29, 8),
+          "minimax_payload": {**payload, "refs": [rv], "text_token_tags": tags29}}
+    S.make_wrapper(2, 2, 4, 4)(see_pack, {"input": x, "timestep": None, "c": ct})
+    assert [p[0] for p in packs] == [["text", "cond", "ref_img", "audio", "video"]] * 4
+    assert packs[0][1] == [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 14, 24, 25, 26, 27, 28], "the top left 3 x 3 tokens"
+    assert all(len(p[1]) == 18 for p in packs) and ct["c_crossattn"].shape[1] == 29
+    stock = PackedLayout(18, T_, 12, 10, 7, keyframes=[{"resolved_frame_index": 0, "latent": guide[..., :12, :10]}],
+                         refs=[S.crop_ref(rv, (0, 12, 0, 10), H, W)])
+    sa, sb = next((a, b) for a, b, k in stock.segments if k == "ref_img")
+    assert not torch.allclose(packs[0][2], stock.position_ids[sa:sb, 1:]), "not where H3 puts a 6 x 6 reference"
+    # each of its tokens covers 2 x 2 of the tile's, and sits on the first of them
+    assert torch.allclose(packs[0][2][:9].reshape(3, 3, 2), packs[0][3][::2, ::2])
+    packs.clear()
+    S.make_wrapper(2, 2, 4, 4, exact_refs=False, text_crop=False)(see_pack, {"input": x, "timestep": None, "c": ct})
+    assert not packs, "nothing to pack: the payload goes in as it was, for the model to lay out"
 
     class NotH3:
         model = object()

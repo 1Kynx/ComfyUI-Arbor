@@ -38,7 +38,7 @@ GROUP_SAVING = 0.15             # faces share a crop only if that saves at least
 CONTEXT = 2.0                   # default crop size / the face: closer to the original than 4, as quick
 CHUNK = 24                      # crops prepared per round, to be put together into a few videos
 REEL_TOKENS = 24000             # crops of one canvas are sampled as one video of up to this many tokens
-REFINE_SIZE = 512               # faster than H3's 768 by a third, and repairs collapsed faces as well or better
+REFINE_SIZE = 448               # H3's VAE works in 256 px tiles: 4 for a 448 canvas, 9 for 512. As good, a third quicker
 # in the H3 prompt guide's format (docs/VIDEO_PROMPT_WRITING_GUIDE_base_en.md): no style named, so it suits any style;
 # the audio is held silent, so the sound fields are N/A
 DEFAULT_PROMPT = (
@@ -217,6 +217,18 @@ def link_regions(regions: dict, shots: list[int]) -> list[Run]:
     for i, r in enumerate(runs):
         r.number = i + 1
     return runs
+
+
+def on_gpu(fn, *args, **kw):
+    """fn(*args, device=...) on the GPU when there is one with room to spare, else on the CPU. Cutting, masking,
+    aligning and pasting crops takes a tenth of the time there, and the models that redraw them leave room for a few
+    frames at a time."""
+    if torch.cuda.is_available():
+        try:
+            return fn(*args, device=torch.device("cuda"), **kw)
+        except torch.cuda.OutOfMemoryError:
+            torch.cuda.empty_cache()
+    return fn(*args, device=torch.device("cpu"), **kw)
 
 
 def _gaussian(x: torch.Tensor, sigma: float) -> torch.Tensor:
@@ -400,45 +412,62 @@ def crop_window(group: list[Run], height: int, width: int, size: int = 768, cont
     return frames, pos, shape
 
 
+MASK_BATCH = 64  # frames of a paste mask grown and feathered at once
+
+
 def paste_mask(group: list[Run], frames: list[int], pos: dict, height: int, width: int, paste: str = "mask",
-               grow: float = 0.35, feather: float = 0.12, keep: torch.Tensor | None = None) -> torch.Tensor:
+               grow: float = 0.35, feather: float = 0.12, keep: torch.Tensor | None = None, device=None) -> torch.Tensor:
     """[frames, h, w] blend weights on the largest crop's grid: the group's faces, grown over the head and feathered, away
     from keep. "mask" follows the mask's outline; "bbox" is a steady box that ignores it."""
+    if device is None:
+        return on_gpu(paste_mask, group, frames, pos, height, width, paste, grow, feather, keep)
     steady = [steady_boxes(r) for r in group] if paste == "bbox" else []
     grid = max(_px(p[3]) for p in pos.values()), max(_px(p[2]) for p in pos.values())
     usual = sorted(p[3] for p in pos.values())[len(pos) // 2]
     size = max(r.size for r in group)
 
-    def region(t):  # the crop of a mask of any size, as nearest scaling to the frame would give, without scaling all of it
+    def region(t, f):  # the crop of a mask of any size, as nearest scaling to the frame would give, without scaling all of it
         x0, y0, cw, ch = pos[f]
         gh, gw = _px(ch), _px(cw)
         rows = ((y0 + (torch.arange(gh) + 0.5) * ch / gh) * t.shape[0] / height).long().clamp(0, t.shape[0] - 1)
         cols = ((x0 + (torch.arange(gw) + 0.5) * cw / gw) * t.shape[1] / width).long().clamp(0, t.shape[1] - 1)
-        return t[rows][:, cols].float()[None, None]
+        return t[rows][:, cols]
 
-    out = []
+    cuts = []  # per frame: what it is grown and feathered by, its mask, and what to keep out of it
     for f in frames:
         x0, y0, cw, ch = pos[f]
         gh, gw = _px(ch), _px(cw)  # this frame's crop on a grid of about one cell per pixel, spanning it exactly
         here = size * ch / usual  # the crop follows the face, so the face's size here follows the crop
-        kernel = int(here * grow) * 2 + 1
+        m = torch.zeros(gh, gw, dtype=torch.bool)
         if paste == "bbox":
-            m = torch.zeros(1, 1, gh, gw)
             for boxes in steady:
                 if f in boxes:
                     a, b, c, d = ((v - o) * n / s for v, o, n, s in
                                   zip(boxes[f], (x0, y0, x0, y0), (gw, gh, gw, gh), (cw, ch, cw, ch)))
-                    m[..., max(round(b), 0):max(round(d), 0), max(round(a), 0):max(round(c), 0)] = 1
+                    m[max(round(b), 0):max(round(d), 0), max(round(a), 0):max(round(c), 0)] = True
         else:
-            m = torch.zeros(1, 1, gh, gw)
             for r in group:
-                for part in r.parts.get(f, ()):
-                    m = torch.maximum(m, region(r.labels[f] == part))
-        w = _gaussian(_dilate(m, kernel), max(1.0, here * feather))
+                parts = r.parts.get(f, ())
+                if parts:
+                    labels = region(r.labels[f], f)
+                    for part in parts:
+                        m |= labels == part
+        cuts.append(((gh, gw, int(here * grow) * 2 + 1, max(1.0, here * feather)), m,
+                     None if keep is None else region(keep[f], f) > 0.5))
+    out, i = [], 0
+    while i < len(cuts):  # a steady crop's frames are one size and grown alike: a batch of them at a time
+        j = i + 1
+        while j < len(cuts) and j - i < MASK_BATCH and cuts[j][0] == cuts[i][0]:
+            j += 1
+        gh, gw, kernel, sigma = cuts[i][0]
+        w = _gaussian(_dilate(torch.stack([c[1] for c in cuts[i:j]]).to(device, torch.float32)[:, None], kernel), sigma)
         if keep is not None:
-            w = w * (1 - _dilate(region(keep[f]), 9))
-        out.append(w[0, 0] if (gh, gw) == grid else F.interpolate(w, size=grid, mode="bilinear", align_corners=False)[0, 0])
-    w = torch.stack(out)
+            w = w * (1 - _dilate(torch.stack([c[2] for c in cuts[i:j]]).to(device, torch.float32)[:, None], 9))
+        if (gh, gw) != grid:
+            w = F.interpolate(w, size=grid, mode="bilinear", align_corners=False)
+        out.append(w[:, 0].cpu())
+        i = j
+    w = torch.cat(out)
     # a gap in the mask eases in and out over a few frames, so nothing pops. Not the two ends: a run mostly ends at a cut,
     # where the old picture would show through what replaced it
     w = F.pad(w.permute(1, 2, 0).reshape(-1, 1, len(frames)), (2, 2), mode="replicate")
@@ -492,6 +521,8 @@ def redraw_batch(model, vae, jobs: list, sampler, sigmas: torch.Tensor, progress
     the rest of a crop stays as it is and gives the model something to match, which steadies the face. Without a guide,
     so blur is not carried over. H3 samples one video at a time and every call has a fixed cost far above that of a
     small crop, so crops of one canvas are put one after another into one video, cut to cut, and sampled together.
+    Every video is encoded before the first is sampled, and all are sampled before the first is decoded: the VAE and
+    the model take each other's place in memory, and that costs seconds every time they swap.
     progress(crops) is called after every step with the number of crops in the video."""
     from comfy.nested_tensor import NestedTensor
     from comfy_extras.nodes_custom_sampler import Guider_Basic, Noise_RandomNoise
@@ -502,6 +533,7 @@ def redraw_batch(model, vae, jobs: list, sampler, sigmas: torch.Tensor, progress
     drawn = [None] * len(jobs)
     groups = reels(jobs, clip_length if tokens else None)
     t0 = time.perf_counter()
+    staged = []
     for members in groups:
         h, w = jobs[members[0]][0].shape[1:3]
         lengths = [len(jobs[i][0]) for i in members]
@@ -509,13 +541,18 @@ def redraw_batch(model, vae, jobs: list, sampler, sigmas: torch.Tensor, progress
             spans = [len(jobs[members[0]][0])]
         else:  # each from the start of a VAE clip, with a frame held after it at least
             spans = [math.ceil((n + 1) / clip_length) * clip_length for n in lengths]
-        crops = torch.cat([_hold_to(jobs[i][0], f) for i, f in zip(members, spans)])
+        crops = torch.cat([_hold_to(jobs[i][0], f) for i, f in zip(members, spans)]).float()
         area = torch.cat([_hold_to(jobs[i][1], f) for i, f in zip(members, spans)])
         empty, count = _empty_av_latent(w, h, len(crops))
         crops, area = _hold_to(crops, count)[:count], _hold_to(area, count)[:count]
         video = vae.encode(crops)
         audio = empty["samples"].unbind()[1].to(video)
         inside = latent_area(area, tuple(video.shape[-3:]), vae).to(video)[None, None]  # audio stays silent
+        staged.append((members, lengths, spans, video, audio, inside))
+        del crops, area
+    t1 = time.perf_counter()
+    sampled = []
+    for members, lengths, spans, video, audio, inside in staged:
         latent = NestedTensor((video, audio))
         locked = NestedTensor((inside.expand_as(video).contiguous(), torch.zeros_like(audio)))
         cond, seed = jobs[members[0]][2], jobs[members[0]][3]
@@ -523,15 +560,19 @@ def redraw_batch(model, vae, jobs: list, sampler, sigmas: torch.Tensor, progress
         guider.set_conds(cond)
         noise = Noise_RandomNoise(seed).generate_noise({"samples": latent})
         step = (lambda *_, k=len(members): progress(k)) if progress else None
-        out = guider.sample(noise, latent, sampler, sigmas, denoise_mask=locked, callback=step, seed=seed).unbind()[0]
+        sampled.append(guider.sample(noise, latent, sampler, sigmas, denoise_mask=locked, callback=step,
+                                     seed=seed).unbind()[0])
+    t2 = time.perf_counter()
+    for (members, lengths, spans, *_), out in zip(staged, sampled):
         at = 0
         for i, n, f in zip(members, lengths, spans):
             part = out if len(members) == 1 else out[:, :, at:at + f // clip_length * tokens]
             images = vae.decode(part)
             images = images.reshape(-1, *images.shape[-3:])
-            drawn[i] = _hold_to(images, n)[:n]
+            drawn[i] = _hold_to(images, n)[:n].half()  # half the memory, and finer than the 8 bits it ends as
             at += f // clip_length * tokens if len(members) > 1 else 0
-    log.info("H3 Region Redraw: %d crops in %d videos, %.0f s", len(jobs), len(groups), time.perf_counter() - t0)
+    log.info("H3 Region Redraw: %d crops in %d videos, %.0f s (encode %.0f, sample %.0f, decode %.0f)", len(jobs),
+             len(groups), time.perf_counter() - t0, t1 - t0, t2 - t1, time.perf_counter() - t2)
     return drawn
 
 
@@ -576,14 +617,21 @@ def _shrunk(x: torch.Tensor, hw) -> torch.Tensor:
     return F.interpolate(x, size=(h, w), mode="bicubic", align_corners=False, antialias=True)
 
 
-def window(image: torch.Tensor, box, hw) -> torch.Tensor:
+def window(image: torch.Tensor, box, hw, device=None) -> torch.Tensor:
     """The fractional box (x0, y0, w, h) of image [H, W, c], resampled to hw: what a crop and resize would give, without
-    rounding the box to whole pixels."""
+    rounding the box to whole pixels. On device, if one is given."""
     span = _cover(box, image.shape[0], image.shape[1])
-    part = image[span[1]:span[3], span[0]:span[2]].float().movedim(-1, 0)[None]
+    part = image[span[1]:span[3], span[0]:span[2]]
+    part = (part if device is None else part.to(device)).float().movedim(-1, 0)[None]
     part = _shrunk(part, (round(part.shape[2] * hw[0] / box[3]), round(part.shape[3] * hw[1] / box[2])))
     return F.grid_sample(part, _grid(box, hw, span, part.device), mode="bicubic", padding_mode="border",
                          align_corners=False)[0].movedim(0, -1)
+
+
+def windows(images: torch.Tensor, frames: list, pos: dict, hw, device=None) -> torch.Tensor:
+    """A crop's frames cut from the video and enlarged: [n, h, w, 3] in half precision, which is half the memory and
+    finer than the 8 bits a video has."""
+    return torch.stack([window(images[f], pos[f], hw, device).clamp(0, 1).half() for f in frames]).cpu()
 
 
 ALIGN_MOST = 0.05  # share of the canvas's short edge a redrawn frame may be moved back by
@@ -657,15 +705,11 @@ def align(before: torch.Tensor, after: torch.Tensor, areas: list) -> tuple[torch
     shakes or breathes against what is around it. Regions sharing a crop are moved each on its own, and blended where
     their areas meet. A move that would not bring the two closer, or would be large, is left out. Also the largest move
     made at a region's edge, in canvas pixels. On the GPU if there is room, else here."""
-    if torch.cuda.is_available():
-        try:
-            return _align(before, after, areas, torch.device("cuda"))
-        except torch.cuda.OutOfMemoryError:
-            torch.cuda.empty_cache()
-    return _align(before, after, areas, after.device)
+    return on_gpu(_align, before, after, areas)
 
 
-def _align(before: torch.Tensor, after: torch.Tensor, areas: list, dev) -> tuple[torch.Tensor, float]:
+def _align(before: torch.Tensor, after: torch.Tensor, areas: list, device) -> tuple[torch.Tensor, float]:
+    dev = device
     h, w = areas[0].shape[1:]
     most = ALIGN_MOST * min(h, w)
     out, largest = [], 0.0
@@ -731,6 +775,22 @@ class Crop:
     width: int = 0
 
 
+def _blend(old: torch.Tensor, new: torch.Tensor, weight: torch.Tensor, shift: torch.Tensor, box, cover,
+           device=None) -> torch.Tensor:
+    """One frame's pasted patch: old [h, w, c] under the pixels `cover` (ax, ay, bx, by), with the canvas new [H, W, c]
+    read at each pixel's own centre inside the fractional box, by weight [gh, gw] (0..255) on the box's grid. The
+    box's fraction of a pixel is kept, not rounded away; outside the box the weight is 0."""
+    ax, ay, bx, by = cover
+    hw = (by - ay, bx - ax)
+    inverse = _grid((ax, ay, bx - ax, by - ay), hw, (box[0], box[1], box[0] + box[2], box[1] + box[3]), device)
+    w = F.grid_sample(weight[None, None].to(device, torch.float32) / 255, inverse, mode="bilinear", padding_mode="zeros",
+                      align_corners=False)[0].movedim(0, -1)
+    n = _shrunk(new.to(device, torch.float32).movedim(-1, 0)[None], hw)
+    n = F.grid_sample(n, inverse, mode="bicubic", padding_mode="border", align_corners=False)[0].movedim(0, -1)
+    o = old.to(device, torch.float32)
+    return (o * (1 - w) + (n + shift.to(device)) * w).clamp(0, 1)
+
+
 def paste_crop(images: torch.Tensor, crop: Crop, drawn: torch.Tensor, first: int = 0) -> None:
     """Feather drawn (frames first..first + len(drawn) of the crop, at any size of the crop's shape) into images, in
     place."""
@@ -739,18 +799,10 @@ def paste_crop(images: torch.Tensor, crop: Crop, drawn: torch.Tensor, first: int
         f = crop.frames[i]
         x0, y0, cw, ch = crop.pos[f]
         box = (x0 * sx, y0 * sy, cw * sx, ch * sy)
-        ax, ay, bx, by = _cover(box, images.shape[1], images.shape[2])
-        hw = (by - ay, bx - ax)
-        # each pixel takes the canvas at its own centre: the box's fraction of a pixel is kept, not rounded away.
-        # Outside the box the weight is 0
-        inverse = _grid((ax, ay, bx - ax, by - ay), hw, (box[0], box[1], box[0] + box[2], box[1] + box[3]), images.device)
-        shift = next(v for a, b, v in crop.shifts if a <= i < b).to(images.device)
-        w = F.grid_sample(crop.weights[i][None, None].float().to(images.device) / 255, inverse, mode="bilinear",
-                          padding_mode="zeros", align_corners=False)[0].movedim(0, -1)
-        n = _shrunk(new.float().to(images.device).movedim(-1, 0)[None], hw)
-        n = F.grid_sample(n, inverse, mode="bicubic", padding_mode="border", align_corners=False)[0].movedim(0, -1)
-        o = images[f, ay:by, ax:bx].float()
-        images[f, ay:by, ax:bx] = (o * (1 - w) + (n + shift) * w).clamp(0, 1).to(images.dtype)
+        ax, ay, bx, by = cover = _cover(box, images.shape[1], images.shape[2])
+        shift = next(v for a, b, v in crop.shifts if a <= i < b)
+        patch = on_gpu(_blend, images[f, ay:by, ax:bx], new, crop.weights[i], shift, box, cover)
+        images[f, ay:by, ax:bx] = patch.to(images.device, images.dtype)
 
 
 def refine_groups(images, groups, height, width, redraw_many, size=768, paste="mask", grow=0.35, feather=0.12,
@@ -758,6 +810,8 @@ def refine_groups(images, groups, height, width, redraw_many, size=768, paste="m
     """Crop each group, redraw them a few at a time with redraw_many([Job]) -> [crops], and feather them back into images
     (in place). Subjects ignore keep. Returns, per group, its Crop and before beside after at the canvas size."""
     plans, jobs = [], []
+    spent = {"crop": 0.0, "redraw": 0.0, "align": 0.0, "paste": 0.0}
+    clock = time.perf_counter
     for g, group in enumerate(groups):
         frames, pos, shape = crop_window(group, height, width, size, context)
         short = sorted(min(p[2], p[3]) for p in pos.values())
@@ -772,7 +826,7 @@ def refine_groups(images, groups, height, width, redraw_many, size=768, paste="m
         step = math.ceil(len(frames) / parts)
         jobs += [(g, s, frames[s:s + step]) for s in range(0, len(frames), step)]
     for c in range(0, len(jobs), chunk):
-        ready = []
+        ready, t = [], clock()
         for g, s, part in jobs[c:c + chunk]:
             plan, crop = plans[g], plans[g]["crop"]
             log.info("H3 Region Redraw: %s", crop.text)
@@ -783,32 +837,42 @@ def refine_groups(images, groups, height, width, redraw_many, size=768, paste="m
                     crop.parts = [(paste_mask([r], crop.frames, crop.pos, height, width, paste, grow, feather, plan["keep"])
                                    * 255).round().to(torch.uint8) for r in groups[g]]
             pos, shape = crop.pos, crop.shape
-            big = torch.stack([window(images[f], pos[f], shape) for f in part]).clamp(0, 1)
+            big = on_gpu(windows, images, part, pos, shape)
             area = torch.stack([w[..., 0] > 2 for w in _each([crop.weights[s + i, ..., None].float() for i in range(len(part))],
                                                               lambda i: shape, "bilinear")])
             parts = [torch.stack([w[..., 0] > 2 for w in _each([p[s + i, ..., None].float() for i in range(len(part))],
                                                                lambda i: shape, "bilinear")]) for p in crop.parts]
             ready.append(Job(g, s, part, big, area, groups[g][0].subject, parts))
-        for job, new in zip(ready, redraw_many(ready)):
+        spent["crop"] += clock() - t
+        t = clock()
+        redrawn = redraw_many(ready)
+        spent["redraw"] += clock() - t
+        for job, new in zip(ready, redrawn):
             plan, crop = plans[job.group], plans[job.group]["crop"]
             new = new.to(images.device, torch.float32).clamp(0, 1)
+            t = clock()
             if not job.subject:  # what is repaired should stay where it was; a subject may be drawn anew
                 new, moved = align(job.crops, new, job.parts or [job.area])
                 log.info("H3 Region Redraw: %s, frames %d-%d moved back by up to %.1f px", crop.text.split(",")[0],
                          job.frames[0], job.frames[-1], moved)
+            spent["align"] += clock() - t
+            t = clock()
             plan["compare"].append(compare(job.crops, new).cpu())
             # outside the area nothing was redrawn: any drift there is the VAE's
             # frame by frame: a whole stretch at once would need several canvases' worth of memory at a time
-            total, shift = 0, torch.zeros(new.shape[-1], device=new.device)
-            for b, o, r in zip(job.crops, new, ~job.area):
-                r = r.to(new.device)
-                shift += (b.to(new.device, torch.float32) - o)[r].sum(0)
+            total, shift = 0, torch.zeros(new.shape[-1], dtype=torch.float64, device=new.device)
+            for k in range(0, len(new), 16):
+                r = ~job.area[k:k + 16].to(new.device)
+                shift += ((job.crops[k:k + 16].to(new.device, torch.float32) - new[k:k + 16]) * r[..., None]).sum((0, 1, 2))
                 total += int(r.sum())
-            shift = shift / max(total, 1)
+            shift = (shift / max(total, 1)).float()
             crop.shifts.append((job.start, job.start + len(job.frames), shift.float().cpu()))
             crop.height, crop.width = height, width
             paste_crop(images, crop, new, job.start)
-    return [p["crop"] for p in plans], [torch.cat(p["compare"]) for p in plans]
+            spent["paste"] += clock() - t
+    log.info("H3 Region Redraw: crops cut %.0f s, redrawn %.0f s, aligned %.0f s, pasted %.0f s", spent["crop"],
+             spent["redraw"], spent["align"], spent["paste"])
+    return [p["crop"] for p in plans], [c[0] if len(c) == 1 else torch.cat(c) for c in (p["compare"] for p in plans)]
 
 
 @dataclass
@@ -894,8 +958,9 @@ class H3RegionRedraw(IO.ComfyNode):
                                      "A subject's picture is <Picture 1>"),
              IO.Int.Input("seed", default=0, min=0, max=0xffffffffffffffff, control_after_generate=True),
              IO.Int.Input("refine_size", default=REFINE_SIZE, min=384, max=1536, step=32,
-                          tooltip="Short edge a crop is enlarged to before it is redrawn. 512 is quick; 768, H3's native "
-                                  "size, suits replacing something"),
+                          tooltip="Short edge a crop is enlarged to before it is redrawn. 448 repairs faces and is "
+                                  "quick: the VAE works in 256 px tiles, 4 for a 448 canvas and 9 for 512 or 640. "
+                                  "768, H3's native size, suits replacing something"),
              IO.Float.Input("context", default=CONTEXT, min=1.2, max=6.0, step=0.1,
                             tooltip="Crop size as a multiple of the region. Lower: it fills the crop and is enlarged "
                                     "more. Higher: the model sees more of what surrounds it"),

@@ -29,7 +29,7 @@ Repair the small faces of a finished video, which is what its defaults are for. 
 - **seed** · *INT*  
   Noise seed. Each crop adds its own offset.
 - **refine_size** · *INT*  
-  Short edge a crop is enlarged to before it is redrawn. 512 repairs faces a third quicker than 768, the short edge of H3's native 1344 × 768, and as well. For replacing something, 768.
+  Short edge a crop is enlarged to before it is redrawn. 448 repairs faces as well as 512 in two thirds of the time: H3's VAE works in 256 px tiles, 4 for a 448 canvas and 9 for 512. 640 costs the VAE what 512 does and gives the face half as many pixels again. For replacing something, 768, the short edge of H3's native 1344 × 768.
 - **context** · *FLOAT*  
   Crop size as a multiple of the region. Lower lets it fill the crop and enlarges it more; higher shows the model more of what surrounds it. 2 keeps faces closest to the original at the same speed as 4; below 2 the redrawn area can reach the crop's edge.
 - **max_size** · *INT*  
@@ -100,6 +100,9 @@ Write in English, as the guide does. Text that shows on screen goes in double qu
 3. Each redrawn frame is first laid back over the original, region by region: moved by the fraction of a pixel or the few pixels it came out off, and brought back to its size if it came out a little larger or smaller. A redraw that drifts or breathes a little from frame to frame would otherwise make its region shake or pulse against what is around it. Subjects are drawn anew and are not moved. Then the result is shrunk and feathered back in. Crops are cut and pasted at their exact, fractional place, so a crop that grows in a push-in does not shake by each frame's rounding either.
 
 Connect KSamplerSelect and Manual Sigmas as you would on a custom sampler.
+
+## How long it takes
+A 768p shot of 243 frames with 22 crops, two steps: 268 s, of which the VAE takes 116 s and sampling 107 s. The VAE is as much of the work as the model, and it works in tiles of 256 px that overlap by at least 64: one or two tiles across cover up to 448 px, three up to 640, four up to 832. That is why `refine_size` is 448 and not 512, which took 425 s for the same shot, the faces no better. Cutting, masking, aligning and pasting the crops is done on the GPU, a few frames at a time, and falls back to the CPU when it has no room.
 
 ## Repair or replace
 The sigmas decide. Starting at 0.7 keeps what is there and draws it better; starting near 1 keeps only the surroundings and draws what the prompt or picture says. To replace something, use a model without a refiner LoRA: with one, the object is erased and the surroundings fill the hole. For an object, `paste` set to `bbox` with a larger `grow` leaves room for a different shape.
