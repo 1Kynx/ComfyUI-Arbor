@@ -11,18 +11,17 @@ from __future__ import annotations
 
 import hashlib
 import os
+import threading
 from collections import OrderedDict
 
 import folder_paths
 
 from . import tree as T
-from .common import IO, CAT_MEDIA, schema, data_out, tree_out, unwrap
-from .nodes_files import EXAMPLE_MEDIA, KINDS, LOADERS, _natural_key, folder_label, resolve_path, scan_folder, \
-    short_path
+from .common import IO, CAT_MEDIA, schema, data_out, tree_out
+from .nodes_files import EXAMPLE_MEDIA, KINDS, LOADERS, folder_label, resolve_path, scan_folder, short_path
 
 EXTS = {kind: {p.strip("*").lower() for p in pattern.split()} for kind, pattern in KINDS.items()}
 KIND_OF = {ext: kind for kind, exts in EXTS.items() for ext in exts}
-SINGULAR = {"images": "image", "videos": "video", "audio": "audio"}
 
 
 def kind_of(path: str) -> str | None:
@@ -39,10 +38,10 @@ def parse_list(text: str) -> list[tuple[str, list[str]]]:
             if files or name:
                 groups.append((name, files))
             name, files = line.lstrip("#").strip(), []
-        elif not line:
+        elif not line:  # ends the group, named or not, as the node's own list does
             if files:
                 groups.append((name, files))
-                name, files = "", []
+            name, files = "", []
         else:
             files.append(line.strip('"'))
     if files or name:
@@ -113,6 +112,7 @@ NODES = [LoadMedia]
 # ------------------------------------------------------------------ dialogs and thumbnails
 
 _THUMBS: OrderedDict = OrderedDict()
+_THUMBS_LOCK = threading.Lock()  # thumbnails are made on worker threads, several at once
 FILTERS = [("Pictures, videos and audio", ";".join(f"*{e}" for exts in EXTS.values() for e in sorted(exts))),
            ("Pictures", ";".join(f"*{e}" for e in sorted(EXTS["images"]))),
            ("Videos", ";".join(f"*{e}" for e in sorted(EXTS["videos"]))),
@@ -153,12 +153,14 @@ def tree_of(path: str) -> list[dict]:
 
 def thumbnail(path: str, size: int) -> bytes:
     """A small WEBP of a picture or of a video's first frame (cached by file, time and size)."""
-    from PIL import Image
+    import io
+    from PIL import Image, ImageOps
     st = os.stat(path)
     key = (path, st.st_mtime_ns, size)
-    if key in _THUMBS:
-        _THUMBS.move_to_end(key)
-        return _THUMBS[key]
+    with _THUMBS_LOCK:
+        if key in _THUMBS:
+            _THUMBS.move_to_end(key)
+            return _THUMBS[key]
     if kind_of(path) == "videos":
         import av
         with av.open(path) as c:
@@ -166,15 +168,15 @@ def thumbnail(path: str, size: int) -> bytes:
     else:
         img = Image.open(path)
         img.draft("RGB", (size, size))
-        img = img.convert("RGB")
+        img = ImageOps.exif_transpose(img).convert("RGB")  # upright, as Load Media loads it
     img.thumbnail((size, size))
-    import io
     buf = io.BytesIO()
     img.save(buf, "WEBP", quality=80)
     data = buf.getvalue()
-    _THUMBS[key] = data
-    if len(_THUMBS) > 512:
-        _THUMBS.popitem(last=False)
+    with _THUMBS_LOCK:
+        _THUMBS[key] = data
+        if len(_THUMBS) > 512:
+            _THUMBS.popitem(last=False)
     return data
 
 
@@ -182,13 +184,14 @@ def register_routes():
     from aiohttp import web
     from server import PromptServer
 
+    import asyncio
+
     routes = PromptServer.instance.routes
 
     @routes.post("/arbor/media/pick")
     async def _pick(request):
         """Open the system dialog on this computer. mode: files | folder | tree (a folder, read as groups) |
         any (files, or the folder the dialog is in — Load Media's Add…)."""
-        import asyncio
         from . import dialogs
 
         if not is_local(request):
@@ -220,8 +223,8 @@ def register_routes():
             folders = paths
         out = {"paths": paths, "entries": [short_path(p) for p in (files if kind != "folder" else paths)],
                "dir": folders[0] if folders else (os.path.dirname(files[0]) if files else "")}
-        if mode in ("tree", "any"):
-            out["groups"] = [g for f in folders for g in tree_of(f)]
+        if mode in ("tree", "any"):  # off the server's own thread: a folder of thousands of files takes a moment
+            out["groups"] = await asyncio.to_thread(lambda: [g for f in folders for g in tree_of(f)])
         if kind == "folder" and paths:  # for Save by Path: the folder relative to output, when it is inside
             out_dir = os.path.realpath(folder_paths.get_output_directory())
             real = os.path.realpath(paths[0])
@@ -236,8 +239,8 @@ def register_routes():
         path = resolve_path(q.get("path", ""))
         if not allowed(request, path) or not os.path.isfile(path) or kind_of(path) not in ("images", "videos"):
             return web.Response(status=404)
-        try:
-            data = thumbnail(path, max(32, min(512, int(q.get("size", 160)))))
+        try:  # decoded off the server's own thread, so a wall of thumbnails does not hold everything else up
+            data = await asyncio.to_thread(thumbnail, path, max(32, min(512, int(q.get("size", 160)))))
         except Exception:
             return web.Response(status=415)
         return web.Response(body=data, content_type="image/webp", headers={"Cache-Control": "max-age=600"})

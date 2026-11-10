@@ -27,9 +27,10 @@ CORE_SAFE = {
     "StringReplace", "StringContains", "StringCompare", "RegexMatch", "RegexExtract", "RegexReplace",
     "ComfyMathExpression",
 }
-# file I/O, heavy image work, or lazy evaluation the in-place evaluator doesn't model
+# file I/O, heavy image or model work, or lazy evaluation the in-place evaluator doesn't model
 ARBOR_UNSAFE = {"Arbor_ImageSlider", "Arbor_ImageGrid", "Arbor_VideoGrid", "Arbor_SmartResize", "Arbor_BatchPick",
-                "Arbor_LoadFolder", "Arbor_LoadMedia", "Arbor_SaveByPath", "Arbor_IndexSwitch"}
+                "Arbor_SplitGrid", "Arbor_LoadFolder", "Arbor_LoadMedia", "Arbor_SaveByPath", "Arbor_IndexSwitch",
+                "Arbor_H3AddGuideFrames", "Arbor_H3TiledRefine", "Arbor_H3RegionRedraw"}
 MAX_NODES = 200
 
 

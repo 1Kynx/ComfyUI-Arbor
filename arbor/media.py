@@ -9,6 +9,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import shutil
 import uuid
 from fractions import Fraction
 
@@ -83,13 +84,28 @@ def video_info(v) -> dict:
     return {"w": int(w), "h": int(h), **out}
 
 
+_COPIES: dict = {}  # (file, modified, size) -> (its copy in temp, the copy's /view reference)
+
+
+def _copied(path: str, prefix: str) -> dict:
+    """/view reference of a copy in temp of a file the page cannot reach where it is. One copy per file, for as
+    long as the file stays as it is."""
+    st = os.stat(path)
+    key = (path, st.st_mtime_ns, st.st_size)
+    copy, ref = _COPIES.get(key, ("", None))
+    if not os.path.isfile(copy):
+        copy, ref = temp_file(prefix, os.path.splitext(path)[1].lstrip(".").lower())
+        shutil.copyfile(path, copy)
+        _COPIES[key] = (copy, ref)
+    return ref
+
+
 def video_ref(v, prefix: str = "video") -> dict:
-    """/view reference the browser can play: the file itself when it is one, else an MP4 in temp."""
+    """/view reference the browser can play: the file itself when it is one (a copy of it when it lies outside
+    ComfyUI's folders), else an MP4 in temp."""
     path = plain_file(v)
     if path and os.path.splitext(path)[1].lower() in BROWSER_EXTS:
-        ref = view_ref(path)
-        if ref:
-            return ref
+        return view_ref(path) or _copied(path, prefix)
     from comfy_api.latest import InputImpl, Types
     path, ref = temp_file(prefix, "mp4")
     if isinstance(v, InputImpl.VideoFromComponents):  # frames in memory, e.g. Create Video's output
@@ -157,7 +173,7 @@ def write_view_mp4(v, path: str):
 
 # ------------------------------------------------------------------ audio
 
-def write_flac(waveform: torch.Tensor, rate: int, path: str | io.BytesIO, meta: dict | None = None):
+def write_flac(waveform: torch.Tensor, rate: int, path: str, meta: dict | None = None):
     """One clip ([channels, samples]) as FLAC, the way ComfyUI's audio saving writes it."""
     import av
     waveform = waveform.detach().float().cpu()
@@ -177,11 +193,8 @@ def write_flac(waveform: torch.Tensor, rate: int, path: str | io.BytesIO, meta: 
     container.mux(stream.encode(frame))
     container.mux(stream.encode(None))
     container.close()
-    if isinstance(path, io.BytesIO):
-        path.write(buf.getbuffer())
-    else:
-        with open(path, "wb") as f:
-            f.write(buf.getbuffer())
+    with open(path, "wb") as f:
+        f.write(buf.getbuffer())
 
 
 def peaks(waveform: torch.Tensor, n: int = 480) -> list[float]:

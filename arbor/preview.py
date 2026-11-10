@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
+import math
 import os
-import uuid
+from concurrent.futures import ThreadPoolExecutor
 
-import numpy as np
 import torch
 from PIL import Image
 
-import folder_paths
-
+from .media import temp_file, video_info
 from .tree import DataTree, format_path
 
 PANEL_MAX_ITEMS = 2000
@@ -29,30 +28,32 @@ def is_mask(v) -> bool:
 
 def to_pil(frame: torch.Tensor) -> Image.Image:
     """[H,W,C] float 0..1 -> PIL RGB(A)."""
-    arr = (frame.detach().float().cpu().clamp(0, 1).numpy() * 255.0).round().astype(np.uint8)
+    arr = frame.detach().float().mul(255).round_().clamp_(0, 255).to(torch.uint8).cpu().numpy()
     if arr.shape[-1] == 1:
         arr = arr[..., 0]
     return Image.fromarray(arr)
 
 
-def _temp_sub() -> tuple[str, str]:
-    sub = "arbor"
-    d = os.path.join(folder_paths.get_temp_directory(), sub)
-    os.makedirs(d, exist_ok=True)
-    return d, sub
-
-
 def save_temp(img: Image.Image, prefix: str, max_px: int | None = None, fmt: str = "webp") -> dict:
-    d, sub = _temp_sub()
+    """Write a picture made for this (it is shrunk in place when larger than max_px) to temp/arbor: its /view
+    reference."""
     if max_px and max(img.size) > max_px:
-        img = img.copy()
         img.thumbnail((max_px, max_px), Image.LANCZOS)
-    name = f"{prefix}_{uuid.uuid4().hex[:12]}.{fmt}"
+    path, ref = temp_file(prefix, fmt)
     if fmt == "webp":
-        img.save(os.path.join(d, name), "WEBP", quality=82, method=4)
+        img.save(path, "WEBP", quality=82, method=4)
     else:
-        img.save(os.path.join(d, name), "PNG", compress_level=1)
-    return {"filename": name, "subfolder": sub, "type": "temp"}
+        img.save(path, "PNG", compress_level=1)
+    return ref
+
+
+def in_threads(fn, jobs: list) -> list:
+    """fn(*job) for every job, a few at a time, in order. For encoding pictures: that leaves Python free to start
+    the next, so a batch of 2K frames is written five times as fast."""
+    if len(jobs) < 2:
+        return [fn(*job) for job in jobs]
+    with ThreadPoolExecutor(max_workers=min(8, os.cpu_count() or 1)) as pool:
+        return list(pool.map(lambda job: fn(*job), jobs))
 
 
 def fmt_number(v) -> str:
@@ -61,7 +62,7 @@ def fmt_number(v) -> str:
     if isinstance(v, int):
         return str(v)
     if isinstance(v, float):
-        if v == int(v) and abs(v) < 1e15:
+        if math.isfinite(v) and v == int(v) and abs(v) < 1e15:
             return f"{v:.1f}"
         return f"{v:.6g}"
     return str(v)
@@ -91,15 +92,11 @@ def _audio_text(waveform: torch.Tensor, rate: int) -> str:
 
 def _video_text(v) -> str:
     """'Video 736×416 · 56 frames · 24 fps · 2.3 s' — whatever the video object can tell without decoding."""
-    parts = []
-    for get, fmt in ((lambda: v.get_dimensions(), lambda d: f"{d[0]}×{d[1]}"),
-                     (lambda: v.get_frame_count(), lambda n: f"{n} frames"),
-                     (lambda: float(v.get_frame_rate()), lambda f: f"{f:g} fps"),
-                     (lambda: float(v.get_duration()), _seconds)):
-        try:
-            parts.append(fmt(get()))
-        except Exception:  # a source that cannot answer one of them
-            pass
+    info = video_info(v)
+    parts = [f"{info['w']}×{info['h']}"] if info["w"] and info["h"] else []
+    for key, fmt in (("frames", lambda n: f"{n} frames"), ("fps", lambda r: f"{r:g} fps"), ("dur", _seconds)):
+        if key in info:
+            parts.append(fmt(info[key]))
     return "Video " + " · ".join(parts) if parts else "Video"
 
 
@@ -168,7 +165,8 @@ def panel_payload(value) -> dict:
             if len(text) > PANEL_MAX_CHARS:
                 row["len"] = len(text)  # front end marks it as cut
             if t == "image" and thumbs < PANEL_MAX_THUMBS:
-                row["img"] = save_temp(to_pil(v[0]), "panel", THUMB_PX)
+                k = max(1, min(v.shape[1:3]) // (2 * THUMB_PX))  # every k-th pixel is plenty for a thumbnail
+                row["img"] = save_temp(to_pil(v[0, ::k, ::k]), "panel", THUMB_PX)
                 thumbs += 1
             rows.append(row)
         branch = {"path": ps, "n": len(items), "items": rows}

@@ -291,6 +291,9 @@ def test_panel():
     clip = InputImpl.VideoFromComponents(Types.VideoComponents(images=torch.rand(12, 16, 24, 3), audio=None,
                                                                frame_rate=Fraction(24)))
     assert describe(clip) == ("video", "Video 24×16 · 12 frames · 24 fps · 0.5 s"), describe(clip)
+    assert describe(float("nan"))[1] == "nan" and describe(float("-inf"))[1] == "-inf", "not every number is finite"
+    from arbor_pkg.arbor.preview import in_threads
+    assert in_threads(lambda a, b: a * b, [(k, 2) for k in range(20)]) == list(range(0, 40, 2)), "in order"
     flat = run(nodes_panel.Panel, data=[1, 2, 3]).ui["arbor_panel"][0]
     assert flat["kind"] == "list" and flat["stats"]["items"] == 3
 
@@ -346,6 +349,9 @@ def test_tree_nodes():
     assert t.names == {(1,): "Places"} and d == ["tea", "roof"], "by name, and its items as data"
     t, d = res(run(nodes_tree.TreeBranch, tree=[named], path="Places, {0}", index=0))
     assert list(t.branches) == [(1,), (0,)] and d == ["tea", "roof", "mei", "kai"], "several, in the order asked"
+    sized = T.DataTree({(0,): ["small"], (1,): ["large"]}, {(0,): 4.5, (1,): {"samples": torch.zeros(1, 4, 8, 8)}})
+    assert res(run(nodes_tree.TreeBranch, tree=[sized], path="4.5", index=0))[1] == ["small"], \
+        "a name that is a number (XY Lists' rows) is asked for as a grid shows it; one that is no text does not get in the way"
     trees = {"tree0": [tr], "tree1": [5, 6], "tree2": [None]}
     mg = res(run(nodes_tree.Merge, trees=trees, mode="merge"))[0]
     assert mg.branches == {(0,): [1.0, 1.5, 2.0, 2.5, 5, 6]}, "unconnected Autogrow slot ignored"
@@ -621,6 +627,27 @@ def test_image_grid():
     assert grid._wrap(draw, "one two three four five six", font, 160, 2)[-1].endswith("…")
     assert len(grid._wrap(draw, "一只猫在雨中的窗台上睡觉", font, 200, 2)[0]) > 1
     raises(ValueError, run, nodes_image.ImageGrid, images=flat[:5], shape=[shape], **grid_kw())
+    # what the rows and columns are called: an empty branch takes its name with it, and a shape that holds the
+    # pictures themselves names no columns
+    drawn, real_layout = {}, grid.layout_sheet
+
+    def spy(sizes, row_labels=None, col_labels=None, *args, **kw):
+        drawn["rows"], drawn["cols"] = row_labels, col_labels
+        return real_layout(sizes, row_labels, col_labels, *args, **kw)
+    grid.layout_sheet = spy
+    try:
+        pic = lambda: torch.rand(1, 8, 8, 3)
+        holes = T.DataTree({(0,): [pic()], (1,): [], (2,): [pic()]}, {(0,): "A", (1,): "B", (2,): "C"})
+        run(nodes_image.ImageGrid, images=[holes], **grid_kw())
+        assert drawn["rows"] == ["A", "C"], drawn
+        pics = T.DataTree({(0,): [pic(), pic()], (1,): [pic(), pic()]})
+        run(nodes_image.ImageGrid, images=pics.flat(), shape=[pics], **grid_kw())
+        assert drawn["cols"] is None, "not 'Image 8×8' over every column"
+        steps = T.DataTree({(0,): [4, 8], (1,): [4, 8]}, {(0,): "euler", (1,): "lcm"})
+        run(nodes_image.ImageGrid, images=pics.flat(), shape=[steps], **grid_kw())
+        assert drawn["cols"] == ["4", "8"] and drawn["rows"] == ["euler", "lcm"], drawn
+    finally:
+        grid.layout_sheet = real_layout
     print("image grid: OK")
 
 
@@ -718,10 +745,18 @@ def test_image_nodes():
     assert tuple(out[0].shape) == (2, 256, 256, 3) and tuple(out[1].shape) == (2, 256, 256)
     out = res(nodes_image.SmartResize.execute(img, {"mode": "scale", "factor": 3.0}, "1", "bilinear", False))
     assert (out[2], out[3]) == (500, 300), "no upscale"
+    assert out[0] is img, "frames that already fit are passed on, not copied"
+    assert tuple(out[1].shape) == (2, 300, 500) and float(out[1].min()) == 1.0
+    assert out[1].untyped_storage().nbytes() == 300 * 500 * 4, "no mask given: all of it, at one frame's memory"
 
     assert nodes_image.parse_indices("0, -1, 2-4, ::3", 6) == [0, 5, 2, 3, 4, 0, 3]
-    picked = res(nodes_image.BatchPick.execute(torch.rand(6, 4, 4, 3), "1, 1, -1"))
-    assert picked[0].shape[0] == 3 and picked[1] == 3
+    six = torch.rand(6, 4, 4, 3)
+    picked = res(nodes_image.BatchPick.execute(six, "1, 1, -1"))
+    assert picked[0].shape[0] == 3 and picked[1] == 3 and torch.equal(picked[0], six[[1, 1, 5]])
+    part = res(nodes_image.BatchPick.execute(six, "1:6:2"))[0]
+    assert torch.equal(part, six[1:6:2]) and part.untyped_storage().data_ptr() == six.untyped_storage().data_ptr(), \
+        "a run of frames is the batch's own memory, not a copy"
+    assert torch.equal(res(nodes_image.BatchPick.execute(six, "4, 2, 0"))[0], six[[4, 2, 0]]), "backwards is picked"
     from fractions import Fraction
     from comfy_api.latest import InputImpl, Types
     frames = torch.rand(10, 4, 6, 3)
@@ -831,6 +866,7 @@ def test_load_media():
 
     assert load_media.parse_list("# A\na.png\nb.png\n\nc.png\n# B\n\n# C\nd.wav") == [
         ("A", ["a.png", "b.png"]), ("", ["c.png"]), ("C", ["d.wav"])], "empty groups are dropped"
+    assert load_media.parse_list("# A\n\nx.png") == [("", ["x.png"])], "an empty line ends a group, as on the node"
     LM = load_media.LoadMedia
     with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as elsewhere:
         os.makedirs(os.path.join(d, "shots"))
@@ -860,6 +896,13 @@ def test_load_media():
         assert nodes_files.resolve_path(whole[1]["files"][0]) == os.path.realpath(at("shots", "s0.png"))
         for p in (os.path.join(d, "clip.mp4"), os.path.join(d, "shots", "s0.png")):
             assert load_media.thumbnail(p, 64)[:4] == b"RIFF", "webp thumbnails of pictures and videos"
+        # a video file outside ComfyUI's folders is shown as it is: copied where the page can reach it, once
+        import folder_paths
+        shown = media.video_ref(videos[0], "test")
+        copy = os.path.join(folder_paths.get_temp_directory(), shown["subfolder"], shown["filename"])
+        with open(copy, "rb") as a, open(at("clip.mp4"), "rb") as b:
+            assert shown["type"] == "temp" and a.read() == b.read(), "the file itself, not a second encode"
+        assert media.video_ref(videos[0], "test") == shown, "one copy while the file stays as it is"
     assert nodes_files.resolve_folder("arbor:storyboard").endswith(os.path.join("example_media", "storyboard"))
     from arbor_pkg.arbor import dialogs
     here = nodes_files.resolve_folder("arbor:storyboard")
@@ -925,6 +968,10 @@ def test_files():
             listed = res(run(nodes_files.SaveByPath, tree=one, filename_prefix="xy/list", layout="subfolders",
                              names=["a → b", "b → c"]))[0]
             assert [rel(f) for f in listed.branches[(0,)]] == ["xy/list/a → b.png", "xy/list/b → c.png"],                 "a plain list goes straight under the prefix"
+            twice = res(run(nodes_files.SaveByPath, tree=one, filename_prefix="xy/twice", layout="subfolders",
+                            names=["same", "same"]))[0].branches[(0,)]
+            assert [os.path.basename(f) for f in twice] == ["same.png", "same_2.png"] and all(map(os.path.exists, twice)), \
+                "two files of one name in one run do not land on each other"
             again = res(save(imgs, "xy/run", layout="flat"))[0]
             assert os.path.basename(again.branches[(0,)][0]) == "run_0 · src_000.png"
             # a long name cut at a space must not leave a trailing space (Windows drops it from folder names)
@@ -1278,8 +1325,15 @@ def test_sampling():
     # each of its tokens covers 2 x 2 of the tile's, and sits on the first of them
     assert torch.allclose(packs[0][2][:9].reshape(3, 3, 2), packs[0][3][::2, ::2])
     packs.clear()
-    S.make_wrapper(2, 2, 4, 4, exact_refs=False, text_crop=False)(see_pack, {"input": x, "timestep": None, "c": ct})
-    assert not packs, "nothing to pack: the payload goes in as it was, for the model to lay out"
+
+    def broken(*a, **kw):
+        raise RuntimeError("H3 packs another way now")
+    real_packed, S.packed = S.packed, broken
+    try:
+        S.make_wrapper(2, 2, 4, 4)(see_pack, {"input": x, "timestep": None, "c": ct})
+    finally:
+        S.packed = real_packed
+    assert not packs, "packing that fails is left to the model: every tile goes in without a layout of its own"
 
     class NotH3:
         model = object()
@@ -1407,7 +1461,12 @@ def test_region_redraw():
         out[area] += 0.4
         return out
 
-    crop2, comp2 = Fc.refine_group(zoomed, [wide_run], big_h, big_w, fake, context=4.0)
+    def refine_one(images_, run, h, w, size=768):
+        """One region through the whole of it, with the fake redraw: its crop, and before beside after."""
+        crops = Fc.plan_crops([[run]], h, w, size, 4.0)
+        return crops[0], Fc.refine(images_, crops, lambda jobs: [fake(j.pixels, j.area) for j in jobs], compare=True)[0]
+
+    crop2, comp2 = refine_one(zoomed, wide_run, big_h, big_w)
     assert sizes == [(60, 768, 768, 3)] and comp2.shape == (60, 768 * 2 + 4, 768, 3) and "enlarged" in crop2.text
     assert (zoomed[59] - 0.25).abs().sum() > (zoomed[0] - 0.25).abs().sum(), "more is pasted as the face grows"
 
@@ -1420,7 +1479,7 @@ def test_region_redraw():
     images = torch.full((60, H, W, 3), 0.25)
     sizes.clear()
     before = images.clone()
-    crop, comp = Fc.refine_group(images, [run0], H, W, fake, context=4.0)
+    crop, comp = refine_one(images, run0, H, W)
     assert sizes == [(20, 768, 768, 3)], sizes
     assert areas[-1] < 0.5, "only around the face is redrawn"
     assert "frames 10-29" in crop.text, crop.text
@@ -1433,10 +1492,16 @@ def test_region_redraw():
     assert not changed[240:280, 520:560].any(), "another face in the mask is not touched by this crop"
     assert abs(float(images[20][changed].max()) - 0.65) < 0.02, "a real change keeps its colour, the VAE's drift goes"
 
+    # the clips are only a look at it: without compare there are none, and the same is pasted
+    unseen = before.clone()
+    crops = Fc.plan_crops([[run0]], H, W, 768, 4.0)
+    assert Fc.refine(unseen, crops, lambda jobs: [fake(j.pixels, j.area) for j in jobs]) == []
+    assert float((unseen - images).abs().max()) < 1e-6
+
     # refine_size sets the canvas
     other = torch.full((60, H, W, 3), 0.25)
     sizes.clear()
-    Fc.refine_group(other, [run0], H, W, fake, 640, context=4.0)
+    refine_one(other, run0, H, W, 640)
     assert sizes == [(20, 640, 640, 3)], sizes
 
     # bbox: a steady box with no holes for a dropout, none where a face is hidden; grow and feather reach further
@@ -1468,13 +1533,12 @@ def test_region_redraw():
     assert any(p[2] != round(p[2]) for p in sp_pos.values()), "sizes are not rounded to whole pixels"
     sp_ramp = torch.arange(1000, dtype=torch.float32)[None, :, None].expand(1000, 1000, 3) / 1000
     sp_box = (100.25, 50.5, 80.5, 80.5)
-    sp_cut = Fc.window(sp_ramp, sp_box, (161, 161))  # 2x
+    sp_cut = Fc.window(sp_ramp[None], sp_box, (161, 161))[0]  # 2x
     sp_want = (sp_box[0] + (torch.arange(161) + 0.5) * sp_box[2] / 161) / 1000
     assert float((sp_cut[80, :, 0] - sp_want).abs()[2:-2].max()) < 1e-3, "a window samples exactly the fractional box"
     sp_frame = torch.zeros(1, 1000, 1000, 3)
-    sp_crop = Fc.Crop([0], {0: sp_box}, (161, 161), torch.full((1, 161, 161), 255, dtype=torch.uint8), [(0, 1, torch.zeros(3))],
-                   height=1000, width=1000)
-    Fc.paste_crop(sp_frame, sp_crop, sp_cut[None])
+    sp_crop = Fc.Crop([], [0], {0: sp_box}, (161, 161), weights=torch.full((1, 161, 161), 255, dtype=torch.uint8))
+    Fc.paste_crop(sp_frame, sp_crop, sp_cut[None], 0, torch.zeros(3))
     sp_in = sp_frame[0, 52:129, 102:179, 0]
     assert float((sp_in - sp_ramp[52:129, 102:179, 0]).abs().max()) < 2e-3, "pasted back where it came from"
     assert float(sp_frame[0, 140:, :, 0].abs().max()) == 0 and float(sp_frame[0, :, 190:, 0].abs().max()) == 0
@@ -1482,7 +1546,12 @@ def test_region_redraw():
     torch.manual_seed(0)
     al_before = Fc._gaussian(torch.rand(3, 1, 128, 128), 3.0).expand(3, 3, 128, 128).movedim(1, -1).contiguous()
     al_true = torch.tensor([[1.6, -2.3], [0.0, 0.0], [-0.4, 0.7]])
-    al_after = Fc._moved(al_before.movedim(-1, 1), al_true[:, 0], al_true[:, 1]).movedim(1, -1)
+
+    def moved(x_, dy, dx):  # each frame's content moved by its own (dy, dx) pixels
+        p = torch.stack([-dy, -dx, torch.zeros_like(dy)], 1)
+        return Fc._warped(x_.movedim(-1, 1), p, torch.zeros(len(x_), 2)).movedim(1, -1)
+
+    al_after = moved(al_before, al_true[:, 0], al_true[:, 1])
     al_area = torch.zeros(3, 128, 128, dtype=torch.bool)
     al_area[:, 32:96, 32:96] = True
     al_fixed, al_most = Fc.align(al_before, al_after, [al_area])
@@ -1497,7 +1566,7 @@ def test_region_redraw():
     assert float(al_err3.max()) < 0.01 and al_edge > 1.5, (al_err3, al_edge)
     # two regions in one crop, off in different ways: each is moved back on its own
     al_two = al_before.clone()
-    al_two[:, :, 64:] = Fc._moved(al_before.movedim(-1, 1), al_true[:, 1], al_true[:, 0]).movedim(1, -1)[:, :, 64:]
+    al_two[:, :, 64:] = moved(al_before, al_true[:, 1], al_true[:, 0])[:, :, 64:]
     al_left, al_right = torch.zeros(3, 128, 128, dtype=torch.bool), torch.zeros(3, 128, 128, dtype=torch.bool)
     al_left[:, 32:96, 8:52] = True
     al_right[:, 32:96, 76:120] = True
@@ -1554,17 +1623,78 @@ def test_region_redraw():
 
     # before and after: one above the other for a wide crop, side by side for a tall one, never larger than needed
     wide_, tall_ = torch.zeros(3, 8, 16, 3), torch.ones(3, 16, 8, 3)
-    assert Fc.compare(wide_, wide_).shape == (3, 20, 16, 3) and Fc.compare(tall_, tall_).shape == (3, 16, 20, 3)
+    assert Fc.before_after(wide_, wide_).shape == (3, 20, 16, 3) and Fc.before_after(tall_, tall_).shape == (3, 16, 20, 3)
     # denoise takes the last steps of the sigmas, as Split Sigmas Denoise does
     sig = torch.tensor([1.0, 0.9, 0.5, 0.0])
     assert torch.equal(Fc.denoised(sig, 1.0), sig) and torch.equal(Fc.denoised(sig, 0.5), sig[1:])
     assert Fc.denoised(sig, 0.0).tolist() == [0.0], "nothing left to do"
 
+    # crops of one canvas and prompt are sampled as one video, each from the start of a VAE clip, and every one gets
+    # its own frames back
+    import comfy_extras.nodes_custom_sampler as CS
+
+    class ToyVAE:  # H3's timing: clips of 17 frames, five latents each (1 + 4 x 4 frames), the last three dropped
+        first_stage_model = NS(clip_length=17, tokens_chunk_size=5, vae_ratio_t=4, frame_pre_padding=3)
+        firsts = [0, 1, 5, 9, 13]  # the first frame each latent of a clip holds
+
+        def encode(self, px):  # a latent is the first frame it holds
+            clips = math.ceil(len(px) / 17)
+            idx = [c * 17 + f for c in range(clips) for f in self.firsts][:clips * 5 - 3]
+            return Fc._hold_to(px, clips * 17)[idx, ::16, ::16, 0][None, None].expand(1, 24, -1, -1, -1).clone()
+
+        def decode(self, z):  # every frame is the latent that holds it
+            t = z.shape[2]
+            which = [f // 17 * 5 + max(i for i, a in enumerate(self.firsts) if a <= f % 17)
+                     for f in range(t // 5 * 17 + (5 if t % 5 else 0))]
+            return z[0, 0, which][..., None].expand(-1, -1, -1, 3).repeat_interleave(16, 1).repeat_interleave(16, 2)
+
+    sampled, steps = [], []
+
+    class ToyGuider:  # samples nothing: what goes in comes out
+        def __init__(self, model):
+            pass
+
+        def set_conds(self, cond):
+            self.cond = cond
+
+        def sample(self, noise, latent, sampler, sigmas, denoise_mask=None, callback=None, seed=None):
+            video = latent.unbind()[0]
+            assert denoise_mask.unbind()[0].shape == video.shape == noise.unbind()[0].shape
+            assert not denoise_mask.unbind()[1].any(), "the audio is held"
+            sampled.append((self.cond, video.shape[2], seed))
+            callback(0, None, None, 1)
+            return latent
+
+    def reel_clip(n, base, cond, seed, hw=(32, 32)):
+        px = (base + torch.arange(n) / 500)[:, None, None, None].expand(n, *hw, 3).clone()
+        return Fc.Clip(px, torch.ones(n, *hw, dtype=torch.bool), cond, seed)
+    one, two = [["prompt"]], [["another"]]
+    reel = [reel_clip(20, 0.1, one, 1), reel_clip(17, 0.3, one, 2), reel_clip(40, 0.5, one, 3), reel_clip(9, 0.7, two, 4),
+            reel_clip(12, 0.2, one, 5, (32, 64))]
+    assert Fc.reels(reel, 17) == [[0, 1, 2], [3], [4]], "one canvas, one prompt"
+    assert Fc.reels(reel, None) == [[0], [1], [2], [3], [4]], "a VAE that does not work in clips: one at a time"
+    real_guider, CS.Guider_Basic = CS.Guider_Basic, ToyGuider
+    try:
+        back = Fc.redraw_batch(None, ToyVAE(), reel, None, torch.tensor([0.7, 0.0]), steps.append)
+    finally:
+        CS.Guider_Basic = real_guider
+    # 34 + 34 + 51 frames, each to the end of its clip, held to the 124 of an H3 video: 37 latents
+    assert sampled == [(one, 37, 1), (two, 7, 4), (one, 7, 5)] and steps == [3, 1, 1], (sampled, steps)
+    for clip, got in zip(reel, back):
+        held = torch.tensor([f // 17 * 17 + max(a for a in ToyVAE.firsts if a <= f % 17) for f in range(len(clip.pixels))])
+        assert got.shape == clip.pixels.shape and got.dtype == torch.float16
+        assert float((got[:, 0, 0, 0].float() - clip.pixels[held, 0, 0, 0]).abs().max()) < 5e-4, "its own frames, in place"
+
     # node: an empty mask returns the frames untouched; a wrong mask count is an error
     frames_in = torch.zeros(60, H, W, 3)
     args = (None, None, None, frames_in, None, torch.tensor([0.7, 0.5, 0.0]), 1.0, "p", 0, 768, 4.0, 128, 0, "mask", 0.35, 0.12)
+    from comfy_execution.graph_utils import ExecutionBlocker
     none = Fc.H3RegionRedraw.execute(*args, masks=torch.zeros(60, 96, 168)).result
-    assert none[0] is frames_in and none[1] == [] and none[2] == "nothing in the masks"
+    assert none[0] is frames_in and none[2] == "nothing in the masks"
+    # no compare clips: what is connected to them is skipped, and told why when compare is merely off
+    assert isinstance(none[1], ExecutionBlocker) and "turn compare on" in none[1].message
+    quiet = Fc.H3RegionRedraw.execute(*args, True, masks=torch.zeros(60, 96, 168)).result[1]
+    assert isinstance(quiet, ExecutionBlocker) and quiet.message is None, "on, and nothing was redrawn"
     assert Fc.H3RegionRedraw.execute(*args).result[2] == "nothing in the masks", "nothing connected is fine"
     raises(ValueError, Fc.H3RegionRedraw.execute, *args, masks=torch.zeros(9, 96, 168))
     raises(ValueError, Fc.H3RegionRedraw.execute, *args, subject_masks={"subject_mask_1": torch.zeros(9, 96, 168)})

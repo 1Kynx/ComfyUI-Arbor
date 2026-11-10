@@ -22,6 +22,7 @@ import re
 from typing import Any, Callable, Iterable, Iterator
 
 Path = tuple[int, ...]
+MAX_COMBOS = 10000  # the most runs a node that multiplies its inputs makes
 
 
 class DataTree:
@@ -293,10 +294,11 @@ def match_branches(*trees: DataTree | None) -> tuple[list[tuple[Path, list]], Da
         return [], None
     count = max(t.branch_count for t in trees if t is not None)
     mp = master.paths()
+    rows = [list(t.branches.values()) if t is not None else None for t in trees]  # once, not once per branch
     out = []
     for k in range(count):
         path = mp[k] if k < len(mp) else mp[-1][:-1] + (mp[-1][-1] + k - len(mp) + 1,)
-        out.append((path, [branch_for(t, k) if t is not None else None for t in trees]))
+        out.append((path, [r[min(k, len(r) - 1)] if r else None for r in rows]))
     return out, master
 
 

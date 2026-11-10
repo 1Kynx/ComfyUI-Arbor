@@ -3,8 +3,7 @@
 from . import tree as T
 from .common import IO, CAT_TREE, schema, connected, data_out, tree_in, tree_out, to_tree, unwrap
 from .preview import label_of
-
-MAX_COMBOS = 10000
+from .tree import MAX_COMBOS
 
 
 # ======================================================================= bridge
@@ -75,8 +74,7 @@ class XYLists(IO.ComfyNode):
                     oz.append(pick(bz, i))
                 # the shape's items are the last variable's values, for column labels
                 shape[path] = [pick(bz if zs else by, i) for i in range(n)]
-            kept = {p: nm for p, nm in names.items() if any(q[:len(p)] == p for q in shape)}  # parents too
-            return IO.NodeOutput(ox, oy, oz, T.DataTree(shape, kept), len(ox))
+            return IO.NodeOutput(ox, oy, oz, T.DataTree(shape, names), len(ox))  # a tree keeps its branches' names
 
         total = sum(len(bx or []) * len(by or []) * len(bz or [None]) for _, (bx, by, bz) in pairs)
         if total > MAX_COMBOS:
@@ -224,7 +222,7 @@ class TreeBranch(IO.ComfyNode):
         if not p:
             picked = T.get_branch(t, index=unwrap(index))
         else:  # one or more paths / branch names, separated by commas
-            by_name = {n: q for q, n in t.names.items() if q in t.branches}
+            by_name = {label_of(n): q for q, n in t.names.items() if q in t.branches}  # as a grid shows them
             parts = [T.get_branch(t, by_name[k] if k in by_name else T.parse_path(k))
                      for k in (s.strip() for s in p.split(",")) if k]
             picked = T.DataTree({q: v for b in parts for q, v in b.branches.items()}, t.names)

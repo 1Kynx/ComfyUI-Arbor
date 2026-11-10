@@ -26,7 +26,6 @@ const kindOf = (f) => {
   return Object.keys(KIND_EXT).find((k) => KIND_EXT[k].includes(ext)) || null;
 };
 const baseName = (f) => f.split(/[\\/]/).pop();
-const isAbs = (p) => /^([a-zA-Z]:[\\/]|[\\/]|~)/.test(p);
 
 export function parseList(text) {
   const groups = [];

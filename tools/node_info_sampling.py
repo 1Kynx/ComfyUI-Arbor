@@ -166,8 +166,9 @@ node("Arbor_H3RegionRedraw", en=dict(
             "group_size": "How far across, in pixels of the video, a crop shared by nearby regions may be. They share one only when that is less work than a crop each, and each keeps the room around it and the enlargement it would have alone, so they are drawn as well; the shared canvas also stays within 1536 pixels, which can stop a group sooner. 0 gives every region a crop of its own.",
             "paste": "What is redrawn and pasted back: `mask` follows the mask's outline, `bbox` is a steady box around it, which leaves room for something of another shape.",
             "grow": "How far the redrawn area reaches past the mask, as a share of the region's size. For a face at 0.7 it needs to cover the hair. Starting near 1, set it to 0: what lies past the mask is what holds the pose.",
-            "feather": "Softness of the pasted edge, as a share of the region's size."},
-    outputs=["The video with the regions redrawn.", "Each crop before and after it was redrawn, at the canvas size, as a list with one clip per crop: one above the other when the crop is wider than tall, side by side when it is taller.", "One line per region: number, frames, position, size and what was done. Then one line per crop, in the order of the clips."],
+            "feather": "Softness of the pasted edge, as a share of the region's size.",
+            "compare": "Also make the `compare` output: each crop before and after it was redrawn. Off, the node is a few seconds quicker and needs much less memory, and whatever is connected to that output is skipped with a note saying why."},
+    outputs=["The video with the regions redrawn.", "Only when `compare` is on. Each crop before and after it was redrawn, at the canvas size, as a list with one clip per crop: one above the other when the crop is wider than tall, side by side when it is taller.", "One line per region: number, frames, position, size and what was done. Then one line per crop, in the order of the clips."],
     doc="""## What it is for
 A face a few dozen pixels wide is more than the model can draw at 2K. More tiles, more steps or a sharper guide don't change that: it still has the same pixels. This node gives each masked region a canvas of its own.
 
@@ -218,7 +219,9 @@ Write in English, as the guide does. Text that shows on screen goes in double qu
 Connect KSamplerSelect and Manual Sigmas as you would on a custom sampler.
 
 ## How long it takes
-A 768p shot of 243 frames with 22 crops, two steps: 268 s, of which the VAE takes 116 s and sampling 107 s. The VAE is as much of the work as the model, and it works in tiles of 256 px that overlap by at least 64: one or two tiles across cover up to 448 px, three up to 640, four up to 832. That is why `refine_size` is 448 and not 512, which took 425 s for the same shot, the faces no better. Cutting, masking, aligning and pasting the crops is done on the GPU, a few frames at a time, and falls back to the CPU when it has no room.
+A 768p shot of 243 frames with 22 crops, two steps: 268 s, of which the VAE takes 116 s and sampling 107 s. The VAE is as much of the work as the model, and it works in tiles of 256 px that overlap by at least 64: one or two tiles across cover up to 448 px, three up to 640, four up to 832. That is why `refine_size` is 448 and not 512, which took 425 s for the same shot, the faces no better. Cutting, masking, aligning and pasting the crops is done on the GPU, a few frames at a time, and falls back to the CPU when it has no room: half a minute of that shot's time.
+
+It takes memory as well, in the computer's own, not the card's: for that shot, the 3 GB of frames that came in and the 3 GB that go out. With `compare` on, the compare clips hold every crop twice at the canvas size, 8 GB more. Where that is too much, redraw a long shot a part at a time.
 
 ## Repair or replace
 The sigmas decide. Starting at 0.7 keeps what is there and draws it better; starting near 1 keeps only the surroundings and draws what the prompt or picture says. To replace something, use a model without a refiner LoRA: with one, the object is erased and the surroundings fill the hole. For an object, `paste` set to `bbox` with a larger `grow` leaves room for a different shape.
@@ -262,8 +265,9 @@ What is redrawn is drawn anew, not recovered. It can change between seeds.
             "group_size": ("合并尺寸", "相邻区域共用的裁切框在原视频里最多多宽（像素）。只有合并后工作量更少时才合并，每块区域保留单独处理时的周围范围和放大倍数，所以画得一样好；共用画布也不会超过 1536 像素，这可能让一组更早停止合并。0 = 每块区域单独一个框。"),
             "paste": ("贴回方式", "重画和贴回的范围：`mask` 沿蒙版轮廓，`bbox` 用外面的稳定方框，能给形状不同的新东西留空间。"),
             "grow": ("外扩", "重画范围超出蒙版多少，按区域尺寸的比例计算。从 0.7 开始修人脸时需要盖住头发。起点接近 1 时设为 0：蒙版外面的部分是保住姿势的依据。"),
-            "feather": ("羽化", "贴回边缘的柔和程度，按区域尺寸的比例计算。")},
-    outputs=[("图像", "局部重绘后的视频。"), ("对比片段", "每个裁切框重画前后的对比，画布尺寸，列表形式，一个裁切框一段：横的框上下排列，竖的框左右排列。"), ("报告", "每块区域一行：编号、帧范围、位置、尺寸和处理结果；之后每个裁切框一行，顺序和片段一致。")],
+            "feather": ("羽化", "贴回边缘的柔和程度，按区域尺寸的比例计算。"),
+            "compare": ("对比片段", "同时生成 `对比片段` 输出：每个裁切框重画前后的画面。关闭时节点快几秒，内存占用少得多；接在该输出上的节点会被跳过，并提示原因。")},
+    outputs=[("图像", "局部重绘后的视频。"), ("对比片段", "只在打开 `对比片段` 时输出。每个裁切框重画前后的对比，画布尺寸，列表形式，一个裁切框一段：横的框上下排列，竖的框左右排列。"), ("报告", "每块区域一行：编号、帧范围、位置、尺寸和处理结果；之后每个裁切框一行，顺序和片段一致。")],
     doc="""## 用途
 几十像素宽的脸，模型在 2K 画面里画不出来。多分块、加步数、锐化引导都改变不了这一点：它占的像素还是那么多。这个节点让蒙版里的每块区域都有自己的画布。
 
@@ -314,7 +318,9 @@ non_diegetic_music: N/A
 KSamplerSelect 和 Manual Sigmas 的接法与自定义采样器相同。
 
 ## 耗时
-768p、243 帧、22 个裁切框、两步采样：268 秒，其中 VAE 116 秒，采样 107 秒。VAE 的工作量和模型差不多，而且它按 256 像素的块处理，相邻块至少重叠 64 像素：448 像素以内横向一到两块，640 以内三块，832 以内四块。所以 `精修尺寸` 默认是 448 而不是 512——同一段片子用 512 要 425 秒，脸并没有更好。裁切、蒙版、对齐、贴回都在 GPU 上分批完成，显存不够时自动退回 CPU。
+768p、243 帧、22 个裁切框、两步采样：268 秒，其中 VAE 116 秒，采样 107 秒。VAE 的工作量和模型差不多，而且它按 256 像素的块处理，相邻块至少重叠 64 像素：448 像素以内横向一到两块，640 以内三块，832 以内四块。所以 `精修尺寸` 默认是 448 而不是 512——同一段片子用 512 要 425 秒，脸并没有更好。裁切、蒙版、对齐、贴回都在 GPU 上分批完成，显存不够时自动退回 CPU，在这段片子里约占半分钟。
+
+它也占内存（电脑内存，不是显存）：这段片子进来的帧 3 GB，出去的帧 3 GB。打开 `对比片段` 后，还要按画布尺寸把每个裁切框存重画前后两份，再多 8 GB。内存不够时，把长镜头分段重绘。
 
 ## 修复还是替换
 由 sigmas 决定。从 0.7 开始会保留原来的内容，画得更好；从接近 1 开始只保留周围环境，按提示词或图片重画。替换时请用不带精修 LoRA 的模型：带了之后物体只会被抹掉，由周围画面填上。替换物体时，`贴回方式` 用 `bbox` 并调大 `外扩`，能给形状不同的新东西留空间。

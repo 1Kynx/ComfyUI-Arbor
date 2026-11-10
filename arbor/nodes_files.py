@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import fnmatch
+import functools
 import hashlib
 import json
 import os
@@ -19,7 +20,7 @@ from . import tree as T
 from .common import IO, CAT_MEDIA, schema, connected, tree_in, tree_out, to_tree, unwrap
 from . import media
 from .media import is_audio, is_video
-from .preview import is_image, label_of, to_pil
+from .preview import in_threads, is_image, label_of, to_pil
 
 MAX_PREVIEWS = 64
 
@@ -53,13 +54,21 @@ def resolve_path(path: str) -> str:
     return os.path.normpath(path)
 
 
+@functools.lru_cache(maxsize=1024)
+def _real(folder: str) -> str:
+    """A folder through junctions / symlinks, so either spelling of it matches. Remembered: asking the system takes
+    a millisecond, and a picked folder asks for each of its thousands of files."""
+    return os.path.realpath(folder)
+
+
 def short_path(path: str) -> str:
     """The shortest way to write an absolute path for resolve_path: arbor:…, output/…, relative to input,
     or the path itself."""
-    full = os.path.realpath(path)  # through junctions / symlinks, so either spelling of a folder matches
+    path = os.path.abspath(path)
+    full = _real(path) if os.path.isdir(path) else os.path.join(_real(os.path.dirname(path)), os.path.basename(path))
     for prefix, root in (("arbor:", EXAMPLE_MEDIA), ("output/", folder_paths.get_output_directory()),
                          ("", folder_paths.get_input_directory())):
-        root = os.path.realpath(root)
+        root = _real(root)
         try:
             rel = os.path.relpath(full, root)
         except ValueError:  # another drive
@@ -82,12 +91,10 @@ def scan_folder(folder: str, pattern: str, subfolders: bool, sort: str, limit: i
     """{relative folder: [file paths]} in display order; empty folders are skipped."""
     pats = [p for p in re.split(r"[\s,;]+", pattern or "") if p] or ["*"]
     groups: dict[str, list[str]] = {}
-    walker = os.walk(folder) if subfolders else [(folder, [], os.listdir(folder))]
-    for root, dirs, files in walker:
-        dirs.sort(key=_natural_key)
-        hits = [os.path.join(root, f) for f in files
-                if any(fnmatch.fnmatch(f.lower(), p.lower()) for p in pats)
-                and os.path.isfile(os.path.join(root, f))]
+    pats = [p.lower() for p in pats]
+    walker = os.walk(folder) if subfolders else [next(os.walk(folder), (folder, [], []))]
+    for root, _, files in walker:
+        hits = [os.path.join(root, f) for f in files if any(fnmatch.fnmatch(f.lower(), p) for p in pats)]
         if not hits:
             continue
         if sort == "modified":
@@ -193,7 +200,8 @@ class LoadFolder(IO.ComfyNode):
         h = hashlib.sha1(kind.get("kind", "").encode())
         for files in groups.values():
             for p in files:
-                h.update(f"{p}|{os.path.getmtime(p)}|{os.path.getsize(p)};".encode("utf-8", "replace"))
+                st = os.stat(p)
+                h.update(f"{p}|{st.st_mtime_ns}|{st.st_size};".encode("utf-8", "replace"))
         return h.hexdigest()
 
     @classmethod
@@ -225,12 +233,15 @@ def _safe(name: str, limit: int = 80) -> str:
     return _BAD.sub("_", str(name))[:limit].strip(" .") or "_"
 
 
-def _unique(path: str) -> str:
+def _unique(path: str, taken: set) -> str:
+    """path, or path_2, path_3… while a file of that name exists or is about to be written (taken, which this adds
+    to)."""
     base, ext = os.path.splitext(path)
     k, out = 2, path
-    while os.path.exists(out):
+    while os.path.normcase(out) in taken or os.path.exists(out):
         out = f"{base}_{k}{ext}"
         k += 1
+    taken.add(os.path.normcase(out))
     return out
 
 
@@ -387,7 +398,7 @@ class SaveByPath(IO.ComfyNode):
         flat = unwrap(layout) == "flat"
         meta = _metadata(cls.hidden)
 
-        saved, previews = {}, {"images": [], "audio": [], "video": []}
+        saved, jobs, taken = {}, [], set()  # jobs: (kind of file, what goes in it, where)
         single = list(plan) == [(0,)] and not data.label((0,), label_of)  # a plain list, or one unnamed {0}
         for b, (path, files) in enumerate(plan.items()):
             tag = "-".join(map(str, path))
@@ -404,14 +415,20 @@ class SaveByPath(IO.ComfyNode):
                 else:
                     target = (os.path.join(folder, f"{filename}_{tag}_{stem}.{ext}") if flat
                               else os.path.join(folder, filename, tag, f"{stem}.{ext}"))
-                target = _unique(target)
+                target = _unique(target, taken)
                 os.makedirs(os.path.dirname(target), exist_ok=True)
-                WRITERS[ext](payload, target, meta)
+                jobs.append((ext, payload, target))
                 row.append(target)
-                kind = {"png": "images", "mp4": "video", "flac": "audio"}.get(ext)
-                if kind and len(previews[kind]) < MAX_PREVIEWS:
-                    previews[kind].append(_preview(target, kind, out_dir, payload))
             saved[path] = row
+        # pictures several at a time: a 2K PNG takes half a second to pack, and most of a batch's time went there
+        in_threads(lambda ext, payload, target: write_png(payload, target, meta), [j for j in jobs if j[0] == "png"])
+        previews = {"images": [], "audio": [], "video": []}
+        for ext, payload, target in jobs:
+            if ext != "png":
+                WRITERS[ext](payload, target, meta)
+            kind = {"png": "images", "mp4": "video", "flac": "audio"}.get(ext)
+            if kind and len(previews[kind]) < MAX_PREVIEWS:
+                previews[kind].append(_preview(target, kind, out_dir, payload))
         ui = {}
         if previews["images"]:
             ui["images"] = previews["images"]

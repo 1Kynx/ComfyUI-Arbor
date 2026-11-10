@@ -1644,6 +1644,10 @@
       "feather": {
         "name": "feather",
         "tooltip": "Softness of the pasted edge, as a share of the region's size."
+      },
+      "compare": {
+        "name": "compare",
+        "tooltip": "Also make the `compare` output: each crop before and after it was redrawn. Off, the node is a few seconds quicker and needs much less memory, and whatever is connected to that output is skipped with a note saying why."
       }
     },
     "outputs": {
@@ -1653,7 +1657,7 @@
       },
       "1": {
         "name": "compare",
-        "tooltip": "Each crop before and after it was redrawn, at the canvas size, as a list with one clip per crop: one above the other when the crop is wider than tall, side by side when it is taller."
+        "tooltip": "Only when `compare` is on. Each crop before and after it was redrawn, at the canvas size, as a list with one clip per crop: one above the other when the crop is wider than tall, side by side when it is taller."
       },
       "2": {
         "name": "report",

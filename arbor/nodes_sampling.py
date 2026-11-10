@@ -389,16 +389,17 @@ def install_row_filter(diffusion_model) -> bool:
     return True
 
 
-def packed(payload: dict, text_len: int, video_shape, audio_t: int, keeps: list, places: list | None = None) -> dict:
-    """The payload with a layout of its own: conditioning put where it lies (place) and rows left out (repack). One
-    entry per conditioning latent, in the payload's order."""
+def packed(payload: dict, text_len: int, size, audio_t: int, keeps: list, places: list) -> dict:
+    """The payload of a video of size (latent frames, height, width) with a layout of its own: conditioning put where
+    it lies (place) and rows left out (repack). keeps and places have one entry per conditioning latent, in the
+    payload's order."""
     from comfy.ldm.minimax.model import PackedLayout
-    _, _, lt, lh, lw = video_shape
-    layout = PackedLayout(text_len, lt, lh + lh % 2, lw + lw % 2, audio_t, keyframes=payload.get("keyframes"),
-                          refs=payload.get("refs"))
+    t, h, w = size
+    h, w = h + h % 2, w + w % 2  # as the model pads it, to whole patches
+    layout = PackedLayout(text_len, t, h, w, audio_t, keyframes=payload.get("keyframes"), refs=payload.get("refs"))
     latents = payload["cond_video_latents"]
-    if places is not None and any(p is not None for p in places):
-        place(layout, latents, places, lh + lh % 2, lw + lw % 2)
+    if any(p is not None for p in places):
+        place(layout, latents, places, h, w)
     out = dict(payload)
     out["layout"], left = repack(layout, keeps)
     out["cond_video_latents"] = [latents[j] for j in left]
@@ -409,16 +410,15 @@ def packed(payload: dict, text_len: int, video_shape, audio_t: int, keeps: list,
 
 
 def make_wrapper(tiles_y: int, tiles_x: int, overlap: int, feather: int, previous=None, guide_mask=None,
-                 margin: int = 1, text_crop: bool = True, exact_refs: bool = True):
+                 margin: int = 1):
     """model_function_wrapper: run each model call tile by tile and blend the denoised predictions. With a guide mask,
     only the guide tokens inside it go in: a tile it misses runs without the guide, a tile it touches with part of
-    it. A reference video framed like the video is cut to each tile, with what the text says of it (text_crop), and
-    put at the positions of where it lies in the tile (exact_refs)."""
+    it. A reference video framed like the video is cut to each tile, with what the text says of it, and put at the
+    positions of where it lies in the tile."""
     from comfy.model_management import throw_exception_if_processing_interrupted
     from comfy.utils import pack_latents, unpack_latents
-    announced = set()
-    grids = {}
-    state = {"masking": guide_mask is not None, "packing": True, "text": text_crop}
+    announced, grids = set(), {}
+    packing = True  # False once H3's packing turns out not to be what this was written for: stock packing from then on
 
     def run(apply_model, x, t, c, args):
         if previous is not None:
@@ -430,38 +430,43 @@ def make_wrapper(tiles_y: int, tiles_x: int, overlap: int, feather: int, previou
             announced.add(key)
             log.info("H3 Tiled Refine: " + message, *values)
 
-    def tile_conds(c, box, video_shape, audio_t, counts):
-        """What one tile's conds differ in from the whole video's: its payload, and its text if that was cropped."""
+    def tile_conds(c, box, full, audio_t, counts):
+        """What one tile's conds differ in from the whole video's: its payload, and its text if part of that is left
+        out. full is the whole video's latent size (frames, height, width)."""
+        nonlocal packing
         payload = c.get("minimax_payload")
         if not isinstance(payload, dict):
             return {}
-        h, w = c["_full_hw"]
-        full = (video_shape[2], h, w)
-        whole = tuple(video_shape[-2:]) == (h, w)
+        t, h, w = full
+        y0, y1, x0, x1 = box
+        size = (t, y1 - y0, x1 - x0)
+        whole = size == full
         refs = payload.get("refs") or []
-        framed = [framed_like(r, *full) for r in refs]
+        framed = [not whole and framed_like(r, t, h, w) for r in refs]  # the references cut to this tile
         tile = payload if whole else crop_payload(payload, box, full=full)
         out = {"minimax_payload": tile}
-        text = c.get("c_crossattn")
-        if any(framed) and not whole:
+        text, tags = c.get("c_crossattn"), payload.get("text_token_tags")
+        if any(framed):
             videos = [f for r, f in zip(refs, framed) if r.get("kind") in ("video", "video_audio")]
             say("refs", "<Video %s> has the video's framing and is cropped to each tile",
                 ">, <Video ".join(str(i + 1) for i, f in enumerate(videos) if f))  # numbered as the prompt does
-            tags = payload.get("text_token_tags")
-            if state["text"] and torch.is_tensor(tags) and torch.is_tensor(text) and tags.numel() == text.shape[1]:
+            if torch.is_tensor(tags) and torch.is_tensor(text) and tags.numel() == text.shape[1]:
                 keep = text_keep(tags.cpu(), refs, box, full)
                 if keep is not None:
-                    text = text[:, keep.to(text.device)]
+                    text = out["c_crossattn"] = text[:, keep.to(text.device)]
                     tile["text_token_tags"] = tags.reshape(-1)[keep.to(tags.device)].reshape(*tags.shape[:-1], -1)
-                    out["c_crossattn"] = text
                     counts[2] += int(keep.sum())
                     counts[3] += keep.numel()
-        if not state["packing"] or not torch.is_tensor(text):
+        if not packing or not torch.is_tensor(text):
             return out
         try:
             keyframes = [kf for kf in tile.get("keyframes") or [] if kf.get("latent") is not None]
             keeps = [None] * len(tile.get("cond_video_latents") or [])
-            if state["masking"] and keyframes:
+            places = [None] * len(keyframes) + [ref_place(r, box, h, w) if f else None
+                                                for r, f in zip(refs, framed) if "latent" in r]
+            if len(places) != len(keeps):
+                raise ValueError("H3 conditioning does not match its latents")
+            if guide_mask is not None and keyframes:
                 if (h, w) not in grids:
                     grids[(h, w)] = mask_grid(guide_mask, h, w)
                 for j, kf in enumerate(keyframes):
@@ -469,19 +474,16 @@ def make_wrapper(tiles_y: int, tiles_x: int, overlap: int, feather: int, previou
                     counts[0] += int(k.sum())
                     counts[1] += k.numel()
                     keeps[j] = None if bool(k.all()) else k
-            places = [None] * len(keyframes) + [ref_place(r, box, h, w) if f and exact_refs and not whole else None
-                                                for r, f in zip(refs, framed) if "latent" in r]
-            if len(places) != len(keeps):
-                raise ValueError("H3 conditioning does not match its latents")
             placed = any(p is not None for p in places)
-            if any(k is not None for k in keeps) or placed:
-                if all(k is not None and not bool(k.any()) for k in keeps[:len(keyframes)]) and not placed:
-                    out["minimax_payload"] = crop_payload(tile, (0, video_shape[3], 0, video_shape[4]), False)
-                else:
-                    out["minimax_payload"] = packed(tile, int(text.shape[1]), video_shape, audio_t, keeps, places)
+            unguided = bool(keyframes) and all(k is not None and not bool(k.any()) for k in keeps[:len(keyframes)])
+            if unguided and not placed:  # the mask leaves this tile no guide: H3's own packing, without one
+                out["minimax_payload"] = crop_payload(tile, (0, size[1], 0, size[2]), False)
+            elif placed or any(k is not None for k in keeps):
+                out["minimax_payload"] = packed(tile, int(text.shape[1]), size, audio_t, keeps, places)
         except Exception as e:  # H3 changed under us: refine with the stock packing rather than fail
-            log.warning("H3 Tiled Refine: the tiles' own packing is off, every tile keeps the whole guide (%s)", e)
-            state["packing"] = False
+            log.warning("H3 Tiled Refine: H3 does not pack as expected, so tiles are left to its own packing: the "
+                        "whole guide in every tile, references where it puts them (%s)", e)
+            packing = False
         return out
 
     def wrapper(apply_model, args):
@@ -492,10 +494,9 @@ def make_wrapper(tiles_y: int, tiles_x: int, overlap: int, feather: int, previou
         streams = unpack_latents(x, shapes)
         video = streams[0]
         h, w = video.shape[-2:]
+        full, audio_t = (video.shape[2], h, w), int(shapes[1][-1])
         boxes = plan_tiles(h, w, tiles_y, tiles_x, overlap)
         counts = [0, 0, 0, 0]  # guide tokens kept, of; text rows kept, of
-        c_full = {**c, "_full_hw": (h, w)}
-        audio_t = int(shapes[1][-1])
 
         def report():
             say((h, w), "%dx%d px in %d tiles of up to %dx%d px%s%s", w * 16, h * 16, len(boxes),
@@ -504,7 +505,7 @@ def make_wrapper(tiles_y: int, tiles_x: int, overlap: int, feather: int, previou
                 f", a tile keeps {counts[2] / counts[3]:.0%} of the text rows" if counts[3] else "")
 
         if len(boxes) == 1:
-            conds = tile_conds(c_full, boxes[0], tuple(video.shape), audio_t, counts)
+            conds = tile_conds(c, boxes[0], full, audio_t, counts)
             report()
             return run(apply_model, x, t, {**c, **conds}, args)
 
@@ -514,11 +515,8 @@ def make_wrapper(tiles_y: int, tiles_x: int, overlap: int, feather: int, previou
         for box in boxes:
             throw_exception_if_processing_interrupted()  # a step is several model calls: let Cancel in between
             y0, y1, x0, x1 = box
-            tile = video[..., y0:y1, x0:x1]
-            xt, tshapes = pack_latents([tile] + list(streams[1:]))
-            ct = dict(c)
-            ct["latent_shapes"] = tshapes
-            ct.update(tile_conds(c_full, box, tuple(tile.shape), audio_t, counts))
+            xt, tshapes = pack_latents([video[..., y0:y1, x0:x1]] + list(streams[1:]))
+            ct = {**c, "latent_shapes": tshapes, **tile_conds(c, box, full, audio_t, counts)}
             if torch.is_tensor(c.get("denoise_mask")):
                 ct["denoise_mask"] = c["denoise_mask"][..., y0:y1, x0:x1]
             pred = unpack_latents(run(apply_model, xt, t, ct, args), tshapes)

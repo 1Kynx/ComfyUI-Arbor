@@ -8,10 +8,10 @@ import torch
 from . import media
 from . import tree as T
 from .common import IO, TREE, CAT_MEDIA, schema, connected, data_out, tree_in, tree_out, to_tree, unwrap
-from .grid import CAPTION_STYLES, FITS, LABEL_DIRS, build_grid, caption_rows, col_labels_for, fit_box, \
-    grid_size, layout_sheet, row_labels_for, wrap_rows
+from .grid import CAPTION_STYLES, FITS, LABEL_DIRS, branch_names, build_grid, caption_rows, col_labels_for, \
+    fit_box, grid_size, layout_sheet, row_labels_for, wrap_rows
 from .media import is_audio, is_video
-from .preview import is_image, label_of, save_temp, to_pil
+from .preview import in_threads, is_image, label_of, save_temp, to_pil
 
 MAX_SLIDES = 64
 
@@ -100,10 +100,11 @@ class ImageSlider(IO.ComfyNode):
     @classmethod
     def execute(cls, images: IO.Autogrow.Type = None, labels=None) -> IO.NodeOutput:
         label_tree = to_tree(labels) if connected(labels) else None
-        slides = []
+        found = []
         for name, value in (images or {}).items():
-            for kind, v, label, group in _slides(name, value, label_tree)[:MAX_SLIDES - len(slides)]:
-                slides.append(_slide(kind, v, label, group))
+            found += _slides(name, value, label_tree)[:MAX_SLIDES - len(found)]
+        pictures = iter(in_threads(_slide, [s for s in found if s[0] == "image"]))  # encoded several at a time
+        slides = [next(pictures) if s[0] == "image" else _slide(*s) for s in found]
         # groups of every input meet by name (or path): input 1's Mei and input 2's Mei are one group;
         # fewer than two groups is no grouping at all
         if len({s["group"] for s in slides if s["group"] is not None}) < 2:
@@ -120,11 +121,13 @@ def _grid_inputs(values, shape, row_labels, col_labels):
     if connected(shape):
         layout = to_tree(shape)
         tree = T.rebuild(tree.flat(), layout)
-        row_values = [[label_of(v) for v in items] for items in layout.branches.values()]
-        if not connected(col_labels) and all(r == row_values[0] for r in row_values):
-            col_labels = shape  # a true matrix (XY Lists): every row holds the column values
-    if not connected(row_labels) and tree.names:  # e.g. XY Lists' x values, "Mira · lab coat"
-        row_labels = [tree.label(p, label_of) or "" for p in tree.paths()]
+        rows = list(layout.branches.values())
+        # a true matrix (XY Lists): every row holds the column values. A shape that holds the pictures themselves
+        # (Tree to Data's) says nothing a column could be called
+        if (not connected(col_labels) and all(isinstance(v, (str, int, float)) for r in rows for v in r)
+                and all(r == rows[0] for r in rows)):
+            col_labels = shape
+    # rows without labels take the names the tree or shape carries, once it is known which rows there are
     return tree, (row_labels if connected(row_labels) else None), (col_labels if connected(col_labels) else None)
 
 
@@ -195,9 +198,12 @@ class ImageGrid(IO.ComfyNode):
 def _clip_size(v) -> tuple[int, int]:
     if isinstance(v, torch.Tensor):
         return int(v.shape[2]), int(v.shape[1])
-    info = media.video_info(v)
-    if info.get("w") and info.get("h"):
-        return info["w"], info["h"]
+    try:
+        w, h = v.get_dimensions()
+    except Exception:  # a source that cannot tell without decoding
+        w = h = 0
+    if w and h:
+        return int(w), int(h)
     images = v.get_components().images
     return int(images.shape[2]), int(images.shape[1])
 
@@ -239,7 +245,7 @@ class VideoGrid(IO.ComfyNode):
         cap_rows = wrap_rows(caps, columns)[0] if caps else None
         n_cols = max(len(c) for _, c in branches)
         sheet = layout_sheet([[_clip_size(v) for v in clips] for clips in rows],
-                             row_labels_for(row_labels, len(branches)),
+                             row_labels_for(row_labels, len(branches)) or branch_names(tree, [p for p, _ in branches]),
                              None if columns > 0 else col_labels_for(col_labels, n_cols),
                              unwrap(cell_size), unwrap(gap), unwrap(font_size), unwrap(theme), unwrap(path_labels),
                              [p for p, _ in branches], "Video Grid", even=True, blocks=blocks, captions=cap_rows,
@@ -262,6 +268,8 @@ class VideoGrid(IO.ComfyNode):
                         rgba = np.asarray(img, dtype=np.float32) / 255.0
                         bar = (rgba[..., :3] * 255.0, rgba[..., 3:], style == "overlay top")
                 cells.append((x, y, frames, rate, bar))
+        if not cells:
+            raise ValueError("Video Grid: the videos have no frames")
         out_fps = unwrap(fps) or max((c[3] for c in cells), default=0) or 24.0
         length = max(len(c[2]) / (c[3] or out_fps) for c in cells)
         count = max(1, math.ceil(length * out_fps - 1e-6))
@@ -361,11 +369,11 @@ class SmartResize(IO.ComfyNode):
         h, w = int(image.shape[1]), int(image.shape[2])
         tw, th, crop = target_size(w, h, mode, int(multiple_of), allow_upscale)
         crop_mode = "center" if crop else "disabled"
-        out = image if (tw, th) == (w, h) else \
-            comfy.utils.common_upscale(image.movedim(-1, 1), tw, th, method, crop_mode).movedim(1, -1)
-        out = out.clamp(0, 1)
-        if mask is None:
-            m = torch.ones((out.shape[0], th, tw), dtype=out.dtype)
+        out = image  # as it is when the size already fits: a clip of frames is not copied for nothing
+        if (tw, th) != (w, h):
+            out = comfy.utils.common_upscale(image.movedim(-1, 1), tw, th, method, crop_mode).movedim(1, -1).clamp_(0, 1)
+        if mask is None:  # all of it: one frame of ones shown for every frame, not a clip's worth of memory
+            m = torch.ones((1, th, tw), dtype=out.dtype).expand(out.shape[0], -1, -1)
         else:
             m = mask if mask.dim() == 3 else mask[None]
             m = comfy.utils.common_upscale(m[:, None], tw, th, "bilinear", crop_mode)[:, 0].clamp(0, 1)
@@ -408,6 +416,9 @@ class BatchPick(IO.ComfyNode):
         idx = parse_indices(indices, int(images.shape[0]))
         if not idx:
             raise ValueError("Batch Pick: no indices given")
+        step = idx[1] - idx[0] if len(idx) > 1 else 1
+        if step > 0 and idx == list(range(idx[0], idx[-1] + 1, step)):  # a run of frames is a view, not a copy
+            return IO.NodeOutput(images[idx[0]:idx[-1] + 1:step], len(idx))
         return IO.NodeOutput(images[idx], len(idx))
 
 

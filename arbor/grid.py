@@ -104,6 +104,12 @@ def row_labels_for(value, n_rows: int) -> list[str] | None:
     return _flat_labels(t)
 
 
+def branch_names(tree: DataTree, paths: list) -> list[str] | None:
+    """Row labels from the names a tree carries (XY Lists' x values, "Mira · lab coat"), for the branches that are
+    laid out: one a grid leaves out for being empty takes its label with it."""
+    return [tree.label(p, label_of) or "" for p in paths] if tree.names else None
+
+
 def col_labels_for(value, n_cols: int) -> list[str] | None:
     """One label per column. A tree whose branches each hold a full row of
     column values (XY Lists' shape, Cross Reference's B) gives its first branch."""
@@ -201,10 +207,9 @@ def _is_cjk_only(text: str) -> bool:
 class Sheet:
     """A labelled grid: the background (labels and captions drawn) and where each cell sits."""
 
-    def __init__(self, image, left, top, cw, ch, gap, cap_h, cap_font, cap_line, colors, cap_above=False):
+    def __init__(self, image, left, top, cw, ch, gap, cap_h, cap_font, cap_line, cap_above=False):
         self.image, self.left, self.top, self.cw, self.ch, self.gap = image, left, top, cw, ch, gap
-        self.cap_h, self.cap_font, self.cap_line, self.colors = cap_h, cap_font, cap_line, colors
-        self.cap_above = cap_above
+        self.cap_h, self.cap_font, self.cap_line, self.cap_above = cap_h, cap_font, cap_line, cap_above
 
     def cell(self, i: int, j: int) -> tuple[int, int]:
         """Top-left corner of the picture area of row i, column j (under its caption when captions are above)."""
@@ -352,7 +357,7 @@ def layout_sheet(sizes: list[list[tuple[int, int] | None]], row_labels=None, col
                 draw.text((left - gap - draw.textlength(line, font=font), ty), line, fill=colors["fg"], font=font)
                 ty += line_h
 
-    out = Sheet(sheet, left, top, cw, ch, gap, cap_h, cap_font, cap_line, colors, cap_above=above and cap_h > 0)
+    out = Sheet(sheet, left, top, cw, ch, gap, cap_h, cap_font, cap_line, cap_above=above and cap_h > 0)
     if cap_lines:
         for i, row in enumerate(cap_lines):
             for j, lines in enumerate(row):
@@ -373,6 +378,7 @@ def build_grid(tree: DataTree, row_labels=None, col_labels=None, fit="fit", cell
     branches = [b for b in branches if b[1]]
     if not any(im is not None for _, r in branches for im in r):
         raise ValueError("Image Grid: no images to lay out")
+    row_labels = row_labels or branch_names(tree, [p for p, _ in branches])
     caps = caption_rows(captions, [len(r) for _, r in branches])
     rows, blocks = wrap_rows([r for _, r in branches], columns)
     cap_rows = wrap_rows(caps, columns)[0] if caps else None

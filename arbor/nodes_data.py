@@ -12,8 +12,7 @@ from . import expr as E
 from . import tree as T
 from .common import IO, NUMBER, CAT_DATA, schema, connected, data_out, tree_in, tree_out, to_tree, unwrap
 from .preview import label_of
-
-MAX_COMBOS = 10000
+from .tree import MAX_COMBOS
 
 
 def both(tree: T.DataTree) -> IO.NodeOutput:
